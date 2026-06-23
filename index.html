@@ -441,6 +441,26 @@
       <div class="setup-title"><span>Cambuur</span> Tracker</div>
       <div class="setup-subtitle">Laten we alles in één keer goed instellen — duurt maar 2 minuten</div>
     </div>
+
+    <!-- Gist herstel optie -->
+    <div id="setup-gist-restore" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">☁️ Al eerder gebruikt? Herstel vanuit GitHub Gist</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Vul je token en Gist ID in om direct je data te laden — geen setup nodig.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <label class="form-label" style="font-size:10px">Personal Access Token</label>
+          <input class="form-input" id="setup-gist-token" type="password" placeholder="ghp_xxxxxxxxxxxx" style="font-size:12px">
+        </div>
+        <div>
+          <label class="form-label" style="font-size:10px">Gist ID</label>
+          <input class="form-input" id="setup-gist-id" placeholder="a1b2c3d4e5..." style="font-size:12px">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-primary" onclick="setupGistRestore()">⬇️ Data laden & starten</button>
+        <div id="setup-gist-status" style="font-size:12px;color:var(--text-muted)"></div>
+      </div>
+    </div>
     <div class="setup-steps">
       <div class="setup-step-tab active" id="stab-1"><span class="setup-step-num">1</span>Seizoen</div>
       <div class="setup-step-tab" id="stab-2"><span class="setup-step-num">2</span>Eigen stadion</div>
@@ -9661,6 +9681,46 @@ async function gistPull(manual = false) {
     console.error('Gist pull error:', e);
     if (statusEl) { statusEl.textContent = '❌ Fout: ' + e.message; statusEl.style.color = 'var(--loss)'; }
     if (manual) showToast('Gist fout: ' + e.message, 'error');
+  }
+}
+
+// Setup wizard: restore from Gist
+async function setupGistRestore() {
+  const token = document.getElementById('setup-gist-token')?.value?.trim();
+  const id    = document.getElementById('setup-gist-id')?.value?.trim();
+  const statusEl = document.getElementById('setup-gist-status');
+  if (!token || !id) {
+    if (statusEl) { statusEl.textContent = '⚠️ Vul beide velden in'; statusEl.style.color = 'var(--loss)'; }
+    return;
+  }
+  if (statusEl) { statusEl.textContent = '⬇️ Laden...'; statusEl.style.color = 'var(--text-muted)'; }
+  try {
+    const res = await fetch(`https://api.github.com/gists/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    });
+    if (!res.ok) throw new Error('Ongeldige token of Gist ID');
+    const json = await res.json();
+    const fileContent = json.files?.[GIST_FILENAME]?.content;
+    if (!fileContent) throw new Error('Geen Cambuur Tracker data gevonden in deze Gist');
+    const data = JSON.parse(fileContent);
+
+    // Save credentials
+    localStorage.setItem('gist_token', token);
+    localStorage.setItem('gist_id', id);
+    _gistToken = token;
+    _gistId = id;
+
+    // Import data and close wizard
+    await importDataObj(data);
+    document.getElementById('setup-overlay').classList.remove('open');
+    showToast('✓ Data geladen vanuit GitHub Gist', 'success');
+    if (statusEl) { statusEl.textContent = '✓ Gelukt!'; statusEl.style.color = 'var(--win)'; }
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = '❌ ' + e.message; statusEl.style.color = 'var(--loss)'; }
   }
 }
 
