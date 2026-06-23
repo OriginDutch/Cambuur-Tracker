@@ -461,6 +461,15 @@
         <div id="setup-gist-status" style="font-size:12px;color:var(--text-muted)"></div>
       </div>
     </div>
+
+    <!-- JSON bestand herstel -->
+    <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">📂 Herstel vanuit JSON bestand</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Laad een eerder geëxporteerd JSON bestand om direct verder te gaan.</div>
+      <input type="file" id="setup-json-file" accept=".json" style="display:none" onchange="setupJsonRestore(this)">
+      <button class="btn btn-secondary" onclick="document.getElementById('setup-json-file').click()">📂 JSON bestand kiezen</button>
+      <div id="setup-json-status" style="font-size:12px;color:var(--text-muted);margin-top:8px"></div>
+    </div>
     <div class="setup-steps">
       <div class="setup-step-tab active" id="stab-1"><span class="setup-step-num">1</span>Seizoen</div>
       <div class="setup-step-tab" id="stab-2"><span class="setup-step-num">2</span>Eigen stadion</div>
@@ -9682,6 +9691,31 @@ async function gistPull(manual = false) {
     if (statusEl) { statusEl.textContent = '❌ Fout: ' + e.message; statusEl.style.color = 'var(--loss)'; }
     if (manual) showToast('Gist fout: ' + e.message, 'error');
   }
+}
+
+// Setup wizard: restore from JSON file
+async function setupJsonRestore(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('setup-json-status');
+  if (statusEl) { statusEl.textContent = '⏳ Laden...'; statusEl.style.color = 'var(--text-muted)'; }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data.seasons && !data.players && !data.matches) throw new Error('Ongeldig bestandsformaat');
+    await importDataObj(data);
+    document.getElementById('setup-overlay').classList.remove('open');
+    // Als Gist al geconfigureerd is op deze computer, direct pushen
+    if (_gistToken && _gistId) {
+      gistPush(false);
+      showToast('✓ Data geladen en gesynchroniseerd met Gist', 'success');
+    } else {
+      showToast('✓ Data geladen — stel Gist sync in via Instellingen → Gegevens voor automatische backup', 'success');
+    }
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = '❌ ' + e.message; statusEl.style.color = 'var(--loss)'; }
+  }
+  input.value = '';
 }
 
 // Setup wizard: restore from Gist
