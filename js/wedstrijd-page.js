@@ -98,6 +98,7 @@ function renderWedstrijdPage(matchId) {
         <div style="display:flex;gap:4px">
           <button class="btn btn-ghost" style="font-size:10px;height:24px" onclick="wpLoadXI()" title="Standaard XI laden">📂</button>
           <button class="btn btn-ghost" style="font-size:10px;height:24px" onclick="wpSaveXI()" title="Opslaan als standaard">💾</button>
+          <button class="btn btn-ghost" style="font-size:10px;height:24px;color:var(--loss)" onclick="wpClearXI()" title="Alles wissen">✕</button>
         </div>
       </div>
       <div id="wp-lineup"></div>
@@ -389,6 +390,12 @@ function wpRenderLineup() {
     return true;
   });
 
+  // Remove any starters who are no longer in the active player list
+  const activeIds = new Set(activePlayers.map(p => p.id));
+  for (const id of [...wpStarters]) {
+    if (!activeIds.has(id)) wpStarters.delete(id);
+  }
+
   const posGroupWp = p => {
     const pos = p.position || '';
     if (['Aanvaller','Linksbuiten','Rechtsbuiten','Spits','Tweede Spits','Schaduwspits'].includes(pos)) return 'Aanvaller';
@@ -437,6 +444,12 @@ async function wpSaveXI() {
   if (!wpStarters.size) { showToast('Selecteer eerst spelers','error'); return; }
   await dbPut('settings',{key:'defaultXI',value:JSON.stringify([...wpStarters])});
   showToast('Standaard XI opgeslagen','success');
+}
+
+function wpClearXI() {
+  wpStarters.clear();
+  wpRenderLineup();
+  wpRenderGoals(); wpRenderSubs(); wpRenderCards();
 }
 async function wpLoadXI() {
   try {

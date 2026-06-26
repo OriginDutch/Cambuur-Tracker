@@ -124,9 +124,30 @@ function renderMatchRow(m, comp) {
     const starters = (m.lineup||[]).slice(0,5).map(id=>{ const p=(S.players||[]).find(x=>x.id===id); return p?p.lastname:'?'; });
     if (starters.length) tipHtml += `<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border-light);opacity:0.6;font-size:11px">👕 ${starters.join(', ')}${(m.lineup||[]).length>5?' +'+ ((m.lineup||[]).length-5):''}</div>`;
     if (!tipHtml) tipHtml = '<span style="opacity:0.5">Geen gebeurtenissen</span>';
+
+    // Missing data warnings for Cambuur matches
+    if (isCam) {
+      const missing = [];
+      if (!(m.lineup||[]).length) missing.push('👕 Geen basiself');
+      if (!m.coachId) missing.push('🧑‍💼 Geen coach');
+      if (m.extraTime1 === undefined && m.extraTime2 === undefined) missing.push('⏱ Geen extra tijd');
+      if (!m.motm) missing.push('🏆 Geen MOTM');
+      if (!m.matchStats?.home?.possession) missing.push('📊 Geen wedstrijdstats');
+      if (missing.length) {
+        tipHtml += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border-light)">
+          <div style="font-size:10px;font-weight:700;color:var(--loss);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Ontbreekt</div>
+          ${missing.map(m=>`<div style="font-size:11px;color:var(--text-muted)">${m}</div>`).join('')}
+        </div>`;
+      }
+    }
   } else {
     tipHtml = `<div style="opacity:0.6">${m.date?fmtShortDate(m.date)+(m.time?' · '+m.time:''):'Datum onbekend'}</div><div style="opacity:0.5;font-size:11px">Klik om in te voeren</div>`;
   }
+
+  // Missing data dot for played Cambuur matches
+  const missingDot = isCam && m.played && (
+    !(m.lineup||[]).length || !m.coachId || !m.motm || !m.matchStats?.home?.possession
+  ) ? `<div title="Ontbrekende data" style="width:7px;height:7px;border-radius:50%;background:var(--loss);flex-shrink:0;margin-left:2px"></div>` : '';
 
   return `<div class="match-row ${isCam?'cambuur-match':''} ${isRival&&isCam?'rival-match':''}"
     style="${isRival&&isCam?'border-left:2px solid var(--heerenveen-rood)':''}"
@@ -135,7 +156,8 @@ function renderMatchRow(m, comp) {
     <div class="match-home" style="${isCam&&m.homeClubId===cam?.id?'color:var(--cambuur-geel)':''}">${homeName}</div>
     ${scoreHtml}
     <div class="match-away" style="${isCam&&m.awayClubId===cam?.id?'color:var(--cambuur-geel)':''}">${awayName}</div>
-    <div class="match-actions" style="display:flex;gap:4px" onclick="event.stopPropagation()">
+    <div class="match-actions" style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
+      ${missingDot}
       <button class="icon-btn danger" style="height:26px;padding:2px 6px;font-size:11px"
         onclick="event.stopPropagation();deleteMatch('${m.id}')" title="Verwijderen">🗑️</button>
     </div>

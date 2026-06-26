@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SC Cambuur — Seizoenstracker</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a1628'/><text x='16' y='23' text-anchor='middle' font-size='18' font-family='Arial Black,sans-serif' font-weight='900' fill='%23F5C500'>SC</text></svg>">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
@@ -166,6 +167,7 @@
       <div class="nav-section-label">Club</div>
       <div class="nav-item" data-page="selectie" onclick="navigate('selectie',this)"><span class="nav-icon">👥</span><span class="nav-label">Selectie</span></div>
       <div class="nav-item" data-page="statistieken" onclick="navigate('statistieken',this)"><span class="nav-icon">📊</span><span class="nav-label">Statistieken</span></div>
+      <div class="nav-item" data-page="vergelijking" onclick="navigate('vergelijking',this)"><span class="nav-icon">⚖️</span><span class="nav-label">Vergelijking</span></div>
       <div class="nav-item" data-page="coaches" onclick="navigate('coaches',this)"><span class="nav-icon">🧑‍💼</span><span class="nav-label">Technische staf</span></div>
       <div class="nav-section-label">Beheer</div>
       <div class="nav-item" data-page="clubs" onclick="navigate('clubs',this)"><span class="nav-icon">🏟️</span><span class="nav-label">Clubs &amp; Stadions</span></div>
@@ -260,7 +262,7 @@
     </div>
 
     <div class="page" id="page-statistieken">
-      <div id="statistieken-content"></div>
+    <div class="page" id="page-vergelijking"><div id="vergelijking-content"></div></div>      <div id="statistieken-content"></div>
     </div>
 
     <div class="page" id="page-instellingen">
@@ -1123,5 +1125,6 @@
 <script src="js/speler.js"></script>
 <script src="js/hover.js"></script>
 <script src="js/gist.js"></script>
+<script src="js/vergelijking.js"></script>
 </body>
 </html>

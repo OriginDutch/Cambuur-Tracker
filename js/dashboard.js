@@ -381,6 +381,79 @@ function renderDashboard(){
         </div>`).join('')}
       </div>
     </div>`:''}
+
+    <!-- Contractwaarschuwingen -->
+    ${(()=>{
+      const today = new Date();
+      const in6m = new Date(today); in6m.setMonth(in6m.getMonth()+6);
+      const expiring = (S.players||[]).filter(p=>{
+        if (!p.contract) return false;
+        const d = new Date(p.contract);
+        return d >= today && d <= in6m && effectiveStatus(p) === 'actief';
+      }).sort((a,b)=>new Date(a.contract)-new Date(b.contract));
+      if (!expiring.length) return '';
+      return `<div class="card">
+        <div class="card-title">📋 Contracten verlopen binnenkort</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${expiring.map(p=>{
+            const d = new Date(p.contract);
+            const months = Math.round((d-today)/(1000*60*60*24*30));
+            const color = months<=2?'var(--loss)':months<=4?'#ff8c00':'var(--draw)';
+            return `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0" onclick="navigateToPlayer('${p.id}')">
+              ${playerAvatarHTML(p,'player-avatar',28)}
+              <div style="flex:1;font-size:13px;font-weight:600">${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</div>
+              <div style="font-size:12px;color:var(--text-muted)">${p.position||''}</div>
+              <div style="font-size:12px;font-weight:700;color:${color}">${new Date(p.contract).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})}</div>
+              <div style="font-size:11px;color:${color};min-width:50px;text-align:right">${months}m</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    })()}
+
+    <!-- Seizoensgemiddelden: balbezit + keepersreddingen -->
+    ${(()=>{
+      const cam = S.clubs.find(c=>c.isOwnClub);
+      if (!cam) return '';
+      const camMatches = played.filter(m=>m.matchStats?.home?.possession!==undefined);
+      if (!camMatches.length) return '';
+
+      const isCamHome = m => m.homeClubId===cam.id;
+      const possessions = camMatches.map(m=>isCamHome(m)?m.matchStats.home.possession:m.matchStats.away.possession);
+      const avgPoss = Math.round(possessions.reduce((a,b)=>a+b,0)/possessions.length);
+
+      // Keeper save percentage
+      const allStats = calcAllPlayerStats(S.currentSeason);
+      const keepers = (S.players||[]).filter(p=>p.position==='Keeper'&&(allStats[p.id]?.appearances||0)>0);
+      const keeperRows = keepers.map(p=>{
+        const st = allStats[p.id]||{};
+        const saves = st.saves||0;
+        const conceded = played.reduce((sum,m)=>{
+          const inLineup = (m.lineup||[]).includes(p.id)||(m.events||[]).some(e=>e.type==='sub'&&e.playerInId===p.id);
+          if (!inLineup) return sum;
+          return sum + (isCamHome(m)?m.awayScore:m.homeScore)||0;
+        },0);
+        const total = saves + conceded;
+        const pct = total>0 ? Math.round(saves/total*100) : null;
+        return {p, saves, conceded, pct, apps: st.appearances||0};
+      }).filter(k=>k.apps>0);
+
+      return `<div class="card">
+        <div class="card-title">📊 Seizoensgemiddelden</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+          <div style="text-align:center;padding:8px 16px;background:var(--bg-tertiary);border-radius:6px">
+            <div style="font-size:28px;font-weight:800;color:var(--cambuur-geel)">${avgPoss}%</div>
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-top:2px">Gem. balbezit</div>
+            <div style="font-size:10px;color:var(--text-muted)">${camMatches.length} wedstrijden</div>
+          </div>
+          ${keeperRows.map(k=>`<div style="text-align:center;padding:8px 16px;background:var(--bg-tertiary);border-radius:6px">
+            <div style="font-size:28px;font-weight:800;color:${(k.pct||0)>=70?'var(--win)':'var(--text-primary)'}">${k.pct!==null?k.pct+'%':'—'}</div>
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-top:2px">Reddingen% ${k.p.lastname}</div>
+            <div style="font-size:10px;color:var(--text-muted)">${k.saves}R / ${k.conceded}T</div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    })()}
   `;
 ;
 }

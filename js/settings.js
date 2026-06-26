@@ -16,6 +16,7 @@ async function switchSeason(id){
   const activePage = document.querySelector('.page.active')?.id?.replace('page-','');
   if (activePage === 'selectie') renderSelectie();
   else if (activePage === 'statistieken') renderStatistieken();
+  else if (activePage === 'vergelijking') renderVergelijking();
   else if (activePage === 'coaches') renderCoachesPage();
   else if (activePage === 'competitions') renderCompetitionsPage();
   else if (activePage === 'speler' && window._currentPlayerId) renderPlayerPage(window._currentPlayerId);
