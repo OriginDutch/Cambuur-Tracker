@@ -4,6 +4,16 @@
 // ══════════════════════════════════════════════════════
 
 const GIST_FILENAME = 'cambuur_tracker_data.json';
+// Cloudflare Worker proxy URL — vul in na setup
+// Leeg laten = direct naar GitHub API (werkt lokaal maar niet via GitHub Pages)
+let GIST_WORKER_URL = localStorage.getItem('gist_worker_url') || '';
+
+function gistApiUrl(gistId) {
+  if (GIST_WORKER_URL) {
+    return gistId ? `${GIST_WORKER_URL}/gist/${gistId}` : `${GIST_WORKER_URL}/gist`;
+  }
+  return gistId ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
+}
 let _gistToken = null;
 let _gistId = null;
 let _gistSyncing = false;
@@ -14,12 +24,14 @@ let _gistLastPushed = null;
 function gistInit() {
   _gistToken = localStorage.getItem('gist_token') || null;
   _gistId    = localStorage.getItem('gist_id')    || null;
-  const tokenInput = document.getElementById('gist-token-input');
-  const idInput    = document.getElementById('gist-id-input');
-  if (tokenInput && _gistToken) tokenInput.value = _gistToken;
-  if (idInput    && _gistId)    idInput.value    = _gistId;
+  GIST_WORKER_URL = localStorage.getItem('gist_worker_url') || '';
+  const tokenInput  = document.getElementById('gist-token-input');
+  const idInput     = document.getElementById('gist-id-input');
+  const workerInput = document.getElementById('gist-worker-input');
+  if (tokenInput  && _gistToken)      tokenInput.value  = _gistToken;
+  if (idInput     && _gistId)         idInput.value     = _gistId;
+  if (workerInput && GIST_WORKER_URL) workerInput.value = GIST_WORKER_URL;
   gistUpdateStatus();
-  // On startup: try to pull latest data if configured
   if (_gistToken && _gistId) gistPull(false);
 }
 
@@ -42,6 +54,9 @@ function gistUpdateStatus() {
   const tokenEl = document.getElementById('gist-token-status');
   const idEl = document.getElementById('gist-id-status');
   if (!el) return;
+  // Worker status
+  const workerEl = document.getElementById('gist-worker-status');
+  if (workerEl) { workerEl.textContent = GIST_WORKER_URL ? '✓ Worker geconfigureerd' : '⚠️ Niet ingesteld — sync werkt alleen lokaal'; workerEl.style.color = GIST_WORKER_URL ? 'var(--win)' : 'var(--draw)'; }
   if (!_gistToken) {
     el.textContent = '⚠️ Geen token ingesteld';
     el.style.color = 'var(--text-muted)';
@@ -89,12 +104,8 @@ async function gistPush(manual = false) {
       files: { [GIST_FILENAME]: { content: data } }
     };
 
-    let url = 'https://api.github.com/gists';
-    let method = 'POST';
-    if (_gistId) {
-      url = `https://api.github.com/gists/${_gistId}`;
-      method = 'PATCH';
-    }
+    let url = gistApiUrl(_gistId);
+    let method = _gistId ? 'PATCH' : 'POST';
 
     const res = await fetch(url, {
       method,
@@ -146,7 +157,7 @@ async function gistPull(manual = false) {
   if (statusEl) { statusEl.textContent = '⬇️ Ophalen uit Gist...'; statusEl.style.color = 'var(--text-muted)'; }
 
   try {
-    const res = await fetch(`https://api.github.com/gists/${_gistId}`, {
+    const res = await fetch(gistApiUrl(_gistId), {
       headers: {
         'Authorization': `Bearer ${_gistToken}`,
         'Accept': 'application/vnd.github+json',
@@ -218,7 +229,7 @@ async function setupGistRestore() {
   }
   if (statusEl) { statusEl.textContent = '⬇️ Laden...'; statusEl.style.color = 'var(--text-muted)'; }
   try {
-    const res = await fetch(`https://api.github.com/gists/${id}`, {
+    const res = await fetch(gistApiUrl(id), {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github+json',
