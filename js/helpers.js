@@ -52,3 +52,19 @@ function isPlayerInSeason(player, season) {
   return true;
 }
 
+
+// Globale effectiveStatus — gebruikt buiten renderSelectie context (dashboard etc.)
+function effectiveStatus(p) {
+  const today = new Date().toISOString().split('T')[0];
+  const fromTimeline = effectiveStatusFromTransfers(p, today);
+  if (fromTimeline) return fromTimeline;
+  if (p.status === 'vertrokken' && p.departureDate && p.departureDate > today) return 'vertrekt';
+  return p.status || 'actief';
+}
+
+function statusLabel(p) {
+  const s = p.status || 'actief';
+  const labels = { actief:'Actief', geblesseerd:'Geblesseerd', geschorst:'Geschorst',
+    vertrokken:'Vertrokken', vertrekt:'Vertrekt', uitgeleend:'Uitgeleend', huurder:'Huurder' };
+  return labels[s] || s;
+}
