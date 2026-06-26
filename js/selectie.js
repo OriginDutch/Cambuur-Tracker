@@ -928,18 +928,40 @@ function renderArchief() {
   const season = seasonFilter ? S.seasons.find(s=>s.id===seasonFilter) : null;
 
   // Determine season date range for filtering
-  const seasonStart = season ? season.year + '-07-01' : null;
-  const seasonEnd = season ? (season.year+1) + '-06-30' : null;
+  const range = season ? getSeasonDateRange(season) : null;
+  const seasonStart = range?.start || null;
+  const seasonEnd = range?.end || null;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  // Helper: is this player effectively no longer at the club?
+  const isGone = p => {
+    if (['vertrokken','uitgeleend'].includes(p.status)) return true;
+    // Contract verlopen en geen actieve status update
+    if (p.contract && p.contract < today && p.status === 'actief') return true;
+    return false;
+  };
+
+  // Helper: contract label
+  const goneLabel = p => {
+    if (p.status === 'vertrokken') return {label: 'Vertrokken', cls: 'badge-status-vertrokken'};
+    if (p.status === 'uitgeleend') return {label: 'Uitgeleend', cls: 'badge-status-uitgeleend'};
+    if (p.contract && p.contract < today) return {label: 'Contract afgelopen', cls: 'badge-status-vertrokken'};
+    return {label: p.status||'—', cls: ''};
+  };
 
   const archived = S.players.filter(p => {
-    const isArchived = ['vertrokken','uitgeleend'].includes(p.status);
-    if (!isArchived) return false;
-    // Season filter: match by joined or departure date
-    if (seasonFilter && season) {
+    if (!isGone(p)) return false;
+    // Season filter
+    if (seasonFilter && range) {
       const joinedInSeason = p.joined && p.joined >= seasonStart && p.joined <= seasonEnd;
-      const leftInSeason = p.departureDate && p.departureDate >= seasonStart && p.departureDate <= seasonEnd;
+      const leftInSeason = (p.departureDate && p.departureDate >= seasonStart && p.departureDate <= seasonEnd)
+        || (p.contract && p.contract >= seasonStart && p.contract <= seasonEnd);
       const loanInSeason = p.loanReturn && p.loanReturn >= seasonStart && p.loanReturn <= seasonEnd;
-      if (!joinedInSeason && !leftInSeason && !loanInSeason) return false;
+      // Also include if player was active during that season
+      const activeInSeason = isPlayerInSeason(p, season) ||
+        (p.joined && p.joined <= seasonEnd && (!p.departureDate || p.departureDate >= seasonStart));
+      if (!joinedInSeason && !leftInSeason && !loanInSeason && !activeInSeason) return false;
     }
     if (!q) return true;
     return (p.lastname+' '+p.firstname+' '+p.position+' '+(p.departureClub||'')+' '+(p.loanClub||'')).toLowerCase().includes(q);
@@ -978,16 +1000,20 @@ function renderArchief() {
   document.getElementById('archief-content').innerHTML = tfHtml +
     `<table class="data-table"><thead><tr>
       <th>Speler</th><th>Positie</th><th>Status</th><th>In dienst</th><th>Vertrek/Uitleenclub</th><th>Aankoop</th><th>Verkoop</th><th></th>
-    </tr></thead><tbody>${archived.map(p=>`<tr style="cursor:pointer" onclick="navigateToPlayer('${p.id}')">
-      <td><div style="display:flex;align-items:center;gap:8px">${playerAvatarHTML(p,'player-avatar',28)}<strong>${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</strong></div></td>
-      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.subpos?.length?p.subpos.join(', '):p.position}">${p.subpos?.length?p.subpos[0]:p.position}</td>
-      <td><span class="badge badge-status-${p.status}">${statusLabel(p)}</span></td>
-      <td class="text-secondary" style="font-size:11px">${p.joined?new Date(p.joined).toLocaleDateString('nl-NL',{year:'numeric',month:'short'}):'—'}</td>
-      <td class="text-secondary" style="font-size:11px">${p.departureClub||p.loanClub||'—'}</td>
-      <td class="text-secondary" style="font-size:11px">${p.youthProduct?'Jeugd':p.freeTransferIn?'Vrije transfer':p.buyFee?formatEuro(p.buyFee):'—'}</td>
-      <td class="text-secondary" style="font-size:11px">${p.freeTransferOut?'Vrije transfer':p.sellFee?formatEuro(p.sellFee):'—'}</td>
-      <td><div class="action-btns"><button class="icon-btn" onclick="event.stopPropagation();openPlayerModal('${p.id}')">✏️</button></div></td>
-    </tr>`).join('')}</tbody></table>`;
+    </tr></thead><tbody>${archived.map(p=>{
+      const gl = goneLabel(p);
+      const depDate = p.departureDate||p.contract||'';
+      return `<tr style="cursor:pointer" onclick="navigateToPlayer('${p.id}')">
+        <td><div style="display:flex;align-items:center;gap:8px">${playerAvatarHTML(p,'player-avatar',28)}<strong>${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</strong></div></td>
+        <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.subpos?.length?p.subpos.join(', '):p.position}">${p.subpos?.length?p.subpos[0]:p.position}</td>
+        <td><span class="badge ${gl.cls}">${gl.label}</span>${depDate?` <span style="font-size:10px;color:var(--text-muted)">${new Date(depDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})}</span>`:''}</td>
+        <td class="text-secondary" style="font-size:11px">${p.joined?new Date(p.joined).toLocaleDateString('nl-NL',{year:'numeric',month:'short'}):'—'}</td>
+        <td class="text-secondary" style="font-size:11px">${p.departureClub||p.loanClub||'—'}</td>
+        <td class="text-secondary" style="font-size:11px">${p.youthProduct?'Jeugd':p.freeTransferIn?'Vrije transfer':p.buyFee?formatEuro(p.buyFee):'—'}</td>
+        <td class="text-secondary" style="font-size:11px">${p.freeTransferOut?'Vrije transfer':p.sellFee?formatEuro(p.sellFee):'—'}</td>
+        <td><div class="action-btns"><button class="icon-btn" onclick="event.stopPropagation();openPlayerModal('${p.id}')">✏️</button></div></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
 }
 
 
