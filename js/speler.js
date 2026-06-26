@@ -327,14 +327,15 @@ function buildPlayerTimeline(p) {
     entries.push({icon:'⬅️', label:'Gehuurd van', club: p.loanFromClub, note:'', date: p.joined||'', dateStr: fmtDate(p.joined), dateToStr: fmtDate(p.loanFromReturn)});
   }
 
-  // Manual entries (huur-uit, verlengingen)
+  // Manual entries
   (p.transfers||[]).forEach(t => {
     const typeObj = ALL_TRANSFER_TYPES.find(x=>x.value===t.type)||{icon:'•',label:t.type};
+    const amountNote = t.amount ? formatEuro(t.amount) : '';
     entries.push({
       icon: typeObj.icon,
       label: typeObj.label.replace(/[📥📤➡️⬅️↩️📝]\s*/,''),
       club: t.club||'',
-      note: t.note||'',
+      note: [t.note, amountNote].filter(Boolean).join(' · '),
       date: t.date||'',
       dateStr: fmtDate(t.date),
       dateToStr: fmtDate(t.dateTo),
@@ -342,6 +343,10 @@ function buildPlayerTimeline(p) {
     // Auto return entry for huur-uit
     if (t.type === 'huur-uit' && t.dateTo) {
       entries.push({icon:'↩️', label:'Terug van verhuur', club: t.club||'', note:'', date: t.dateTo, dateStr: fmtDate(t.dateTo)});
+    }
+    // Auto end entry for huur-in
+    if (t.type === 'huur-in' && t.dateTo) {
+      entries.push({icon:'🔚', label:'Huur afgelopen', club: t.club||'', note:'', date: t.dateTo, dateStr: fmtDate(t.dateTo)});
     }
   });
 

@@ -4,18 +4,14 @@
 // ══════════════════════════════════════════════════════
 
 const TRANSFER_TYPES = [
-  {value:'huur-uit',  label:'➡️ Uitgeleend aan',     icon:'➡️'},
-  {value:'verlenging',label:'📝 Contractverlenging', icon:'📝'},
+  {value:'huur-in',     label:'⬅️ Gehuurd van',       icon:'⬅️', hasClub:true,  hasDates:true,  hasAmount:false},
+  {value:'huur-uit',    label:'➡️ Uitgeleend aan',     icon:'➡️', hasClub:true,  hasDates:true,  hasAmount:false},
+  {value:'transfer-in', label:'📥 Transfer in',        icon:'📥', hasClub:true,  hasDates:false, hasAmount:true},
+  {value:'transfer-uit',label:'📤 Transfer uit',       icon:'📤', hasClub:true,  hasDates:false, hasAmount:true},
+  {value:'verlenging',  label:'📝 Contractverlenging', icon:'📝', hasClub:false, hasDates:true,  hasAmount:false},
 ];
-// All types including auto-generated (for timeline display)
-const ALL_TRANSFER_TYPES = [
-  {value:'transfer-in',  label:'📥 Transfer in',      icon:'📥'},
-  {value:'transfer-uit', label:'📤 Transfer uit',     icon:'📤'},
-  {value:'huur-uit',     label:'➡️ Uitgeleend aan',   icon:'➡️'},
-  {value:'huur-in',      label:'⬅️ Gehuurd van',      icon:'⬅️'},
-  {value:'terugkeer',    label:'↩️ Terug van verhuur', icon:'↩️'},
-  {value:'verlenging',   label:'📝 Contractverlenging',icon:'📝'},
-];
+
+const ALL_TRANSFER_TYPES = TRANSFER_TYPES;
 
 function renderTransferHistory() {
   const el = document.getElementById('transfer-history-list');
@@ -28,38 +24,50 @@ function renderTransferHistory() {
   const sorted = [...entries].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   el.innerHTML = sorted.map((t) => {
     const realIdx = entries.indexOf(t);
-    const isHuur = t.type === 'huur-uit';
-    return `<div style="display:grid;grid-template-columns:110px 1fr 80px 80px 28px;gap:5px;align-items:end;margin-bottom:6px">
+    const typeDef = TRANSFER_TYPES.find(x=>x.value===t.type) || TRANSFER_TYPES[0];
+    return `<div style="display:grid;grid-template-columns:130px ${typeDef.hasClub?'1fr ':''}${typeDef.hasDates?'80px 80px ':' 80px '}${typeDef.hasAmount?'90px ':''}28px;gap:5px;align-items:end;margin-bottom:6px">
       <div>
         <label class="form-label" style="font-size:10px">Type</label>
         <select class="form-select" style="height:26px;font-size:11px" onchange="window._playerTransfers[${realIdx}].type=this.value;renderTransferHistory()">
           ${TRANSFER_TYPES.map(x=>`<option value="${x.value}" ${t.type===x.value?'selected':''}>${x.label}</option>`).join('')}
         </select>
       </div>
+      ${typeDef.hasClub?`<div>
+        <label class="form-label" style="font-size:10px">${t.type==='huur-in'?'Van club':t.type==='huur-uit'?'Aan club':t.type==='transfer-in'?'Van club':'Naar club'}</label>
+        <input class="form-input" value="${t.club||''}" style="height:26px;font-size:12px"
+          placeholder="${t.type==='huur-in'?'FC Utrecht':t.type==='huur-uit'?'Helmond Sport':t.type==='transfer-in'?'FC Utrecht':'SC Heerenveen'}"
+          oninput="window._playerTransfers[${realIdx}].club=this.value">
+      </div>`:''}
       <div>
-        <label class="form-label" style="font-size:10px">${isHuur?'Club':'Notitie'}</label>
-        <input class="form-input" value="${t.club||t.note||''}" style="height:26px;font-size:12px"
-          placeholder="${isHuur?'Helmond Sport':'Cluboptie gelicht...'}"
-          oninput="window._playerTransfers[${realIdx}][this.dataset.field]=this.value" data-field="${isHuur?'club':'note'}">
-      </div>
-      <div>
-        <label class="form-label" style="font-size:10px">Van</label>
+        <label class="form-label" style="font-size:10px">${typeDef.hasDates?'Van':'Datum'}</label>
         <input class="form-input" type="date" value="${t.date||''}" style="height:26px;font-size:11px"
           onchange="window._playerTransfers[${realIdx}].date=this.value">
       </div>
-      <div>
+      ${typeDef.hasDates?`<div>
         <label class="form-label" style="font-size:10px">Tot</label>
         <input class="form-input" type="date" value="${t.dateTo||''}" style="height:26px;font-size:11px"
           onchange="window._playerTransfers[${realIdx}].dateTo=this.value">
+      </div>`:''}
+      ${typeDef.hasAmount?`<div>
+        <label class="form-label" style="font-size:10px">Bedrag (opt.)</label>
+        <input class="form-input" type="number" min="0" value="${t.amount||''}" placeholder="0"
+          style="height:26px;font-size:11px"
+          oninput="window._playerTransfers[${realIdx}].amount=parseFloat(this.value)||null">
+      </div>`:''}
+      <div>
+        <label class="form-label" style="font-size:10px">Notitie</label>
+        <input class="form-input" value="${t.note||''}" style="height:26px;font-size:11px"
+          placeholder="Optioneel..."
+          oninput="window._playerTransfers[${realIdx}].note=this.value">
       </div>
-      <button class="icon-btn danger" style="height:26px" onclick="window._playerTransfers.splice(${realIdx},1);renderTransferHistory()">✕</button>
+      <button class="icon-btn danger" style="height:26px;margin-top:16px" onclick="window._playerTransfers.splice(${realIdx},1);renderTransferHistory()">✕</button>
     </div>`;
   }).join('');
 }
 
 function addTransferEntry() {
   if (!window._playerTransfers) window._playerTransfers = [];
-  window._playerTransfers.unshift({type:'transfer-in', club:'', date:'', dateTo:'', note:''});
+  window._playerTransfers.unshift({type:'huur-in', club:'', date:'', dateTo:'', note:'', amount:null});
   renderTransferHistory();
 }
 
