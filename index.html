@@ -419,7 +419,7 @@
             <div><div class="settings-row-label">Cloudflare Worker URL</div><div class="settings-row-desc">Vul in na setup op cloudflare.com — lost CORS probleem op voor GitHub Pages</div></div>
             <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
               <input class="form-input" id="gist-worker-input" placeholder="https://cambuur.jouwnaam.workers.dev" style="width:280px;font-size:12px"
-                oninput="GIST_WORKER_URL=this.value.trim();localStorage.setItem('gist_worker_url',GIST_WORKER_URL);gistUpdateStatus()">
+                oninput="GIST_WORKER_URL=this.value.trim().replace(/\/+$/,'');localStorage.setItem('gist_worker_url',GIST_WORKER_URL);gistUpdateStatus()">
               <div style="font-size:10px;color:var(--text-muted)" id="gist-worker-status"></div>
             </div>
           </div>

@@ -9,8 +9,9 @@ const GIST_FILENAME = 'cambuur_tracker_data.json';
 let GIST_WORKER_URL = localStorage.getItem('gist_worker_url') || '';
 
 function gistApiUrl(gistId) {
-  if (GIST_WORKER_URL) {
-    return gistId ? `${GIST_WORKER_URL}/gist/${gistId}` : `${GIST_WORKER_URL}/gist`;
+  const base = (GIST_WORKER_URL || '').replace(/\/+$/, '');
+  if (base) {
+    return gistId ? `${base}/gist/${gistId}` : `${base}/gist`;
   }
   return gistId ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
 }
