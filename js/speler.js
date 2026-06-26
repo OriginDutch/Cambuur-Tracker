@@ -234,7 +234,7 @@ function renderPlayerPage(id) {
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <div class="card-title" style="margin:0">Transferhistorie</div>
-            <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="openPlayerModal('${id}')">+ Toevoegen</button>
+            <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="openPlayerModal('${id}')">✏️ Bewerken / toevoegen</button>
           </div>
           ${timeline.length?timeline.map(t=>`
             <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border-light)">
