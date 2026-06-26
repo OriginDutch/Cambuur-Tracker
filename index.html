@@ -756,9 +756,12 @@
               <span>Eigen jeugd</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
-              <input type="checkbox" id="player-loan-in" style="accent-color:var(--cambuur-geel)">
+              <input type="checkbox" id="player-loan-in" style="accent-color:var(--cambuur-geel)" onchange="document.getElementById('player-previous-club-wrap').style.display=this.checked?'block':'none'">
               <span>Huurspeler</span>
             </label>
+            <div id="player-previous-club-wrap" style="display:none">
+              <input class="form-input" id="player-previous-club" placeholder="Van club (bijv. FC Utrecht)" style="font-size:12px;margin-top:4px">
+            </div>
           </div>
         </div>
         <!-- Verhuur & Verlengingen -->

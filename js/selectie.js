@@ -28,6 +28,8 @@ function openPlayerModal(editId) {
     document.getElementById('player-free-transfer-in').checked = p.freeTransferIn || false;
     document.getElementById('player-youth-product').checked = p.youthProduct || false;
     document.getElementById('player-loan-in').checked = p.loanIn || false;
+    document.getElementById('player-previous-club').value = p.previousClub || '';
+    document.getElementById('player-previous-club-wrap').style.display = p.loanIn ? 'block' : 'none';
     window._playerTransfers = JSON.parse(JSON.stringify(p.transfers||[]));
     renderTransferHistory();
     switchPlayerModalTab('basis', null);
@@ -60,6 +62,8 @@ function openPlayerModal(editId) {
     document.getElementById('player-free-transfer-in').checked = false;
     document.getElementById('player-youth-product').checked = false;
     document.getElementById('player-loan-in').checked = false;
+    document.getElementById('player-previous-club').value = '';
+    document.getElementById('player-previous-club-wrap').style.display = 'none';
     window._playerTransfers = [];
     renderTransferHistory();
     document.getElementById('player-foot') && (document.getElementById('player-foot').value = '');
@@ -280,6 +284,7 @@ async function savePlayer() {
     freeTransferIn: document.getElementById('player-free-transfer-in').checked,
     youthProduct: document.getElementById('player-youth-product').checked,
     loanIn: document.getElementById('player-loan-in').checked,
+    previousClub: document.getElementById('player-previous-club').value || null,
     transfers: window._playerTransfers || [],
     sellFee: status === 'vertrokken' ? (parseInt(document.getElementById('sf-sell-fee')?.value) || 0) : (existing ? ((S.players||[]).find(p=>p.id===existing)?.sellFee || 0) : 0),
     freeTransferOut: status === 'vertrokken' ? (document.getElementById('sf-free-transfer-out')?.checked || false) : false,
