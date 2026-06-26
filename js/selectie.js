@@ -22,6 +22,7 @@ function openPlayerModal(editId) {
     document.getElementById('player-position').value = p.position || '';
     document.getElementById('player-joined').value = p.joined || '';
     document.getElementById('player-contract').value = p.contract || '';
+    document.getElementById('player-available-from').value = p.availableFrom || '';
     document.getElementById('player-note').value = p.note || '';
     document.getElementById('player-buy-fee').value = p.buyFee || '';
     document.getElementById('player-free-transfer-in').checked = p.freeTransferIn || false;
@@ -52,7 +53,7 @@ function openPlayerModal(editId) {
   } else {
     document.getElementById('modal-player-title').textContent = 'Speler toevoegen';
     ['player-photo','player-firstname','player-lastname','player-number','player-dob',
-     'player-joined','player-contract','player-note','player-buy-fee'].forEach(id => {
+     'player-joined','player-contract','player-available-from','player-note','player-buy-fee'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
     document.getElementById('player-free-transfer-in').checked = false;
@@ -255,6 +256,7 @@ async function savePlayer() {
     subpos: [...selectedSubpos],
     joined: document.getElementById('player-joined').value,
     contract: document.getElementById('player-contract').value,
+    availableFrom: document.getElementById('player-available-from').value || null,
     note: document.getElementById('player-note').value.trim(),
     foot: document.getElementById('player-foot')?.value || '',
     height: parseInt(document.getElementById('player-height')?.value) || null,

@@ -399,12 +399,30 @@ function wpRenderLineup() {
   // Filter players active on match date
   const activePlayers = (S.players||[]).filter(p => {
     if (!matchDate) return true;
-    const joined = p.joined || null;
+
+    // "Beschikbaar voor wedstrijden vanaf" — overschrijft joined voor wedstrijdselectie
+    const availFrom = p.availableFrom || p.joined || null;
     const departed = p.departureDate || null;
     const loanEnd = p.loanFromReturn || null;
     const effectiveDep = departed || loanEnd || null;
-    if (joined && joined > matchDate) return false;
+
+    // Nog niet beschikbaar
+    if (availFrom && availFrom > matchDate) return false;
+    // Al vertrokken of huur afgelopen
     if (effectiveDep && effectiveDep < matchDate) return false;
+
+    // Uitgeleend tijdens deze wedstrijd
+    const activeLoan = (p.transfers||[]).find(t => {
+      if (t.type !== 'huur-uit') return false;
+      const from = t.date || null;
+      const to = t.dateTo || null;
+      if (!from) return false;
+      if (from > matchDate) return false;
+      if (to && to < matchDate) return false;
+      return true;
+    });
+    if (activeLoan) return false;
+
     return true;
   });
 
