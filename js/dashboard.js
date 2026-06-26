@@ -386,10 +386,11 @@ function renderDashboard(){
     ${(()=>{
       const today = new Date();
       const in6m = new Date(today); in6m.setMonth(in6m.getMonth()+6);
+      const effStatus = typeof effectiveStatus === 'function' ? effectiveStatus : (p => p.status || 'actief');
       const expiring = (S.players||[]).filter(p=>{
         if (!p.contract) return false;
         const d = new Date(p.contract);
-        return d >= today && d <= in6m && effectiveStatus(p) === 'actief';
+        return d >= today && d <= in6m && effStatus(p) === 'actief';
       }).sort((a,b)=>new Date(a.contract)-new Date(b.contract));
       if (!expiring.length) return '';
       return `<div class="card">
