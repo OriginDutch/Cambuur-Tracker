@@ -25,42 +25,48 @@ function renderTransferHistory() {
   el.innerHTML = sorted.map((t) => {
     const realIdx = entries.indexOf(t);
     const typeDef = TRANSFER_TYPES.find(x=>x.value===t.type) || TRANSFER_TYPES[0];
-    return `<div style="display:grid;grid-template-columns:130px ${typeDef.hasClub?'1fr ':''}${typeDef.hasDates?'80px 80px ':' 80px '}${typeDef.hasAmount?'90px ':''}28px;gap:5px;align-items:end;margin-bottom:6px">
-      <div>
-        <label class="form-label" style="font-size:10px">Type</label>
-        <select class="form-select" style="height:26px;font-size:11px" onchange="window._playerTransfers[${realIdx}].type=this.value;renderTransferHistory()">
-          ${TRANSFER_TYPES.map(x=>`<option value="${x.value}" ${t.type===x.value?'selected':''}>${x.label}</option>`).join('')}
-        </select>
+    const clubLabel = t.type==='huur-in'?'Van club':t.type==='huur-uit'?'Aan club':t.type==='transfer-in'?'Van club':t.type==='transfer-uit'?'Naar club':null;
+    const clubPlaceholder = t.type==='huur-in'?'FC Utrecht':t.type==='huur-uit'?'Helmond Sport':t.type==='transfer-in'?'FC Utrecht':'SC Heerenveen';
+    return `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border-light)">
+      <!-- Rij 1: Type · Club · Van -->
+      <div style="display:grid;grid-template-columns:130px ${typeDef.hasClub?'1fr ':''} 90px;gap:5px;align-items:end;margin-bottom:4px">
+        <div>
+          <label class="form-label" style="font-size:10px">Type</label>
+          <select class="form-select" style="height:26px;font-size:11px" onchange="window._playerTransfers[${realIdx}].type=this.value;renderTransferHistory()">
+            ${TRANSFER_TYPES.map(x=>`<option value="${x.value}" ${t.type===x.value?'selected':''}>${x.label}</option>`).join('')}
+          </select>
+        </div>
+        ${typeDef.hasClub?`<div>
+          <label class="form-label" style="font-size:10px">${clubLabel}</label>
+          <input class="form-input" value="${t.club||''}" style="height:26px;font-size:12px" placeholder="${clubPlaceholder}"
+            oninput="window._playerTransfers[${realIdx}].club=this.value">
+        </div>`:''}
+        <div>
+          <label class="form-label" style="font-size:10px">${typeDef.hasDates?'Van':'Datum'}</label>
+          <input class="form-input" type="date" value="${t.date||''}" style="height:26px;font-size:11px"
+            onchange="window._playerTransfers[${realIdx}].date=this.value">
+        </div>
       </div>
-      ${typeDef.hasClub?`<div>
-        <label class="form-label" style="font-size:10px">${t.type==='huur-in'?'Van club':t.type==='huur-uit'?'Aan club':t.type==='transfer-in'?'Van club':'Naar club'}</label>
-        <input class="form-input" value="${t.club||''}" style="height:26px;font-size:12px"
-          placeholder="${t.type==='huur-in'?'FC Utrecht':t.type==='huur-uit'?'Helmond Sport':t.type==='transfer-in'?'FC Utrecht':'SC Heerenveen'}"
-          oninput="window._playerTransfers[${realIdx}].club=this.value">
-      </div>`:''}
-      <div>
-        <label class="form-label" style="font-size:10px">${typeDef.hasDates?'Van':'Datum'}</label>
-        <input class="form-input" type="date" value="${t.date||''}" style="height:26px;font-size:11px"
-          onchange="window._playerTransfers[${realIdx}].date=this.value">
+      <!-- Rij 2: Tot · Bedrag · Notitie · Verwijder -->
+      <div style="display:grid;grid-template-columns:${typeDef.hasDates?'90px ':''}${typeDef.hasAmount?'90px ':''}1fr 28px;gap:5px;align-items:end">
+        ${typeDef.hasDates?`<div>
+          <label class="form-label" style="font-size:10px">Tot</label>
+          <input class="form-input" type="date" value="${t.dateTo||''}" style="height:26px;font-size:11px"
+            onchange="window._playerTransfers[${realIdx}].dateTo=this.value">
+        </div>`:''}
+        ${typeDef.hasAmount?`<div>
+          <label class="form-label" style="font-size:10px">Bedrag (opt.)</label>
+          <input class="form-input" type="number" min="0" value="${t.amount||''}" placeholder="0"
+            style="height:26px;font-size:11px"
+            oninput="window._playerTransfers[${realIdx}].amount=parseFloat(this.value)||null">
+        </div>`:''}
+        <div>
+          <label class="form-label" style="font-size:10px">Notitie</label>
+          <input class="form-input" value="${t.note||''}" style="height:26px;font-size:11px" placeholder="Optioneel..."
+            oninput="window._playerTransfers[${realIdx}].note=this.value">
+        </div>
+        <button class="icon-btn danger" style="height:26px;margin-top:16px" onclick="window._playerTransfers.splice(${realIdx},1);renderTransferHistory()">✕</button>
       </div>
-      ${typeDef.hasDates?`<div>
-        <label class="form-label" style="font-size:10px">Tot</label>
-        <input class="form-input" type="date" value="${t.dateTo||''}" style="height:26px;font-size:11px"
-          onchange="window._playerTransfers[${realIdx}].dateTo=this.value">
-      </div>`:''}
-      ${typeDef.hasAmount?`<div>
-        <label class="form-label" style="font-size:10px">Bedrag (opt.)</label>
-        <input class="form-input" type="number" min="0" value="${t.amount||''}" placeholder="0"
-          style="height:26px;font-size:11px"
-          oninput="window._playerTransfers[${realIdx}].amount=parseFloat(this.value)||null">
-      </div>`:''}
-      <div>
-        <label class="form-label" style="font-size:10px">Notitie</label>
-        <input class="form-input" value="${t.note||''}" style="height:26px;font-size:11px"
-          placeholder="Optioneel..."
-          oninput="window._playerTransfers[${realIdx}].note=this.value">
-      </div>
-      <button class="icon-btn danger" style="height:26px;margin-top:16px" onclick="window._playerTransfers.splice(${realIdx},1);renderTransferHistory()">✕</button>
     </div>`;
   }).join('');
 }
