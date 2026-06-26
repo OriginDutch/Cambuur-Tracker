@@ -107,3 +107,128 @@ function effectiveStatusFromTransfers(player, refDate) {
 
   return 'actief';
 }
+
+// ══════════════════════════════════════════════════════
+// TRANSFER MIGRATIE — legacy velden → transfers array
+// ══════════════════════════════════════════════════════
+
+async function migrateTransfers() {
+  // Only run once
+  const done = await dbGet('settings', 'transfers_migrated_v1');
+  if (done?.value) return;
+
+  const players = S.players || [];
+  let migrated = 0;
+
+  for (const p of players) {
+    const existing = p.transfers || [];
+    const newEntries = [];
+
+    // ── Binnenkomst ──
+    if (p.joined) {
+      // Check if we already have a transfer-in or huur-in around the joined date
+      const hasIncoming = existing.some(t =>
+        ['transfer-in','huur-in'].includes(t.type) &&
+        t.date && Math.abs(new Date(t.date) - new Date(p.joined)) < 1000*60*60*24*30
+      );
+      if (!hasIncoming) {
+        if (p.loanIn) {
+          newEntries.push({
+            type: 'huur-in',
+            club: p.previousClub || p.loanFromClub || '',
+            date: p.joined,
+            dateTo: p.loanFromReturn || null,
+            note: '',
+            amount: null,
+          });
+        } else {
+          newEntries.push({
+            type: 'transfer-in',
+            club: p.previousClub || '',
+            date: p.joined,
+            dateTo: null,
+            note: p.freeTransferIn ? 'Vrije transfer' : p.youthProduct ? 'Eigen jeugd' : '',
+            amount: p.buyFee ? parseFloat(p.buyFee) : null,
+          });
+        }
+      }
+    }
+
+    // ── Vertrek ──
+    if (p.departureDate) {
+      const hasDeparture = existing.some(t =>
+        t.type === 'transfer-uit' &&
+        t.date && Math.abs(new Date(t.date) - new Date(p.departureDate)) < 1000*60*60*24*30
+      );
+      if (!hasDeparture) {
+        newEntries.push({
+          type: 'transfer-uit',
+          club: p.departureClub || '',
+          date: p.departureDate,
+          dateTo: null,
+          note: p.freeTransferOut ? 'Vrije transfer' : '',
+          amount: p.sellFee ? parseFloat(p.sellFee) : null,
+        });
+      }
+    }
+
+    // ── Huur-in via loanFromClub (legacy) ──
+    if (p.loanFromClub && !p.loanIn) {
+      const hasLoanIn = existing.some(t => t.type === 'huur-in');
+      if (!hasLoanIn) {
+        newEntries.push({
+          type: 'huur-in',
+          club: p.loanFromClub,
+          date: p.joined || '',
+          dateTo: p.loanFromReturn || null,
+          note: '',
+          amount: null,
+        });
+      }
+    }
+
+    if (newEntries.length) {
+      p.transfers = [...existing, ...newEntries];
+      await dbPut('players', p);
+      migrated++;
+    }
+  }
+
+  // Update S.players in memory
+  S.players = await (async () => { const {dbAll} = window; return dbAll ? dbAll('players') : S.players; })()
+    .catch(() => S.players);
+
+  await saveSetting('transfers_migrated_v1', true);
+  if (migrated > 0) console.log(`Transfer migratie: ${migrated} spelers bijgewerkt`);
+}
+
+// ── Sync legacy player fields into transfers array ──
+// Called on every save — ensures transfers[] stays in sync with profile fields
+function syncLegacyToTransfers(player, existing) {
+  const result = [...existing];
+
+  const hasType = (type, date) => result.some(t =>
+    t.type === type &&
+    (!date || (t.date && Math.abs(new Date(t.date) - new Date(date)) < 1000*60*60*24*32))
+  );
+
+  // Incoming transfer
+  if (player.joined && !hasType('transfer-in', player.joined) && !hasType('huur-in', player.joined)) {
+    if (player.loanIn) {
+      result.push({type:'huur-in', club: player.previousClub||player.loanFromClub||'', date: player.joined, dateTo: player.loanFromReturn||null, note:'', amount:null});
+    } else {
+      result.push({type:'transfer-in', club: player.previousClub||'', date: player.joined, dateTo:null,
+        note: player.freeTransferIn?'Vrije transfer':player.youthProduct?'Eigen jeugd':'',
+        amount: player.buyFee ? parseFloat(player.buyFee) : null});
+    }
+  }
+
+  // Departure
+  if (player.departureDate && !hasType('transfer-uit', player.departureDate)) {
+    result.push({type:'transfer-uit', club: player.departureClub||'', date: player.departureDate, dateTo:null,
+      note: player.freeTransferOut?'Vrije transfer':'',
+      amount: player.sellFee ? parseFloat(player.sellFee) : null});
+  }
+
+  return result.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+}

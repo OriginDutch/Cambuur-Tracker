@@ -49,8 +49,9 @@ async function init(){
   await loadDefaultFormation();
   if (!S.prefs) S.prefs = {};
   applyPrefs();
+  // Migrate legacy transfer fields to transfers array (runs once)
+  await migrateTransfers();
   renderSeasonSelect();renderCompetitionsNav();renderDashboard();renderSeasonsManage();
   if(S.seasons.length===0){initWizard();document.getElementById('setup-overlay').classList.add('open');}
-  // Check for players whose departure date has passed
   setTimeout(checkDepartedPlayers, 800);
 }

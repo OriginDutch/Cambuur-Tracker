@@ -309,57 +309,22 @@ function navigateBack() {
 
 // Build automatic timeline from player fields + manual transfers
 function buildPlayerTimeline(p) {
-  const entries = [];
   const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}) : null;
+  const transfers = [...(p.transfers||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
-  // Transfer in
-  if (p.joined) {
-    let label = 'Transfer in';
-    let note = '';
-    if (p.youthProduct) { label = 'Eigen jeugd'; }
-    else if (p.loanIn) { label = 'Gehuurd van'; note = 'Huurspeler'; }
-    else if (p.freeTransferIn) { note = 'Vrije transfer'; }
-    else if (p.buyFee) { note = formatEuro(p.buyFee); }
-    const icon = p.loanIn ? '⬅️' : '📥';
-    entries.push({icon, label, club: p.previousClub||'', note, date: p.joined, dateStr: fmtDate(p.joined)});
-  }
-
-  // Huurling (ingehuurd)
-  if (p.loanFromClub) {
-    entries.push({icon:'⬅️', label:'Gehuurd van', club: p.loanFromClub, note:'', date: p.joined||'', dateStr: fmtDate(p.joined), dateToStr: fmtDate(p.loanFromReturn)});
-  }
-
-  // Manual entries
-  (p.transfers||[]).forEach(t => {
-    const typeObj = ALL_TRANSFER_TYPES.find(x=>x.value===t.type)||{icon:'•',label:t.type};
+  return transfers.map(t => {
+    const typeDef = ALL_TRANSFER_TYPES.find(x=>x.value===t.type) || {icon:'•', label:t.type};
     const amountNote = t.amount ? formatEuro(t.amount) : '';
-    entries.push({
-      icon: typeObj.icon,
-      label: typeObj.label.replace(/[📥📤➡️⬅️↩️📝]\s*/,''),
-      club: t.club||'',
-      note: [t.note, amountNote].filter(Boolean).join(' · '),
-      date: t.date||'',
+    const notes = [t.note, amountNote].filter(Boolean).join(' · ');
+    const entry = {
+      icon: typeDef.icon,
+      label: typeDef.label.replace(/^[^\w]*/,'').trim(),
+      club: t.club || '',
+      note: notes,
+      date: t.date || '',
       dateStr: fmtDate(t.date),
       dateToStr: fmtDate(t.dateTo),
-    });
-    // Auto return entry for huur-uit
-    if (t.type === 'huur-uit' && t.dateTo) {
-      entries.push({icon:'↩️', label:'Terug van verhuur', club: t.club||'', note:'', date: t.dateTo, dateStr: fmtDate(t.dateTo)});
-    }
-    // Auto end entry for huur-in
-    if (t.type === 'huur-in' && t.dateTo) {
-      entries.push({icon:'🔚', label:'Huur afgelopen', club: t.club||'', note:'', date: t.dateTo, dateStr: fmtDate(t.dateTo)});
-    }
+    };
+    return entry;
   });
-
-  // Transfer uit
-  if (p.departureDate) {
-    let note = '';
-    if (p.freeTransferOut) note = 'Vrije transfer';
-    else if (p.sellFee) note = formatEuro(p.sellFee);
-    entries.push({icon:'📤', label:'Transfer uit', club: p.departureClub||'', note, date: p.departureDate, dateStr: fmtDate(p.departureDate)});
-  }
-
-  // Sort by date descending
-  return entries.sort((a,b) => (b.date||'').localeCompare(a.date||''));
 }

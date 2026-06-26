@@ -291,6 +291,12 @@ async function savePlayer() {
   };
 
   if (!S.players) S.players = [];
+
+  // Sync legacy fields into transfers array
+  const existingTransfers = window._playerTransfers || [];
+  const syncedTransfers = syncLegacyToTransfers(player, existingTransfers);
+  player.transfers = syncedTransfers;
+
   await dbPut('players', player);
   if (existing) {
     const idx = S.players.findIndex(p => p.id === existing);
