@@ -29,7 +29,7 @@ function renderTransferHistory() {
     const clubPlaceholder = t.type==='huur-in'?'FC Utrecht':t.type==='huur-uit'?'Helmond Sport':t.type==='transfer-in'?'FC Utrecht':'SC Heerenveen';
     return `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border-light)">
       <!-- Rij 1: Type · Club · Van -->
-      <div style="display:grid;grid-template-columns:130px ${typeDef.hasClub?'1fr ':''} 90px;gap:5px;align-items:end;margin-bottom:4px">
+      <div style="display:grid;grid-template-columns:130px ${typeDef.hasClub?'1fr ':''} 120px;gap:5px;align-items:end;margin-bottom:4px">
         <div>
           <label class="form-label" style="font-size:10px">Type</label>
           <select class="form-select" style="height:26px;font-size:11px" onchange="window._playerTransfers[${realIdx}].type=this.value;renderTransferHistory()">
@@ -48,7 +48,7 @@ function renderTransferHistory() {
         </div>
       </div>
       <!-- Rij 2: Tot · Bedrag · Notitie · Verwijder -->
-      <div style="display:grid;grid-template-columns:${typeDef.hasDates?'90px ':''}${typeDef.hasAmount?'90px ':''}1fr 28px;gap:5px;align-items:end">
+      <div style="display:grid;grid-template-columns:${typeDef.hasDates?'120px ':''}${typeDef.hasAmount?'100px ':''}1fr 28px;gap:5px;align-items:end">
         ${typeDef.hasDates?`<div>
           <label class="form-label" style="font-size:10px">Tot</label>
           <input class="form-input" type="date" value="${t.dateTo||''}" style="height:26px;font-size:11px"
