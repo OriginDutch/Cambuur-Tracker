@@ -817,9 +817,10 @@ function playerCard(p, effStatus) {
   const loanBadge = ''; // removed: statusBadge already shows huurder status
   const isLeaving = effStatus === 'vertrekt';
 
-  // Club duration
+  // Club duration — end: departureDate → expired contract → today
   const clubStart = p.joined || null;
-  const clubEnd = p.departureDate || p.contract || null;
+  const _today = new Date().toISOString().split('T')[0];
+  const clubEnd = p.departureDate || (p.contract && p.contract < _today ? p.contract : null);
   const clubDur = (() => {
     if (!clubStart) return null;
     const from = new Date(clubStart);
@@ -1018,24 +1019,19 @@ function renderArchief() {
     return;
   }
 
-  // Helper: seasons a player was active in
+  // Helper: seasons a player was at the club (date-based, not match-based)
   const playerSeasons = p => {
+    const today = new Date().toISOString().split('T')[0];
+    const joined = p.joined || null;
+    const dep = p.departureDate || null;
+    const effectiveEnd = dep || (p.contract && p.contract < today ? p.contract : null);
     return (S.seasons||[]).filter(s => {
       if (s.hidden) return false;
       const r = getSeasonDateRange(s);
       if (!r) return false;
-      const joined = p.joined || null;
-      const dep = p.departureDate || p.contract || null;
       if (joined && joined > r.end) return false;
-      if (dep && dep < r.start) return false;
-      // Must have played at least one match
-      const cam = S.clubs.find(c=>c.isOwnClub);
-      if (!cam) return true;
-      return (S.matches||[]).some(m =>
-        m.played && m.date >= r.start && m.date <= r.end &&
-        (m.homeClubId===cam.id||m.awayClubId===cam.id) &&
-        ((m.lineup||[]).includes(p.id)||(m.events||[]).some(e=>e.type==='sub'&&e.playerInId===p.id))
-      );
+      if (effectiveEnd && effectiveEnd < r.start) return false;
+      return true;
     }).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   };
 
@@ -1048,26 +1044,28 @@ function renderArchief() {
 
   // Helper: total career stats at club
   const careerStats = p => {
-    const allStats = (S.seasons||[]).reduce((acc, s) => {
+    return (S.seasons||[]).reduce((acc, s) => {
       const st = calcPlayerStats(p.id, s.id, null);
       acc.appearances += st.appearances||0;
       acc.goals += st.goals||0;
       acc.assists += st.assists||0;
       return acc;
     }, {appearances:0, goals:0, assists:0});
-    return allStats;
   };
 
   // Helper: duration at club
+  // End: departureDate → expired contract → today (for active players)
   const clubDuration = p => {
     const start = p.joined || null;
-    const end = p.departureDate || p.contract || null;
     if (!start) return '—';
+    const today = new Date().toISOString().split('T')[0];
+    const end = p.departureDate || (p.contract && p.contract < today ? p.contract : null);
     const from = new Date(start);
     const to = end ? new Date(end) : new Date();
     let years = to.getFullYear() - from.getFullYear();
     let months = to.getMonth() - from.getMonth();
     if (months < 0) { years--; months += 12; }
+    if (years === 0 && months === 0) return '< 1 mnd';
     if (years === 0) return `${months} mnd`;
     if (months === 0) return `${years} jr`;
     return `${years} jr ${months} mnd`;
