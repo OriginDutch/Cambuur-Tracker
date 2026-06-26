@@ -7,6 +7,11 @@
 // Seizoen start 1 augustus van het startjaar, eindigt 31 juli volgend jaar
 function getSeasonDateRange(season) {
   if (!season) return null;
+  // Als een string (ID) wordt meegegeven, zoek het seizoensobject op
+  if (typeof season === 'string') {
+    season = (S?.seasons||[]).find(s => s.id === season) || null;
+    if (!season) return null;
+  }
   // Gebruik expliciete datums als die er zijn
   if (season.startDate && season.endDate) {
     return { start: season.startDate, end: season.endDate };
@@ -33,9 +38,11 @@ function isPlayerInSeason(player, season) {
 
   const joined   = player.joined        || null;
   const departed = player.departureDate || null;
-  // Huurlingen: gebruik loanFromReturn als effectieve einddatum als departureDate ontbreekt
   const loanEnd  = player.loanFromReturn || null;
-  const effectiveDeparture = departed || loanEnd || null;
+  // Als geen expliciete vertrekdatum maar wel een verlopen contract, gebruik contractdatum
+  const contractEnd = player.contract || null;
+  const effectiveDeparture = departed || loanEnd ||
+    (contractEnd && contractEnd < range.start ? contractEnd : null);
 
   // Geen joined datum → toon in alle seizoenen tenzij al vertrokken voor dit seizoen
   if (!joined) {
