@@ -150,6 +150,7 @@ function renderMatchRow(m, comp) {
   ) ? `<div title="Ontbrekende data" style="width:7px;height:7px;border-radius:50%;background:var(--loss);flex-shrink:0;margin-left:2px"></div>` : '';
 
   return `<div class="match-row ${isCam?'cambuur-match':''} ${isRival&&isCam?'rival-match':''}"
+    data-match-id="${m.id}"
     style="${isRival&&isCam?'border-left:2px solid var(--heerenveen-rood)':''}"
     onclick="navigateToMatch('${m.id}')">
     <div class="match-date">${dateStr}${m.time&&!m.played?' '+m.time:''}</div>

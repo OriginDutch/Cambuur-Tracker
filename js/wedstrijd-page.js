@@ -19,6 +19,24 @@ function wpBack() {
   if (m) {
     const nav = document.querySelector(`.nav-item[data-comp="${m.competitionId}"]`);
     if (nav) { nav.classList.add('active'); document.getElementById('topbar-title').textContent = S.competitions.find(c=>c.id===m.competitionId)?.name||''; }
+    // Only re-render the specific match row, not the whole page
+    _refreshMatchRow(m.id);
+  }
+}
+
+// Refresh only the single match row in the competition view
+function _refreshMatchRow(matchId) {
+  const m = (S.matches||[]).find(x=>x.id===matchId);
+  if (!m) return;
+  // Find the existing match row and replace it
+  const existing = document.querySelector(`.match-row[data-match-id="${matchId}"]`);
+  if (existing) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = renderMatchRow(m);
+    const newRow = tmp.firstElementChild;
+    if (newRow) existing.replaceWith(newRow);
+  } else {
+    // Fallback: full re-render
     renderCompDetail(m.competitionId);
   }
 }
@@ -811,8 +829,9 @@ async function wpSave() {
 
   await dbPut('matches',m);
   window._playerStats = calcAllPlayerStats(S.currentSeason);
-  showToast('Wedstrijd opgeslagen','success');
-  wpBack();
+  showToast('Wedstrijd opgeslagen ✓','success');
+  // Update the match row in the background without navigating away
+  _refreshMatchRow(m.id);
 }
 
 
