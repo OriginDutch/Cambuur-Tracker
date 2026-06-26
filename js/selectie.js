@@ -816,6 +816,22 @@ function playerCard(p, effStatus) {
   const nameLine = `${p.firstname ? p.firstname[0]+'.\u00a0' : ''}${p.lastname}`;
   const loanBadge = ''; // removed: statusBadge already shows huurder status
   const isLeaving = effStatus === 'vertrekt';
+
+  // Club duration
+  const clubStart = p.joined || null;
+  const clubEnd = p.departureDate || p.contract || null;
+  const clubDur = (() => {
+    if (!clubStart) return null;
+    const from = new Date(clubStart);
+    const to = clubEnd ? new Date(clubEnd) : new Date();
+    let years = to.getFullYear() - from.getFullYear();
+    let months = to.getMonth() - from.getMonth();
+    if (months < 0) { years--; months += 12; }
+    if (years === 0 && months === 0) return '< 1 mnd';
+    if (years === 0) return `${months} mnd`;
+    if (months === 0) return `${years} jr`;
+    return `${years} jr ${months} mnd`;
+  })();
   return `<div class="player-card${isLeaving ? ' player-card-leaving' : ''}" data-player-id="${p.id}" onclick="navigateToPlayer('${p.id}')" onmouseenter="playerHoverShow(event,'${p.id}')" onmouseleave="playerHoverHide()">
     <div class="player-card-top">
       ${av}
@@ -855,6 +871,11 @@ function playerCard(p, effStatus) {
         <div class="player-card-stat-val">${window._playerStats?.[p.id]?.assists??'—'}</div>
         <div class="player-card-stat-lbl">Assists</div>
       </div>
+      ${clubDur?`<div style="width:1px;background:var(--border-light);margin:0 4px"></div>
+      <div class="player-card-stat">
+        <div class="player-card-stat-val" style="font-size:11px">${clubDur}</div>
+        <div class="player-card-stat-lbl">Bij club</div>
+      </div>`:''}
     </div>
   </div>`;
 }
@@ -997,18 +1018,81 @@ function renderArchief() {
     return;
   }
 
+  // Helper: seasons a player was active in
+  const playerSeasons = p => {
+    return (S.seasons||[]).filter(s => {
+      if (s.hidden) return false;
+      const r = getSeasonDateRange(s);
+      if (!r) return false;
+      const joined = p.joined || null;
+      const dep = p.departureDate || p.contract || null;
+      if (joined && joined > r.end) return false;
+      if (dep && dep < r.start) return false;
+      // Must have played at least one match
+      const cam = S.clubs.find(c=>c.isOwnClub);
+      if (!cam) return true;
+      return (S.matches||[]).some(m =>
+        m.played && m.date >= r.start && m.date <= r.end &&
+        (m.homeClubId===cam.id||m.awayClubId===cam.id) &&
+        ((m.lineup||[]).includes(p.id)||(m.events||[]).some(e=>e.type==='sub'&&e.playerInId===p.id))
+      );
+    }).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  };
+
+  // Helper: season range string "2015/16 – 2025/26 (10 seizoenen)"
+  const seasonRangeStr = seasons => {
+    if (!seasons.length) return '—';
+    if (seasons.length === 1) return `${seasons[0].name} (1 seizoen)`;
+    return `${seasons[0].name} – ${seasons[seasons.length-1].name} (${seasons.length} seizoenen)`;
+  };
+
+  // Helper: total career stats at club
+  const careerStats = p => {
+    const allStats = (S.seasons||[]).reduce((acc, s) => {
+      const st = calcPlayerStats(p.id, s.id, null);
+      acc.appearances += st.appearances||0;
+      acc.goals += st.goals||0;
+      acc.assists += st.assists||0;
+      return acc;
+    }, {appearances:0, goals:0, assists:0});
+    return allStats;
+  };
+
+  // Helper: duration at club
+  const clubDuration = p => {
+    const start = p.joined || null;
+    const end = p.departureDate || p.contract || null;
+    if (!start) return '—';
+    const from = new Date(start);
+    const to = end ? new Date(end) : new Date();
+    let years = to.getFullYear() - from.getFullYear();
+    let months = to.getMonth() - from.getMonth();
+    if (months < 0) { years--; months += 12; }
+    if (years === 0) return `${months} mnd`;
+    if (months === 0) return `${years} jr`;
+    return `${years} jr ${months} mnd`;
+  };
+
   document.getElementById('archief-content').innerHTML = tfHtml +
     `<table class="data-table"><thead><tr>
-      <th>Speler</th><th>Positie</th><th>Status</th><th>In dienst</th><th>Vertrek/Uitleenclub</th><th>Aankoop</th><th>Verkoop</th><th></th>
+      <th>Speler</th><th>Positie</th><th>Status</th><th>Seizoenen</th><th>Totaal</th><th>Duur</th><th>Aankoop</th><th>Verkoop</th><th></th>
     </tr></thead><tbody>${archived.map(p=>{
       const gl = goneLabel(p);
       const depDate = p.departureDate||p.contract||'';
+      const seasons = playerSeasons(p);
+      const stats = careerStats(p);
       return `<tr style="cursor:pointer" onclick="navigateToPlayer('${p.id}')">
         <td><div style="display:flex;align-items:center;gap:8px">${playerAvatarHTML(p,'player-avatar',28)}<strong>${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</strong></div></td>
-        <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.subpos?.length?p.subpos.join(', '):p.position}">${p.subpos?.length?p.subpos[0]:p.position}</td>
+        <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.subpos?.length?p.subpos[0]:p.position||'—'}</td>
         <td><span class="badge ${gl.cls}">${gl.label}</span>${depDate?` <span style="font-size:10px;color:var(--text-muted)">${new Date(depDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})}</span>`:''}</td>
-        <td class="text-secondary" style="font-size:11px">${p.joined?new Date(p.joined).toLocaleDateString('nl-NL',{year:'numeric',month:'short'}):'—'}</td>
-        <td class="text-secondary" style="font-size:11px">${p.departureClub||p.loanClub||'—'}</td>
+        <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap">${seasonRangeStr(seasons)}</td>
+        <td style="font-size:12px;white-space:nowrap">
+          ${stats.appearances?`<span>${stats.appearances}W</span> `:''}
+          ${stats.goals?`<span style="color:var(--cambuur-geel)">⚽${stats.goals}</span> `:''}
+          ${stats.assists?`<span>🎯${stats.assists}</span>`:''}
+          ${!stats.appearances?'<span class="text-muted">—</span>':''}
+        </td>
+        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${clubDuration(p)}</td>
         <td class="text-secondary" style="font-size:11px">${p.youthProduct?'Jeugd':p.freeTransferIn?'Vrije transfer':p.buyFee?formatEuro(p.buyFee):'—'}</td>
         <td class="text-secondary" style="font-size:11px">${p.freeTransferOut?'Vrije transfer':p.sellFee?formatEuro(p.sellFee):'—'}</td>
         <td><div class="action-btns"><button class="icon-btn" onclick="event.stopPropagation();openPlayerModal('${p.id}')">✏️</button></div></td>
