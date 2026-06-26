@@ -317,9 +317,11 @@ function buildPlayerTimeline(p) {
     let label = 'Transfer in';
     let note = '';
     if (p.youthProduct) { label = 'Eigen jeugd'; }
+    else if (p.loanIn) { label = 'Gehuurd van'; note = 'Huurspeler'; }
     else if (p.freeTransferIn) { note = 'Vrije transfer'; }
     else if (p.buyFee) { note = formatEuro(p.buyFee); }
-    entries.push({icon:'📥', label, club: p.previousClub||'', note, date: p.joined, dateStr: fmtDate(p.joined)});
+    const icon = p.loanIn ? '⬅️' : '📥';
+    entries.push({icon, label, club: p.previousClub||'', note, date: p.joined, dateStr: fmtDate(p.joined)});
   }
 
   // Huurling (ingehuurd)

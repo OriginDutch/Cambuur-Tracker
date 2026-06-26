@@ -27,6 +27,7 @@ function openPlayerModal(editId) {
     document.getElementById('player-buy-fee').value = p.buyFee || '';
     document.getElementById('player-free-transfer-in').checked = p.freeTransferIn || false;
     document.getElementById('player-youth-product').checked = p.youthProduct || false;
+    document.getElementById('player-loan-in').checked = p.loanIn || false;
     window._playerTransfers = JSON.parse(JSON.stringify(p.transfers||[]));
     renderTransferHistory();
     switchPlayerModalTab('basis', null);
@@ -58,6 +59,7 @@ function openPlayerModal(editId) {
     });
     document.getElementById('player-free-transfer-in').checked = false;
     document.getElementById('player-youth-product').checked = false;
+    document.getElementById('player-loan-in').checked = false;
     window._playerTransfers = [];
     renderTransferHistory();
     document.getElementById('player-foot') && (document.getElementById('player-foot').value = '');
@@ -277,6 +279,7 @@ async function savePlayer() {
     buyFee: parseInt(document.getElementById('player-buy-fee').value) || 0,
     freeTransferIn: document.getElementById('player-free-transfer-in').checked,
     youthProduct: document.getElementById('player-youth-product').checked,
+    loanIn: document.getElementById('player-loan-in').checked,
     transfers: window._playerTransfers || [],
     sellFee: status === 'vertrokken' ? (parseInt(document.getElementById('sf-sell-fee')?.value) || 0) : (existing ? ((S.players||[]).find(p=>p.id===existing)?.sellFee || 0) : 0),
     freeTransferOut: status === 'vertrokken' ? (document.getElementById('sf-free-transfer-out')?.checked || false) : false,
@@ -825,6 +828,7 @@ function playerCard(p, effStatus) {
     if (!clubStart) return null;
     const from = new Date(clubStart);
     const to = clubEnd ? new Date(clubEnd) : new Date();
+    if (from > to) return null; // joined in future
     let years = to.getFullYear() - from.getFullYear();
     let months = to.getMonth() - from.getMonth();
     if (months < 0) { years--; months += 12; }
@@ -872,11 +876,7 @@ function playerCard(p, effStatus) {
         <div class="player-card-stat-val">${window._playerStats?.[p.id]?.assists??'—'}</div>
         <div class="player-card-stat-lbl">Assists</div>
       </div>
-      ${clubDur?`<div style="width:1px;background:var(--border-light);margin:0 4px"></div>
-      <div class="player-card-stat">
-        <div class="player-card-stat-val" style="font-size:11px">${clubDur}</div>
-        <div class="player-card-stat-lbl">Bij club</div>
-      </div>`:''}
+
     </div>
   </div>`;
 }
@@ -1062,6 +1062,7 @@ function renderArchief() {
     const end = p.departureDate || (p.contract && p.contract < today ? p.contract : null);
     const from = new Date(start);
     const to = end ? new Date(end) : new Date();
+    if (from > to) return '—'; // joined in future
     let years = to.getFullYear() - from.getFullYear();
     let months = to.getMonth() - from.getMonth();
     if (months < 0) { years--; months += 12; }
@@ -1091,7 +1092,7 @@ function renderArchief() {
           ${!stats.appearances?'<span class="text-muted">—</span>':''}
         </td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${clubDuration(p)}</td>
-        <td class="text-secondary" style="font-size:11px">${p.youthProduct?'Jeugd':p.freeTransferIn?'Vrije transfer':p.buyFee?formatEuro(p.buyFee):'—'}</td>
+        <td class="text-secondary" style="font-size:11px">${p.youthProduct?'Jeugd':p.loanIn?'Huurspeler':p.freeTransferIn?'Vrije transfer':p.buyFee?formatEuro(p.buyFee):'—'}</td>
         <td class="text-secondary" style="font-size:11px">${p.freeTransferOut?'Vrije transfer':p.sellFee?formatEuro(p.sellFee):'—'}</td>
         <td><div class="action-btns"><button class="icon-btn" onclick="event.stopPropagation();openPlayerModal('${p.id}')">✏️</button></div></td>
       </tr>`;
