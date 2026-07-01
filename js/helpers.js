@@ -30,6 +30,21 @@ function getSeasonDateRange(season) {
   };
 }
 
+// Sorteert een array van seizoenen: eerst op handmatige sortOrder,
+// anders op jaartal (uit naam of year-veld), nieuwste eerst.
+// Muteert de array in-place (zoals Array.sort) en geeft 'm ook terug.
+function sortSeasons(seasons) {
+  seasons.sort((a,b) => {
+    if (a.sortOrder!=null && b.sortOrder!=null) return a.sortOrder-b.sortOrder;
+    if (a.sortOrder!=null) return -1;
+    if (b.sortOrder!=null) return 1;
+    const ay = parseInt(a.name?.match(/^(\d{4})/)?.[1] || a.year || 0);
+    const by = parseInt(b.name?.match(/^(\d{4})/)?.[1] || b.year || 0);
+    return by-ay;
+  });
+  return seasons;
+}
+
 // Geeft true als speler actief was tijdens het opgegeven seizoen
 function isPlayerInSeason(player, season) {
   if (!season) return true;

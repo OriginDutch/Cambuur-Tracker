@@ -124,7 +124,7 @@ async function swFinish(){
   await dbPut('competitions',{id:compId,name:compName,type:compType,seasonId,clubIds,rounds,created:Date.now()});
   S.competitions.push({id:compId,name:compName,type:compType,seasonId,clubIds,rounds,created:Date.now()});
 
-  S.seasons.sort((a,b)=>{ if(a.sortOrder!=null&&b.sortOrder!=null)return a.sortOrder-b.sortOrder; if(a.sortOrder!=null)return -1; if(b.sortOrder!=null)return 1; const ay=parseInt(a.name?.match(/^(\d{4})/)?.[1]||a.year||0); const by=parseInt(b.name?.match(/^(\d{4})/)?.[1]||b.year||0); return by-ay; });
+  sortSeasons(S.seasons);
   renderSeasonSelect();renderCompetitionsNav();renderDashboard();renderSeasonsManage();
   document.getElementById('setup-overlay').classList.remove('open');
   showToast('Welkom bij Cambuur Tracker! 🎉','success');

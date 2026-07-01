@@ -148,6 +148,17 @@ function dbRunQuery() {
   try {
     const isWrite = /^(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)/i.test(sql);
 
+    // Destructieve queries (DELETE/DROP/ALTER) altijd expliciet laten bevestigen —
+    // dit schrijft direct terug naar IndexedDB, dus geen "undo" achteraf.
+    const isDestructive = /^(DELETE|DROP|ALTER)/i.test(sql);
+    if (isDestructive) {
+      const ok = confirm(`Let op: dit is een destructieve query en kan niet ongedaan gemaakt worden.\n\n${sql}\n\nWeet je het zeker?`);
+      if (!ok) {
+        document.getElementById('db-result-info').textContent = 'Query geannuleerd.';
+        return;
+      }
+    }
+
     // Auto-replace *_NEW placeholder IDs with unique timestamp-based IDs
     if (/INSERT/i.test(sql) && sql.includes('_NEW')) {
       let counter = 0;

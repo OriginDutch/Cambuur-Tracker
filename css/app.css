@@ -338,7 +338,7 @@
   .round-meta{font-size:11px;color:var(--text-muted);}
   .round-chevron{font-size:10px;color:var(--text-muted);transition:transform 0.2s;}
   .round-header.open .round-chevron{transform:rotate(180deg);}
-  .round-body{display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);overflow:hidden;}
+  .round-body{display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);overflow:visible;}
   .round-body.open{display:block;}
 
   .match-row{display:grid;grid-template-columns:90px 1fr 60px 1fr 70px;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border-light);font-size:12px;transition:background 0.1s;}
@@ -405,10 +405,11 @@
     left: 50%; top: calc(100% + 4px); transform: translateX(-50%);
     background: var(--bg-modal); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 10px 14px;
-    min-width: 200px; max-width: 320px; z-index: 200;
+    min-width: 200px; max-width: 320px; z-index: 9000;
     box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     pointer-events: none; font-size: 12px; line-height: 1.7;
   }
+  .match-row { position: relative; overflow: visible; }
   .match-row:hover .match-tooltip { display: block; }
   .wp-sticky { position: sticky; top: 0; z-index: 50; background: var(--bg-primary); padding: 10px 0 8px; border-bottom: 1px solid var(--border); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
   .wp-section { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; }

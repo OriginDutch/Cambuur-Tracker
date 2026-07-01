@@ -373,8 +373,30 @@ function wpSortedPlayers(players, onlyStarters, onlyBench) {
 }
 
 function wpPlayerOpts(excludeId, selectedId, onlyStarters, onlyBench, groupFirst) {
-  // groupFirst: position group to show first (e.g. 'Aanvaller')
-  const all = S.players||[];
+  const m = (S.matches||[]).find(x=>x.id===wpCurrentId);
+  const matchDate = m?.date || null;
+
+  // Filter on match date — same logic as lineup
+  const all = (S.players||[]).filter(p => {
+    if (!matchDate) return true;
+    const availFrom = p.availableFrom || p.joined || null;
+    const departed = p.departureDate || null;
+    const loanEnd = p.loanFromReturn || null;
+    const effectiveDep = departed || loanEnd || null;
+    if (availFrom && availFrom > matchDate) return false;
+    if (effectiveDep && effectiveDep < matchDate) return false;
+    const activeLoan = (p.transfers||[]).find(t => {
+      if (t.type !== 'huur-uit') return false;
+      const from = t.date || null;
+      const to = t.dateTo || null;
+      if (!from || from > matchDate) return false;
+      if (to && to < matchDate) return false;
+      return true;
+    });
+    if (activeLoan) return false;
+    return true;
+  });
+
   let pool = wpSortedPlayers(all, onlyStarters, onlyBench).filter(p=>p.id!==excludeId);
 
   if (groupFirst) {
@@ -383,7 +405,6 @@ function wpPlayerOpts(excludeId, selectedId, onlyStarters, onlyBench, groupFirst
     pool = [...inGroup, ...outGroup];
   }
 
-  const fallback = !onlyStarters && !onlyBench && pool.length===0;
   return '<option value="">— Speler —</option>' + pool.map(p=>
     `<option value="${p.id}" ${p.id===selectedId?'selected':''}>${p.number?'#'+p.number+' ':''}${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</option>`
   ).join('');
