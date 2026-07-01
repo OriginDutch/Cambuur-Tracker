@@ -359,6 +359,12 @@ async function exportData(){
   const a=document.createElement('a');a.href=url;a.download=`cambuur_${new Date().toISOString().split('T')[0]}.json`;a.click();URL.revokeObjectURL(url);
   showToast('Gegevens geëxporteerd','success');
 }
+// ⚠️ LET OP — er is ook importDataObj() in gist.js. Dat is GEEN duplicaat
+// dat je zomaar kunt samenvoegen: importData() hieronder is een "vervang
+// alles"-restore vanaf een JSON-bestand (wist eerst seasons/clubs/stadiums/
+// competitions), terwijl importDataObj() een "merge"-import is voor Gist-sync
+// (wist niets vooraf). Bij wijzigen: check of beide functies nog het juiste
+// gedrag hebben voor hún eigen use-case — niet automatisch synchroniseren.
 async function importData(e){
   const file=e.target.files[0];if(!file)return;
   try{
@@ -372,7 +378,7 @@ async function importData(e){
     if(data.players){for(const p of data.players)await dbPut('players',p);S.players=data.players;}
     if(data.matches){for(const m of data.matches)await dbPut('matches',m);S.matches=data.matches;}
     if(data.coaches){for(const c of data.coaches)await dbPut('coaches',c);S.coaches=data.coaches||[];}
-    S.seasons.sort((a,b)=>{ if(a.sortOrder!=null&&b.sortOrder!=null)return a.sortOrder-b.sortOrder; if(a.sortOrder!=null)return -1; if(b.sortOrder!=null)return 1; const ay=parseInt(a.name?.match(/^(\d{4})/)?.[1]||a.year||0); const by=parseInt(b.name?.match(/^(\d{4})/)?.[1]||b.year||0); return by-ay; });
+    sortSeasons(S.seasons);
     // Always activate the first (most recent) imported season
     if(S.seasons.length>0){
       S.currentSeason=S.seasons[0].id;

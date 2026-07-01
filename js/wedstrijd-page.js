@@ -376,26 +376,8 @@ function wpPlayerOpts(excludeId, selectedId, onlyStarters, onlyBench, groupFirst
   const m = (S.matches||[]).find(x=>x.id===wpCurrentId);
   const matchDate = m?.date || null;
 
-  // Filter on match date — same logic as lineup
-  const all = (S.players||[]).filter(p => {
-    if (!matchDate) return true;
-    const availFrom = p.availableFrom || p.joined || null;
-    const departed = p.departureDate || null;
-    const loanEnd = p.loanFromReturn || null;
-    const effectiveDep = departed || loanEnd || null;
-    if (availFrom && availFrom > matchDate) return false;
-    if (effectiveDep && effectiveDep < matchDate) return false;
-    const activeLoan = (p.transfers||[]).find(t => {
-      if (t.type !== 'huur-uit') return false;
-      const from = t.date || null;
-      const to = t.dateTo || null;
-      if (!from || from > matchDate) return false;
-      if (to && to < matchDate) return false;
-      return true;
-    });
-    if (activeLoan) return false;
-    return true;
-  });
+  // Filter op wedstrijddatum — zelfde logica als isPlayerAvailableOn() in helpers.js
+  const all = (S.players||[]).filter(p => isPlayerAvailableOn(p, matchDate));
 
   let pool = wpSortedPlayers(all, onlyStarters, onlyBench).filter(p=>p.id!==excludeId);
 
@@ -417,35 +399,8 @@ function wpRenderLineup() {
   const m = (S.matches||[]).find(x=>x.id===wpCurrentId);
   const matchDate = m?.date || null;
 
-  // Filter players active on match date
-  const activePlayers = (S.players||[]).filter(p => {
-    if (!matchDate) return true;
-
-    // "Beschikbaar voor wedstrijden vanaf" — overschrijft joined voor wedstrijdselectie
-    const availFrom = p.availableFrom || p.joined || null;
-    const departed = p.departureDate || null;
-    const loanEnd = p.loanFromReturn || null;
-    const effectiveDep = departed || loanEnd || null;
-
-    // Nog niet beschikbaar
-    if (availFrom && availFrom > matchDate) return false;
-    // Al vertrokken of huur afgelopen
-    if (effectiveDep && effectiveDep < matchDate) return false;
-
-    // Uitgeleend tijdens deze wedstrijd
-    const activeLoan = (p.transfers||[]).find(t => {
-      if (t.type !== 'huur-uit') return false;
-      const from = t.date || null;
-      const to = t.dateTo || null;
-      if (!from) return false;
-      if (from > matchDate) return false;
-      if (to && to < matchDate) return false;
-      return true;
-    });
-    if (activeLoan) return false;
-
-    return true;
-  });
+  // Filter players active on match date — zelfde logica als isPlayerAvailableOn() in helpers.js
+  const activePlayers = (S.players||[]).filter(p => isPlayerAvailableOn(p, matchDate));
 
   // Remove any starters who are no longer in the active player list
   const activeIds = new Set(activePlayers.map(p => p.id));

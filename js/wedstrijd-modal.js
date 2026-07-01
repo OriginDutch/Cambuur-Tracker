@@ -32,7 +32,7 @@ function openMatchModal(matchId) {
 
 
   // Populate player selects
-  const players = (S.players||[]).filter(p=>!['vertrokken','uitgeleend'].includes(p.status));
+  const players = (S.players||[]).filter(p => isPlayerAvailableOn(p, m?.date || null));
   const playerOpts = `<option value="">— Speler —</option>` + players.map(p=>`<option value="${p.id}">${p.number?'#'+p.number+' ':''}${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</option>`).join('');
   ['mm-motm'].forEach(id => {
     const sel = document.getElementById(id);
@@ -55,7 +55,8 @@ function openMatchModal(matchId) {
 
 function renderGoalsList() {
   const wrap = document.getElementById('mm-goals-list');
-  const players = (S.players||[]).filter(p=>!['vertrokken','uitgeleend'].includes(p.status));
+  const mForDate = (S.matches||[]).find(x=>x.id===currentMatchId);
+  const players = (S.players||[]).filter(p => isPlayerAvailableOn(p, mForDate?.date || null));
   const pOpts = window._matchPlayerOpts || '';
   const oppName = window._matchOppName || 'Tegenstander';
 
@@ -144,7 +145,8 @@ function recalcScore() {
 
 function renderCardsList() {
   const wrap = document.getElementById('mm-cards-list');
-  const players = (S.players||[]).filter(p=>!['vertrokken','uitgeleend'].includes(p.status));
+  const mForDate = (S.matches||[]).find(x=>x.id===currentMatchId);
+  const players = (S.players||[]).filter(p => isPlayerAvailableOn(p, mForDate?.date || null));
   wrap.innerHTML = matchCards.map((c,i) => `
     <div class="card-entry">
       <input class="form-input" value="${c.minute||''}" placeholder="Min" type="number" min="1" max="120" oninput="matchCards[${i}].minute=parseInt(this.value)||null" style="font-size:12px;padding:5px 6px;height:32px">
@@ -161,41 +163,10 @@ function renderCardsList() {
     </div>`).join('') || '<p class="text-muted" style="font-size:11px;padding:4px 0">Nog geen kaarten.</p>';
 }
 
-function renderSubsList() {
-  const wrap = document.getElementById('mm-subs-list');
-  if (!wrap) return;
-  const players = (S.players||[]).filter(p=>!['vertrokken','uitgeleend'].includes(p.status));
-  // Sort ATT→MID→DEF→GK
-  const groupOrder = {ATT:0,MID:1,DEF:2,GK:3,OTHER:4};
-  const sorted = [...players].sort((a,b)=>{
-    const ag=groupOrder[getPosGroup(a.subpos?.[0]||a.position||'')]??4;
-    const bg=groupOrder[getPosGroup(b.subpos?.[0]||b.position||'')]??4;
-    return ag-bg || (a.number||99)-(b.number||99);
-  });
-
-  const playerOpts = (excludeId, selectedId) => sorted.map(p => {
-    const disabled = p.id === excludeId ? 'disabled style="opacity:0.4"' : '';
-    const sel = p.id === selectedId ? 'selected' : '';
-    const subp = p.subpos?.[0]||p.position||'';
-    return `<option value="${p.id}" ${sel} ${disabled}>${p.number?'#'+p.number+' ':''}${p.firstname?p.firstname[0]+'. ':''}${p.lastname} — ${subp}</option>`;
-  }).join('');
-
-  wrap.innerHTML = matchSubs.map((s,i) => `
-    <div class="sub-entry">
-      <input class="form-input" value="${s.minute||''}" placeholder="Min" type="number" min="1" max="120"
-        oninput="matchSubs[${i}].minute=parseInt(this.value)||null"
-        style="font-size:12px;padding:5px 6px;height:32px">
-      <select class="form-select" onchange="matchSubs[${i}].playerOutId=this.value;renderSubsList()" style="font-size:12px;padding:5px 6px;height:32px">
-        <option value="">— Speler eraf —</option>
-        ${playerOpts(s.playerInId, s.playerOutId)}
-      </select>
-      <select class="form-select" onchange="matchSubs[${i}].playerInId=this.value;renderSubsList()" style="font-size:12px;padding:5px 6px;height:32px">
-        <option value="">— Speler erin —</option>
-        ${playerOpts(s.playerOutId, s.playerInId)}
-      </select>
-      <button class="remove-row-btn" onclick="matchSubs.splice(${i},1);renderSubsList()">✕</button>
-    </div>`).join('') || '<p class="text-muted" style="font-size:11px;padding:4px 0">Nog geen wissels.</p>';
-}
+// NB: renderSubsList() en renderLineupList() (basisself-checklist) leven in
+// wedstrijd-lineup.js — die targeten #mm-subs-list / #mm-lineup-list voor de
+// "Basisself/Wissels"-sectie bovenin deze modal. Zie ook renderPeriodLineupList()
+// hieronder voor de losstaande lijstweergave binnen de Opstelling-tab.
 
 async function saveMatch() {
   const m = (S.matches||[]).find(x=>x.id===currentMatchId);
@@ -1284,7 +1255,8 @@ function renderLineupTab() {
   // All players for display (incl. vertrokken — loadout may reference them)
   const players = (S.players||[]);
   // Only active players for the picker
-  const activePlayers = (S.players||[]).filter(p=>!['vertrokken','uitgeleend'].includes(p.status));
+  const mForDate = (S.matches||[]).find(x=>x.id===currentMatchId);
+  const activePlayers = (S.players||[]).filter(p => isPlayerAvailableOn(p, mForDate?.date || null));
 
   // ── LOADOUT BAR ──
   const loadouts = S.loadouts || [];
@@ -1349,7 +1321,7 @@ function renderLineupTab() {
     periodContent = `<div class="field-wrap">${renderField(formation, period.assignments, pi, players)}</div>`;
   } else {
     // List uses activePlayers for clicking, but field uses all players for display
-    periodContent = renderLineupList(activePlayers, period.assignments, pi, assignedIds);
+    periodContent = renderPeriodLineupList(activePlayers, period.assignments, pi, assignedIds);
   }
 
   // ── BENCH ──
@@ -1408,7 +1380,8 @@ function renderField(formation, assignments, pi, players) {
 
 function cycleFieldPos(pi, posIdx) {
   const period = matchPeriods[pi];
-  const players = (S.players||[]).filter(p=>!['vertrokken','uitgeleend'].includes(p.status));
+  const mForDate = (S.matches||[]).find(x=>x.id===currentMatchId);
+  const players = (S.players||[]).filter(p => isPlayerAvailableOn(p, mForDate?.date || null));
   const assignedIds = new Set(Object.values(period.assignments));
   const current = period.assignments[posIdx];
 
@@ -1466,7 +1439,7 @@ function assignFieldPos(pi, posIdx, playerId) {
   renderLineupTab();
 }
 
-function renderLineupList(players, assignments, pi, assignedIds) {
+function renderPeriodLineupList(players, assignments, pi, assignedIds) {
   const groupOrder = {ATT:0,MID:1,DEF:2,GK:3,OTHER:4};
   const starters = players.filter(p=>assignedIds.includes(p.id))
     .sort((a,b)=>(groupOrder[getPosGroup(a.subpos?.[0]||a.position||'')]??4)-(groupOrder[getPosGroup(b.subpos?.[0]||b.position||'')]??4)||(a.number||99)-(b.number||99));

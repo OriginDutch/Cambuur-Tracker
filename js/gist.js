@@ -260,6 +260,13 @@ async function setupGistRestore() {
 }
 
 // Import data object directly (used by gistPull)
+// ⚠️ LET OP — er is ook importData() in statistieken.js. Dat is GEEN
+// duplicaat dat je zomaar kunt samenvoegen: importDataObj() hieronder is
+// een "merge"-import voor Gist-sync (wist niets vooraf, roept gistPull()
+// aan), terwijl importData() een "vervang alles"-restore is vanaf een
+// JSON-bestand (wist eerst seasons/clubs/stadiums/competitions). Bij
+// wijzigen: check of beide functies nog het juiste gedrag hebben voor
+// hún eigen use-case — niet automatisch synchroniseren.
 async function importDataObj(data) {
   if (data.seasons)      { for (const s of data.seasons)      await dbPut('seasons', s); }
   if (data.clubs)        { for (const s of data.clubs)         await dbPut('clubs', s); }

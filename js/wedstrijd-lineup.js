@@ -5,7 +5,8 @@ let matchStarters = new Set(); // set of playerIds
 function renderLineupList() {
   const el = document.getElementById('mm-lineup-list');
   if (!el) return;
-  const players = (S.players||[]);
+  const m = (S.matches||[]).find(x=>x.id===currentMatchId);
+  const players = (S.players||[]).filter(p => isPlayerAvailableOn(p, m?.date || null));
   const groups = [
     {label:'Aanvallers', key:'Aanvaller'},
     {label:'Middenvelders', key:'Middenvelder'},
@@ -81,7 +82,8 @@ function renderSubsList() {
     return;
   }
 
-  const players = (S.players||[]);
+  const m = (S.matches||[]).find(x=>x.id===currentMatchId);
+  const players = (S.players||[]).filter(p => isPlayerAvailableOn(p, m?.date || null));
   const groupOrder = {Aanvaller:0, Middenvelder:1, Verdediger:2, Keeper:3};
   const sorted = [...players].sort((a,b) => {
     const ag = groupOrder[a.position]??4, bg = groupOrder[b.position]??4;

@@ -45,6 +45,43 @@ function sortSeasons(seasons) {
   return seasons;
 }
 
+// Geeft true als een speler beschikbaar was voor selectie op de gegeven datum
+// (of "nu" als er geen datum is). Sluit uit: nog niet toegevoegd, al vertrokken/
+// huur-in afgelopen, of actief uitgeleend (huur-uit) op dat moment.
+// refDate mag null zijn — dan wordt alleen op status gefilterd (vertrokken/uitgeleend).
+function isPlayerAvailableOn(player, refDate) {
+  if (['vertrokken','uitgeleend'].includes(player.status)) {
+    // Status is een handmatige/legacy vlag — check alsnog op datum of dat
+    // klopt voor de gevraagde datum (bv. iemand die toen nog niet vertrokken was)
+    if (!refDate) return false;
+  }
+  if (!refDate) return true;
+
+  const availFrom = player.availableFrom || player.joined || null;
+  const departed = player.departureDate || null;
+  const loanEnd = player.loanFromReturn || null;
+  const effectiveDep = departed || loanEnd || null;
+
+  // Nog niet beschikbaar
+  if (availFrom && availFrom > refDate) return false;
+  // Al vertrokken of huur (inkomend) afgelopen
+  if (effectiveDep && effectiveDep < refDate) return false;
+
+  // Uitgeleend (huur-uit) op dit moment
+  const activeLoan = (player.transfers||[]).find(t => {
+    if (t.type !== 'huur-uit') return false;
+    const from = t.date || null;
+    const to = t.dateTo || null;
+    if (!from) return false;
+    if (from > refDate) return false;
+    if (to && to < refDate) return false;
+    return true;
+  });
+  if (activeLoan) return false;
+
+  return true;
+}
+
 // Geeft true als speler actief was tijdens het opgegeven seizoen
 function isPlayerInSeason(player, season) {
   if (!season) return true;
