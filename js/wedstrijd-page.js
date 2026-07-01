@@ -479,8 +479,8 @@ function wpRenderGoals() {
   if (!el) return;
   const hasStarters = wpStarters.size > 0;
   if (!wpGoals.length) { el.innerHTML='<p style="font-size:12px;color:var(--text-muted)">Nog geen doelpunten.</p>'; wpRenderTimeline(); return; }
-  const allP = S.players||[];
   const m = (S.matches||[]).find(x=>x.id===wpCurrentId);
+  const allP = (S.players||[]).filter(p => isPlayerAvailableOn(p, m?.date || null));
   const cam = S.clubs.find(c=>c.isOwnClub);
   const isCamMatch = m && (m.homeClubId===cam?.id || m.awayClubId===cam?.id);
   el.innerHTML = wpGoals.map((g,i)=>{
@@ -598,7 +598,8 @@ function wpRenderSubs() {
   if (!el) return;
   const hasStarters = wpStarters.size > 0;
   if (!wpSubs.length) { el.innerHTML='<p style="font-size:12px;color:var(--text-muted)">Nog geen wissels.</p>'; wpRenderTimeline(); return; }
-  const allP = S.players||[];
+  const m = (S.matches||[]).find(x=>x.id===wpCurrentId);
+  const allP = (S.players||[]).filter(p => isPlayerAvailableOn(p, m?.date || null));
   const go = {Aanvaller:0,Middenvelder:1,Verdediger:2,Keeper:3};
 
   // Track which players are already used as subs-in across ALL subs
@@ -674,7 +675,6 @@ function wpRenderSubs() {
   wpRenderTimeline();
   // Update MOTM options and cards after sub change
   wpRenderCards();
-  const m = (S.matches||[]).find(x=>x.id===wpCurrentId);
   if (m) {
     const subInIds = new Set(wpSubs.filter(s=>s.playerInId).map(s=>s.playerInId));
     const played = wpStarters.size>0 ? (S.players||[]).filter(p=>wpStarters.has(p.id)||subInIds.has(p.id)) : S.players||[];
@@ -702,7 +702,8 @@ function wpRenderCards() {
   if (!wpCards.length) { el.innerHTML='<p style="font-size:12px;color:var(--text-muted)">Nog geen kaarten.</p>'; return; }
   // Include starters + all subs-in (invallers can also get cards)
   const appeared = wpGetAllAppeared();
-  const allP = S.players||[];
+  const m = (S.matches||[]).find(x=>x.id===wpCurrentId);
+  const allP = (S.players||[]).filter(p => isPlayerAvailableOn(p, m?.date || null));
   const cardCandidates = hasStarters
     ? wpSortedPlayers(allP.filter(p=>appeared.has(p.id)))
     : wpSortedPlayers(allP);

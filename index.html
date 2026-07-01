@@ -350,15 +350,6 @@
         </div>
       </div>
 
-      <!-- TAB: FORMATIES (verwijderd) -->
-      <div id="stab-formaties" style="display:none;max-width:700px">
-        <div class="settings-section">
-          <div class="settings-title">Standaard XI</div>
-          <div class="settings-row-desc" style="margin-bottom:12px">Sla je basiself op via een wedstrijdpagina. Je kunt hem daarna inladen bij elke nieuwe wedstrijd.</div>
-          <div id="loadouts-settings-list"></div>
-        </div>
-      </div>
-
       <!-- TAB: SELECTIE -->
       <div id="stab-selectie" style="display:none;max-width:580px">
         <div class="settings-section">
@@ -1021,95 +1012,6 @@
 </div>
 
 <!-- MODAL: WEDSTRIJD INVOEREN -->
-<div class="modal-overlay" id="modal-match">
-  <div class="modal" style="width:680px;max-width:96vw;max-height:96vh">
-    <div class="modal-header">
-      <div class="modal-title" id="match-modal-title">Wedstrijd invoeren</div>
-      <button class="modal-close" onclick="closeModal('modal-match')">✕</button>
-    </div>
-    <!-- Score — altijd zichtbaar -->
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 24px;background:var(--bg-tertiary);border-bottom:1px solid var(--border)">
-      <div style="flex:1;text-align:right;font-weight:700;font-size:15px" id="mm-home-label">Thuis</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <input class="form-input" id="mm-home-score" type="number" min="0" placeholder="—"
-          style="width:56px;text-align:center;font-size:22px;font-weight:800;font-family:'Barlow Condensed',sans-serif;padding:4px;height:44px;-moz-appearance:textfield" onwheel="this.blur()">
-        <span style="font-size:22px;font-weight:800;color:var(--text-muted)">-</span>
-        <input class="form-input" id="mm-away-score" type="number" min="0" placeholder="—"
-          style="width:56px;text-align:center;font-size:22px;font-weight:800;font-family:'Barlow Condensed',sans-serif;padding:4px;height:44px;-moz-appearance:textfield" onwheel="this.blur()">
-      </div>
-      <div style="flex:1;text-align:left;font-weight:700;font-size:15px" id="mm-away-label">Uit</div>
-    </div>
-    <div class="modal-body" style="overflow-y:auto;max-height:calc(96vh - 180px);padding:20px 24px;display:flex;flex-direction:column;gap:20px">
-
-      <!-- INFO -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-        <div class="form-group" style="margin:0"><label class="form-label">Datum</label><input class="form-input" id="mm-date" type="date"></div>
-        <div class="form-group" style="margin:0"><label class="form-label">Aanvangstijd</label><input class="form-input" id="mm-time" type="time"></div>
-        <div class="form-group" style="margin:0"><label class="form-label">🏆 Man of the Match</label><select class="form-select" id="mm-motm"></select></div>
-      </div>
-
-      <!-- BASISELF -->
-      <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">👕 Basiself <span id="mm-starter-count" style="color:var(--text-muted);font-weight:400">(0/11)</span></div>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="loadDefaultXI()">📂 Standaard laden</button>
-            <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="saveDefaultXI()">💾 Opslaan als standaard</button>
-          </div>
-        </div>
-        <div id="mm-lineup-list"></div>
-      </div>
-
-      <!-- DOELPUNTEN -->
-      <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">⚽ Doelpunten</div>
-          <button class="btn btn-ghost" style="font-size:11px" onclick="matchGoals.push({minute:null,playerId:'',assistId:'',goalType:'normaal'});renderGoalsList()">+ Toevoegen</button>
-        </div>
-        <div id="mm-goals-list"></div>
-      </div>
-
-      <!-- KAARTEN -->
-      <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">🟨 Kaarten</div>
-          <button class="btn btn-ghost" style="font-size:11px" onclick="matchCards.push({minute:null,playerId:'',cardType:'geel'});renderCardsList()">+ Toevoegen</button>
-        </div>
-        <div id="mm-cards-list"></div>
-      </div>
-
-      <!-- WISSELS -->
-      <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">↕ Wissels</div>
-          <button class="btn btn-ghost" style="font-size:11px" onclick="addSub()">+ Toevoegen</button>
-        </div>
-        <div id="mm-subs-list"></div>
-      </div>
-
-      <!-- TIJDLIJN -->
-      <div id="mm-timeline-wrap" style="display:none">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);margin-bottom:8px">🕐 Tijdlijn</div>
-        <div id="mm-timeline"></div>
-      </div>
-
-      <!-- NOTITIES -->
-      <div class="form-group" style="margin:0">
-        <label class="form-label">📝 Notities</label>
-        <textarea class="form-input" id="mm-notes" rows="2" style="resize:vertical;min-height:56px;font-size:13px" placeholder="Vrije aantekeningen over deze wedstrijd..."></textarea>
-      </div>
-
-    </div>
-    <div class="modal-footer" style="justify-content:space-between">
-      <button class="btn btn-ghost" style="font-size:11px" onclick="toggleTimeline()">🕐 Tijdlijn</button>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-secondary" onclick="closeModal('modal-match')">Annuleren</button>
-        <button class="btn btn-primary" onclick="saveMatch()">✓ Opslaan</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL: BEVESTIG -->
 <div class="modal-overlay" id="modal-confirm">
   <div class="modal" style="width:380px">
@@ -1134,7 +1036,6 @@
 <script src="js/selectie.js"></script>
 <script src="js/competitie.js"></script>
 <script src="js/wedstrijd-modal.js"></script>
-<script src="js/wedstrijd-lineup.js"></script>
 <script src="js/wedstrijd-page.js"></script>
 <script src="js/coaches.js"></script>
 <script src="js/db-viewer.js"></script>

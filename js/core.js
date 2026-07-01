@@ -27,8 +27,7 @@ let S={lang:'nl',theme:'dark',currentSeason:null,seasons:[],clubs:[],stadiums:[]
 //
 // Er staan nog bestaande losse globals verspreid door de app heen
 // (o.a. window._playerTransfers, window._vergTab, window._vergP1/P2,
-// window._openRounds, matchStarters, matchSubs, matchGoals, matchCards,
-// showTimeline, swStep/swStadCount/swClubCount, s365Matches/s365Selected).
+// window._openRounds, swStep/swStadCount/swClubCount, s365Matches/s365Selected).
 // Die hoeven niet in één keer gemigreerd te worden — verplaats ze
 // gewoon naar UI zodra je toch al in dat bestand aan het werk bent
 // voor iets anders. Zo groeit de opruiming organisch mee zonder een
@@ -37,8 +36,7 @@ let UI={};
 
 async function loadAll(){
   const setts=await dbAll('settings');
-  setts.forEach(s=>{if(s.key==='lang')S.lang=s.value;if(s.key==='theme')S.theme=s.value;if(s.key==='currentSeason')S.currentSeason=s.value;if(s.key==='defaultFormation')window._defaultFormation=s.value;if(s.key==='defaultFieldWidth'&&parseInt(s.value))window._defaultFieldWidth=parseInt(s.value);if(s.key==='loadouts'){try{if(!S.loadouts)S.loadouts=JSON.parse(s.value);}catch(e){}}
-    if(s.key==='prefs'){try{S.prefs=JSON.parse(s.value);}catch(e){}}});
+  setts.forEach(s=>{if(s.key==='lang')S.lang=s.value;if(s.key==='theme')S.theme=s.value;if(s.key==='currentSeason')S.currentSeason=s.value;if(s.key==='prefs'){try{S.prefs=JSON.parse(s.value);}catch(e){}}});
   S.pinnedNextMatch=null;S.seasons=await dbAll('seasons');S.clubs=await dbAll('clubs');S.stadiums=await dbAll('stadiums');S.competitions=await dbAll('competitions');S.players=await dbAll('players');S.matches=await dbAll('matches');S.coaches=await dbAll('coaches');
   sortSeasons(S.seasons);
   S.competitions.sort((a,b)=>{
@@ -57,7 +55,6 @@ async function init(){
   applyTheme(S.theme);
   document.getElementById('dark-mode-toggle').checked=S.theme==='dark';
   document.getElementById('lang-select').value=S.lang;
-  await loadDefaultFormation();
   if (!S.prefs) S.prefs = {};
   applyPrefs();
   // Migrate legacy transfer fields to transfers array (runs once)
