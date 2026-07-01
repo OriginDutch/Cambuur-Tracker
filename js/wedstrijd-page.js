@@ -4,6 +4,29 @@ let wpCurrentId = null;
 let wpStarters = new Set();
 let wpGoals = [], wpCards = [], wpSubs = [];
 
+// Markeert een 'missing data'-veld als bewust leeg gelaten (of haalt de markering weg).
+// Slaat meteen op, los van de 'Opslaan'-knop, zodat het niet verloren gaat bij wegnavigeren.
+async function wpToggleDataIgnored(key, el) {
+  const m = (S.matches||[]).find(x=>x.id===wpCurrentId);
+  if (!m) return;
+  if (!m.dataIgnored) m.dataIgnored = [];
+  if (el.checked) {
+    if (!m.dataIgnored.includes(key)) m.dataIgnored.push(key);
+  } else {
+    m.dataIgnored = m.dataIgnored.filter(k=>k!==key);
+  }
+  await dbPut('matches', m);
+}
+
+// Kleine checkbox-HTML voor 'bewust leeg' — te gebruiken naast een sectietitel
+function wpDataIgnoredToggle(m, key) {
+  const ignored = (m.dataIgnored||[]).includes(key);
+  return `<label style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:400;white-space:nowrap">
+    <input type="checkbox" ${ignored?'checked':''} onchange="wpToggleDataIgnored('${key}',this)" style="accent-color:var(--text-muted)">
+    Bewust leeg
+  </label>`;
+}
+
 function navigateToMatch(matchId) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-wedstrijd').classList.add('active');
@@ -103,6 +126,7 @@ function renderWedstrijdPage(matchId) {
           class="form-input" style="width:44px;height:28px;text-align:center;font-size:12px;padding:2px 4px;-moz-appearance:textfield" onwheel="this.blur()">
         <span>min</span>
       </div>
+      ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'extraTime') : ''}
     </div>
   </div>
 
@@ -113,10 +137,13 @@ function renderWedstrijdPage(matchId) {
     <div class="wp-section">
       <div class="wp-section-title">
         <span>👕 Basiself <span id="wp-cnt" style="color:var(--text-muted);font-weight:400">(${wpStarters.size}/11)</span></span>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-ghost" style="font-size:10px;height:24px" onclick="wpLoadXI()" title="Standaard XI laden">📂</button>
-          <button class="btn btn-ghost" style="font-size:10px;height:24px" onclick="wpSaveXI()" title="Opslaan als standaard">💾</button>
-          <button class="btn btn-ghost" style="font-size:10px;height:24px;color:var(--loss)" onclick="wpClearXI()" title="Alles wissen">✕</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${m.played ? wpDataIgnoredToggle(m, 'lineup') : ''}
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-ghost" style="font-size:10px;height:24px" onclick="wpLoadXI()" title="Standaard XI laden">📂</button>
+            <button class="btn btn-ghost" style="font-size:10px;height:24px" onclick="wpSaveXI()" title="Opslaan als standaard">💾</button>
+            <button class="btn btn-ghost" style="font-size:10px;height:24px;color:var(--loss)" onclick="wpClearXI()" title="Alles wissen">✕</button>
+          </div>
         </div>
       </div>
       <div id="wp-lineup"></div>
@@ -155,7 +182,10 @@ function renderWedstrijdPage(matchId) {
       <!-- Coach + MOTM + Notities -->
       <div class="wp-section">
         <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label">🧑‍💼 Coach</label>
+          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+            <span>🧑‍💼 Coach</span>
+            ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'coach') : ''}
+          </label>
           <div style="display:flex;gap:6px;align-items:center">
             <select class="form-select" id="wp-coach" style="flex:1" onchange="wpCoachChanged()"></select>
             <div id="wp-coach-warning" style="display:none;font-size:11px;color:var(--loss);white-space:nowrap">⚠️ Geschorst</div>
@@ -163,7 +193,10 @@ function renderWedstrijdPage(matchId) {
           <div id="wp-coach-cards-section" style="margin-top:8px"></div>
         </div>
         <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label">🏆 Man of the Match</label>
+          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+            <span>🏆 Man of the Match</span>
+            ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'motm') : ''}
+          </label>
           <select class="form-select" id="wp-motm" style="width:100%"></select>
         </div>
         <div class="form-group" style="margin:0">
@@ -178,7 +211,10 @@ function renderWedstrijdPage(matchId) {
 
   <!-- Wedstrijdstatistieken — volle breedte -->
   <div class="wp-section" style="margin-top:12px">
-    <div class="wp-section-title">📊 Wedstrijdstatistieken</div>
+    <div class="wp-section-title">
+      <span>📊 Wedstrijdstatistieken</span>
+      ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'matchStats') : ''}
+    </div>
     <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center">
       <!-- Header -->
       <div style="font-size:11px;font-weight:700;color:var(--cambuur-geel);text-align:center">SC Cambuur</div>

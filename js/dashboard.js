@@ -382,6 +382,33 @@ function renderDashboard(){
       </div>
     </div>`:''}
 
+    <!-- Ontbrekende wedstrijddata (alleen gespeelde Cambuur-wedstrijden dit seizoen) -->
+    ${(()=>{
+      const withMissing = played.filter(m => getMissingDataFields(m).length > 0);
+      if (!withMissing.length) return '';
+      const oppName = m => {
+        const isCamHome = m.homeClubId===cam?.id;
+        const oppClub = S.clubs.find(c=>c.id===(isCamHome?m.awayClubId:m.homeClubId));
+        return oppClub?.name || (isCamHome?m.awayName:m.homeName) || '?';
+      };
+      const byField = MISSING_DATA_FIELDS.map(f => ({
+        field: f,
+        matches: withMissing.filter(m => getMissingDataFields(m).some(mf=>mf.key===f.key))
+      })).filter(x => x.matches.length > 0);
+      return `<div class="card">
+        <div class="card-title">⚠️ Ontbrekende wedstrijddata</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${withMissing.length} van ${played.length} gespeelde wedstrijden mist data dit seizoen</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${byField.map(({field,matches})=>`<details>
+            <summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);padding:4px 0">${field.icon} ${matches.length}x ${field.label}</summary>
+            <div style="padding:2px 0 6px 22px;display:flex;flex-direction:column;gap:3px">
+              ${matches.map(m=>`<div style="font-size:11px;color:var(--text-muted);cursor:pointer" onclick="navigateToMatch('${m.id}')" onmouseover="this.style.color='var(--cambuur-geel)'" onmouseout="this.style.color='var(--text-muted)'">${fmtShortDate(m.date)} — vs ${oppName(m)}</div>`).join('')}
+            </div>
+          </details>`).join('')}
+        </div>
+      </div>`;
+    })()}
+
     <!-- Contractwaarschuwingen -->
     ${(()=>{
       const today = new Date();

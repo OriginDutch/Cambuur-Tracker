@@ -125,3 +125,29 @@ function statusLabel(p) {
     vertrokken:'Vertrokken', vertrekt:'Vertrekt', uitgeleend:'Uitgeleend', huurder:'Huurder' };
   return labels[s] || s;
 }
+
+// ══════════════════════════════
+// MISSING-DATA CHECK (alleen relevant voor gespeelde Cambuur-wedstrijden)
+// ══════════════════════════════
+// Centrale definitie van welke velden we bijhouden voor 'ontbrekende data'.
+// Gebruikt door zowel de rode stipjes/tooltip in competitie.js als het
+// dashboard-widget. m.dataIgnored (array van keys) sluit een veld bewust uit.
+const MISSING_DATA_FIELDS = [
+  {key:'lineup',     icon:'👕', label:'Geen basisself',    check:m => !(m.lineup||[]).length},
+  {key:'coach',      icon:'🧑‍💼', label:'Geen coach',        check:m => !m.coachId},
+  {key:'extraTime',  icon:'⏱', label:'Geen extra tijd',    check:m => m.extraTime1===undefined && m.extraTime2===undefined},
+  {key:'motm',       icon:'🏆', label:'Geen MOTM',          check:m => !m.motm},
+  {key:'matchStats', icon:'📊', label:'Geen wedstrijdstats', check:m => !m.matchStats?.home?.possession},
+];
+
+// Geeft alleen de velden die daadwerkelijk ontbreken én niet bewust genegeerd zijn
+function getMissingDataFields(match) {
+  const ignored = match.dataIgnored || [];
+  return MISSING_DATA_FIELDS.filter(f => f.check(match) && !ignored.includes(f.key));
+}
+
+// Geeft de velden die ontbreken MAAR bewust genegeerd zijn (voor een grijs stipje i.p.v. rood)
+function getIgnoredMissingFields(match) {
+  const ignored = match.dataIgnored || [];
+  return MISSING_DATA_FIELDS.filter(f => f.check(match) && ignored.includes(f.key));
+}

@@ -127,16 +127,18 @@ function renderMatchRow(m, comp) {
 
     // Missing data warnings for Cambuur matches
     if (isCam) {
-      const missing = [];
-      if (!(m.lineup||[]).length) missing.push('👕 Geen basiself');
-      if (!m.coachId) missing.push('🧑‍💼 Geen coach');
-      if (m.extraTime1 === undefined && m.extraTime2 === undefined) missing.push('⏱ Geen extra tijd');
-      if (!m.motm) missing.push('🏆 Geen MOTM');
-      if (!m.matchStats?.home?.possession) missing.push('📊 Geen wedstrijdstats');
+      const missing = getMissingDataFields(m);
+      const ignoredMissing = getIgnoredMissingFields(m);
       if (missing.length) {
         tipHtml += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border-light)">
           <div style="font-size:10px;font-weight:700;color:var(--loss);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Ontbreekt</div>
-          ${missing.map(m=>`<div style="font-size:11px;color:var(--text-muted)">${m}</div>`).join('')}
+          ${missing.map(f=>`<div style="font-size:11px;color:var(--text-muted)">${f.icon} ${f.label}</div>`).join('')}
+        </div>`;
+      }
+      if (ignoredMissing.length) {
+        tipHtml += `<div style="margin-top:${missing.length?'4px':'6px'};${missing.length?'':'padding-top:6px;border-top:1px solid var(--border-light);'}">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Bewust leeg gelaten</div>
+          ${ignoredMissing.map(f=>`<div style="font-size:11px;color:var(--text-muted);opacity:0.6">${f.icon} ${f.label}</div>`).join('')}
         </div>`;
       }
     }
@@ -144,10 +146,14 @@ function renderMatchRow(m, comp) {
     tipHtml = `<div style="opacity:0.6">${m.date?fmtShortDate(m.date)+(m.time?' · '+m.time:''):'Datum onbekend'}</div><div style="opacity:0.5;font-size:11px">Klik om in te voeren</div>`;
   }
 
-  // Missing data dot for played Cambuur matches
-  const missingDot = isCam && m.played && (
-    !(m.lineup||[]).length || !m.coachId || !m.motm || !m.matchStats?.home?.possession
-  ) ? `<div title="Ontbrekende data" style="width:7px;height:7px;border-radius:50%;background:var(--loss);flex-shrink:0;margin-left:2px"></div>` : '';
+  // Missing data dot for played Cambuur matches — grijs als alles ontbrekende alleen bewust genegeerd is
+  const missingCount = isCam && m.played ? getMissingDataFields(m).length : 0;
+  const ignoredCount = isCam && m.played ? getIgnoredMissingFields(m).length : 0;
+  const missingDot = missingCount > 0
+    ? `<div title="Ontbrekende data" style="width:7px;height:7px;border-radius:50%;background:var(--loss);flex-shrink:0;margin-left:2px"></div>`
+    : (ignoredCount > 0
+      ? `<div title="Bewust leeg gelaten" style="width:7px;height:7px;border-radius:50%;background:var(--text-muted);flex-shrink:0;margin-left:2px;opacity:0.5"></div>`
+      : '');
 
   return `<div class="match-row ${isCam?'cambuur-match':''} ${isRival&&isCam?'rival-match':''}"
     data-match-id="${m.id}"
