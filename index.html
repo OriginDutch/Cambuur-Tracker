@@ -792,12 +792,20 @@
           <select class="form-select" id="player-status" onchange="updateStatusFields()">
             <option value="actief">Actief</option>
             <option value="huurder">Huurling (ingehuurd)</option>
-            <option value="geblesseerd">Geblesseerd</option>
             <option value="geschorst">Geschorst</option>
             <option value="vertrokken">Vertrokken</option>
           </select>
         </div>
         <div id="status-fields"></div>
+
+        <!-- Blessurehistorie — losstaand van status, kan naast elke status voorkomen -->
+        <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">🩹 Blessurehistorie</div>
+            <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="addInjuryEntry()">+ Toevoegen</button>
+          </div>
+          <div id="injury-history-list" style="max-height:220px;overflow-y:auto"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1028,6 +1036,7 @@
 <script src="js/core.js"></script>
 <script src="js/helpers.js"></script>
 <script src="js/transfers.js"></script>
+<script src="js/injuries.js"></script>
 <script src="js/wizard.js"></script>
 <script src="js/navigation.js"></script>
 <script src="js/settings.js"></script>

@@ -32,6 +32,8 @@ function openPlayerModal(editId) {
     document.getElementById('player-previous-club-wrap').style.display = p.loanIn ? 'block' : 'none';
     window._playerTransfers = JSON.parse(JSON.stringify(p.transfers||[]));
     renderTransferHistory();
+    window._playerInjuries = JSON.parse(JSON.stringify(p.injuries||[]));
+    renderInjuryHistory();
     switchPlayerModalTab('basis', null);
     document.getElementById('player-foot') && (document.getElementById('player-foot').value = p.foot || '');
     document.getElementById('player-height') && (document.getElementById('player-height').value = p.height || '');
@@ -49,7 +51,6 @@ function openPlayerModal(editId) {
     // Fill status-specific fields
     const sf = document.getElementById('status-fields');
     if (p.status === 'huurder') { document.getElementById('sf-loan-from-club') && (document.getElementById('sf-loan-from-club').value = p.loanFromClub || ''); document.getElementById('sf-loan-from-return') && (document.getElementById('sf-loan-from-return').value = p.loanFromReturn || ''); document.getElementById('sf-buy-option') && (document.getElementById('sf-buy-option').value = p.buyOption || ''); }
-    if (p.status === 'geblesseerd') { document.getElementById('sf-injury-type') && (document.getElementById('sf-injury-type').value = p.injuryType || ''); document.getElementById('sf-return-date') && (document.getElementById('sf-return-date').value = p.returnDate || ''); }
     if (p.status === 'geschorst') { document.getElementById('sf-suspension-end') && (document.getElementById('sf-suspension-end').value = p.suspensionEnd || ''); }
     if (p.status === 'uitgeleend') { document.getElementById('sf-loan-club') && (document.getElementById('sf-loan-club').value = p.loanClub || ''); document.getElementById('sf-loan-return') && (document.getElementById('sf-loan-return').value = p.loanReturn || ''); }
     if (p.status === 'vertrokken') { document.getElementById('sf-departure-date') && (document.getElementById('sf-departure-date').value = p.departureDate || ''); document.getElementById('sf-departure-club') && (document.getElementById('sf-departure-club').value = p.departureClub || ''); }
@@ -66,6 +67,8 @@ function openPlayerModal(editId) {
     document.getElementById('player-previous-club-wrap').style.display = 'none';
     window._playerTransfers = [];
     renderTransferHistory();
+    window._playerInjuries = [];
+    renderInjuryHistory();
     document.getElementById('player-foot') && (document.getElementById('player-foot').value = '');
     document.getElementById('player-height') && (document.getElementById('player-height').value = '');
     populateNatDropdown('');
@@ -89,6 +92,7 @@ function switchPlayerModalTab(tab, el) {
   if (el) el.classList.add('active');
   else document.querySelector('#player-modal-tabs .tab')?.classList.add('active');
   if (tab === 'basis') renderTransferHistory();
+  if (tab === 'status') renderInjuryHistory();
 }
 
 function previewAvatar() {
@@ -130,10 +134,6 @@ function updateStatusFields() {
         <option value="optie">Koopoptie aanwezig</option>
         <option value="verplicht">Verplichte doorkoop</option>
       </select>
-    </div>`,
-    geblesseerd: `<div class="form-row cols-2">
-      <div class="form-group"><label class="form-label">Blessuretype</label><input class="form-input" id="sf-injury-type" placeholder="Hamstring, knie..."></div>
-      <div class="form-group"><label class="form-label">Verwachte terugkeer</label><input class="form-input" id="sf-return-date" type="date"></div>
     </div>`,
     geschorst: `<div class="form-group"><label class="form-label">Geschorst tot</label><input class="form-input" id="sf-suspension-end" type="date"></div>`,
     uitgeleend: `<div class="form-row cols-2">
@@ -269,8 +269,6 @@ async function savePlayer() {
     status,
     valueHistory: [...currentValueEntries],
     // Status-specific fields
-    injuryType: status === 'geblesseerd' ? (document.getElementById('sf-injury-type')?.value || '') : '',
-    returnDate: status === 'geblesseerd' ? (document.getElementById('sf-return-date')?.value || '') : '',
     suspensionEnd: status === 'geschorst' ? (document.getElementById('sf-suspension-end')?.value || '') : '',
     loanFromClub: status === 'huurder' ? (document.getElementById('sf-loan-from-club')?.value || '') : '',
     loanFromReturn: status === 'huurder' ? (document.getElementById('sf-loan-from-return')?.value || '') : '',
@@ -286,6 +284,7 @@ async function savePlayer() {
     loanIn: document.getElementById('player-loan-in').checked,
     previousClub: document.getElementById('player-previous-club').value || null,
     transfers: window._playerTransfers || [],
+    injuries: window._playerInjuries || [],
     sellFee: status === 'vertrokken' ? (parseInt(document.getElementById('sf-sell-fee')?.value) || 0) : (existing ? ((S.players||[]).find(p=>p.id===existing)?.sellFee || 0) : 0),
     freeTransferOut: status === 'vertrokken' ? (document.getElementById('sf-free-transfer-out')?.checked || false) : false,
   };
@@ -567,14 +566,18 @@ function playerCard(p, effStatus) {
     if (diff < 0) return '<span style="color:var(--loss);font-size:16px;font-weight:800">▼</span>';
     return '<span style="color:var(--draw);font-size:14px;font-weight:800">=</span>';
   })();
-  // Verberg geblesseerd/geschorst badge als de datum al voorbij het seizoen is
+  // Verberg geschorst-badge als de datum al voorbij het seizoen is
   const _sr = window._currentSeasonRange || null;
   const _hideTimedStatus = _sr && (
-    (effStatus === 'geblesseerd' && p.returnDate && p.returnDate > _sr.end) ||
     (effStatus === 'geschorst' && p.suspensionEnd && p.suspensionEnd > _sr.end)
   );
   const statusBadge = (effStatus && effStatus !== 'actief' && !_hideTimedStatus)
     ? `<span class="badge badge-status-${effStatus}" style="font-size:9px;margin-top:2px;display:inline-block">${statusLabelEff(p, effStatus)}</span>` : '';
+  // Blessure staat los van status — kan naast elke andere status getoond worden
+  const activeInjury = effectiveInjuryStatus(p);
+  const _hideInjuryBadge = _sr && activeInjury?.expectedReturn && activeInjury.expectedReturn > _sr.end;
+  const injuryBadge = (activeInjury && !_hideInjuryBadge)
+    ? `<span class="badge badge-status-geblesseerd" style="font-size:9px;margin-top:2px;display:inline-block" title="${activeInjury.type||'Blessure'}${activeInjury.expectedReturn?' · terug rond '+new Date(activeInjury.expectedReturn).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}):''}">🩹 Geblesseerd</span>` : '';
   const contractWarn = contractWarning(p, _sr);
   const subposLine = p.subpos?.length
     ? p.subpos.slice(0,2).join(' · ') + (p.subpos.length > 2 ? ` +${p.subpos.length-2}` : '')
@@ -614,7 +617,7 @@ function playerCard(p, effStatus) {
         <div style="font-size:11px;color:var(--text-secondary);display:flex;gap:6px;margin-bottom:3px">
           ${age ? `<span>${age} jr</span>` : ''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nationality||'—'}</span>
         </div>
-        <div style="display:flex;gap:3px;flex-wrap:wrap">${statusBadge}${loanBadge}${contractWarn}</div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap">${statusBadge}${injuryBadge}${loanBadge}${contractWarn}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;align-self:flex-start">
         <button class="icon-btn" style="padding:2px 5px" onclick="event.stopPropagation();openPlayerModal('${p.id}')" title="Bewerken">✏️</button>
@@ -664,7 +667,7 @@ function playerListView(players, effectiveStatus) {
       <td>${age}</td>
       <td>${p.nationality||'—'}</td>
       <td>${val} ${getValueTrend(p)}</td>
-      <td><span class="badge badge-status-${es}">${statusLabelEff(p,es)}</span></td>
+      <td><span class="badge badge-status-${es}">${statusLabelEff(p,es)}</span>${effectiveInjuryStatus(p)?' <span title="Geblesseerd" style="font-size:11px">🩹</span>':''}</td>
       <td class="num">${window._playerStats?.[p.id]?.goals??'—'}</td>
       <td class="num">${window._playerStats?.[p.id]?.assists??'—'}</td>
       <td><div class="action-btns">

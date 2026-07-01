@@ -59,6 +59,8 @@ async function init(){
   applyPrefs();
   // Migrate legacy transfer fields to transfers array (runs once)
   await migrateTransfers();
+  // Migrate legacy status:'geblesseerd' to injuries array (runs once)
+  await migrateInjuries();
   renderSeasonSelect();renderCompetitionsNav();renderDashboard();renderSeasonsManage();
   if(S.seasons.length===0){initWizard();document.getElementById('setup-overlay').classList.add('open');}
   setTimeout(checkDepartedPlayers, 800);

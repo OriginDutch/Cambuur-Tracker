@@ -35,8 +35,8 @@ function renderDashboard(){
   const topScorers=(S.players||[]).filter(p=>stats[p.id]?.goals>0)
     .sort((a,b)=>stats[b.id].goals-stats[a.id].goals).slice(0,5);
 
-  // Warnings
-  const warnings=(S.players||[]).filter(p=>['geblesseerd','geschorst'].includes(p.status));
+  // Warnings — geschorst (status) + geblesseerd (losse tijdlijn, ongeacht status)
+  const warnings=(S.players||[]).filter(p=>p.status==='geschorst'||effectiveInjuryStatus(p));
 
   // Coach samenvatting huidig seizoen
   const currentCoach = (() => {
@@ -372,13 +372,22 @@ function renderDashboard(){
     ${warnings.length?`<div class="card">
       <div class="card-title">⚠ Beschikbaarheid</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${warnings.map(p=>`<div style="display:flex;align-items:center;gap:8px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;cursor:pointer" onclick="navigateToPlayer('${p.id}')">
+        ${warnings.map(p=>{
+          const inj = effectiveInjuryStatus(p);
+          const statusBadge = p.status==='geschorst'
+            ? `<span class="badge badge-status-geschorst" style="font-size:9px">Geschorst${p.suspensionEnd?' t/m '+new Date(p.suspensionEnd).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}):''}</span>`
+            : '';
+          const injBadge = inj
+            ? `<span class="badge badge-status-geblesseerd" style="font-size:9px">🩹 ${inj.type||'Geblesseerd'}${inj.expectedReturn?' t/m '+new Date(inj.expectedReturn).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}):''}</span>`
+            : '';
+          return `<div style="display:flex;align-items:center;gap:8px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;cursor:pointer" onclick="navigateToPlayer('${p.id}')">
           ${playerAvatarHTML(p,'player-avatar',30)}
           <div>
             <div style="font-weight:600;font-size:13px">${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</div>
-            <span class="badge badge-status-${p.status}" style="font-size:9px">${statusLabel(p)}${p.returnDate?' t/m '+new Date(p.returnDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}):p.suspensionEnd?' t/m '+new Date(p.suspensionEnd).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}):''}</span>
+            <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:2px">${statusBadge}${injBadge}</div>
           </div>
-        </div>`).join('')}
+        </div>`;
+        }).join('')}
       </div>
     </div>`:''}
 
