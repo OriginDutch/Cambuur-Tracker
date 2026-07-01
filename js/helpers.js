@@ -50,11 +50,9 @@ function sortSeasons(seasons) {
 // huur-in afgelopen, of actief uitgeleend (huur-uit) op dat moment.
 // refDate mag null zijn — dan wordt alleen op status gefilterd (vertrokken/uitgeleend).
 function isPlayerAvailableOn(player, refDate) {
-  if (['vertrokken','uitgeleend'].includes(player.status)) {
-    // Status is een handmatige/legacy vlag — check alsnog op datum of dat
-    // klopt voor de gevraagde datum (bv. iemand die toen nog niet vertrokken was)
-    if (!refDate) return false;
-  }
+  // Handmatige status-vlag sluit altijd uit, ook als er geen (betrouwbare)
+  // datum bekend is — dit is meestal de meest directe/bewuste bron.
+  if (['vertrokken','uitgeleend'].includes(player.status)) return false;
   if (!refDate) return true;
 
   const availFrom = player.availableFrom || player.joined || null;
