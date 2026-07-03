@@ -17,6 +17,7 @@ function renderVergelijking() {
     {id:'seizoen', label:'📅 Seizoenen'},
     {id:'transfer', label:'💸 Transferbalans'},
     {id:'speler',  label:'👤 Spelers'},
+    {id:'clubs',   label:'🆚 Clubs'},
   ];
 
   el.innerHTML = `
@@ -34,6 +35,7 @@ function renderVergelijking() {
   if (window._vergTab === 'seizoen') renderVergSeizoen(body, seasons, cam);
   else if (window._vergTab === 'transfer') renderVergTransfer(body, seasons, players);
   else if (window._vergTab === 'speler') renderVergSpeler(body, players);
+  else if (window._vergTab === 'clubs') renderVergClubs(body, cam);
 }
 
 // ── SEIZOENSVERGELIJKING ──
@@ -282,5 +284,92 @@ function renderVergSpeler(el, players) {
     </div>
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Statistieken gebaseerd op huidig geselecteerd seizoen</div>
     ${comparisonHtml||'<p class="text-muted" style="margin-top:16px">Selecteer twee spelers om te vergelijken.</p>'}
+  `;
+}
+
+// ── HEAD-TO-HEAD PER CLUB (all-time, alle seizoenen) ──
+function renderVergClubs(el, cam) {
+  if (!window._vergClub) window._vergClub = '';
+
+  const otherClubs = (S.clubs||[]).filter(c=>!c.isOwnClub && c.id!==cam?.id)
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  const opts = otherClubs.map(c=>`<option value="${c.id}" ${window._vergClub===c.id?'selected':''}>${c.name}${c.highlight==='rivaal'?' 🔥':''}</option>`).join('');
+
+  const club = otherClubs.find(c=>c.id===window._vergClub);
+  let recordHtml = '';
+
+  if (club) {
+    const matches = (S.matches||[]).filter(m=>m.played &&
+      ((m.homeClubId===cam?.id && m.awayClubId===club.id) || (m.awayClubId===cam?.id && m.homeClubId===club.id))
+    ).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+    if (!matches.length) {
+      recordHtml = `<p class="text-muted" style="margin-top:16px">Nog geen gespeelde wedstrijden tegen ${club.name} gevonden.</p>`;
+    } else {
+      let w=0,d=0,l=0,gf=0,ga=0;
+      matches.forEach(m=>{
+        const isCamHome = m.homeClubId===cam?.id;
+        const cs = isCamHome?m.homeScore:m.awayScore;
+        const os = isCamHome?m.awayScore:m.homeScore;
+        gf+=cs; ga+=os;
+        if(cs>os) w++; else if(cs===os) d++; else l++;
+      });
+      const played = matches.length;
+      const winPct = played ? Math.round(w/played*100) : 0;
+
+      recordHtml = `
+        <div class="card" style="margin-top:16px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:16px;padding-bottom:16px;border-top:${club.highlight==='rivaal'?'3px solid var(--heerenveen-rood)':'none'}">
+            <div style="text-align:center">
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--cambuur-geel)">SC Cambuur</div>
+            </div>
+            <div style="text-align:center;font-size:13px;color:var(--text-muted)">all-time</div>
+            <div style="text-align:center">
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800">${club.name}</div>
+              ${club.highlight==='rivaal'?'<span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;text-align:center;border-top:1px solid var(--border);padding-top:14px">
+            <div><div style="font-size:20px;font-weight:800">${played}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Gespeeld</div></div>
+            <div><div style="font-size:20px;font-weight:800;color:var(--win)">${w}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Winst</div></div>
+            <div><div style="font-size:20px;font-weight:800;color:var(--draw)">${d}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Gelijk</div></div>
+            <div><div style="font-size:20px;font-weight:800;color:var(--loss)">${l}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Verlies</div></div>
+            <div><div style="font-size:20px;font-weight:800;color:${gf-ga>0?'var(--win)':gf-ga<0?'var(--loss)':'var(--text-primary)'}">${gf}-${ga}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Doelsaldo</div></div>
+            <div><div style="font-size:20px;font-weight:800;color:var(--cambuur-geel)">${winPct}%</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Winratio</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Alle onderlinge wedstrijden (${played})</div>
+          <table class="data-table">
+            <thead><tr><th>Seizoen</th><th>Datum</th><th>Thuis</th><th class="num">Score</th><th>Uit</th></tr></thead>
+            <tbody>${matches.map(m=>{
+              const season = (S.seasons||[]).find(s=>s.id===m.seasonId);
+              const homeClub = S.clubs.find(c=>c.id===m.homeClubId);
+              const awayClub = S.clubs.find(c=>c.id===m.awayClubId);
+              const isCamHome = m.homeClubId===cam?.id;
+              const cs = isCamHome?m.homeScore:m.awayScore;
+              const os = isCamHome?m.awayScore:m.homeScore;
+              const resultColor = cs>os?'var(--win)':cs===os?'var(--draw)':'var(--loss)';
+              const dateStr = m.date ? new Date(m.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}) : '—';
+              return `<tr style="cursor:pointer" onclick="navigateToMatch('${m.id}')">
+                <td style="font-size:12px;color:var(--text-muted)">${season?.name||'—'}</td>
+                <td style="font-size:12px">${dateStr}</td>
+                <td style="${isCamHome?'font-weight:700;color:var(--cambuur-geel)':''}">${homeClub?.name||m.homeName||'?'}</td>
+                <td class="num" style="font-weight:700;color:${resultColor}">${m.homeScore}-${m.awayScore}</td>
+                <td style="${!isCamHome?'font-weight:700;color:var(--cambuur-geel)':''}">${awayClub?.name||m.awayName||'?'}</td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>
+        </div>`;
+    }
+  }
+
+  el.innerHTML = `
+    <select class="form-select" style="margin-bottom:8px" onchange="window._vergClub=this.value;renderVergelijking()">
+      <option value="">— Kies een club —</option>${opts}
+    </select>
+    <div style="font-size:11px;color:var(--text-muted)">Statistieken over alle seizoenen heen, niet alleen het huidige</div>
+    ${recordHtml||(window._vergClub?'':'<p class="text-muted" style="margin-top:16px">Selecteer een club om het onderlinge record te bekijken.</p>')}
   `;
 }

@@ -243,6 +243,7 @@ function renderDashboard(){
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:0.5px">
         ${camName} — <span style="color:var(--cambuur-geel)">${season.name}</span>
       </div>
+      ${played.length ? `<button class="btn btn-ghost" style="font-size:12px" onclick="navigateToSeizoensverslag('${season.id}')">📋 Seizoensverslag</button>` : ''}
     </div>
 
     <!-- Stats bar -->
