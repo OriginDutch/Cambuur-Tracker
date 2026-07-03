@@ -869,3 +869,448 @@ function renderArchief() {
 
 
 // ══════════════════════════════
+
+
+
+
+// ══════════════════════════════
+// LANDEN LIJST
+// ══════════════════════════════
+// Nationaliteiten met vlaggen — {name, flag}
+const LANDEN = [
+  {name:'Nederlands', flag:'🇳🇱'},{name:'Belgisch', flag:'🇧🇪'},
+  {name:'Duits', flag:'🇩🇪'},{name:'Frans', flag:'🇫🇷'},
+  {name:'Spaans', flag:'🇪🇸'},{name:'Italiaans', flag:'🇮🇹'},
+  {name:'Portugees', flag:'🇵🇹'},{name:'Engels', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+  {name:'Schots', flag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿'},{name:'Welsh', flag:'🏴󠁧󠁢󠁷󠁬󠁳󠁿'},
+  {name:'Iers', flag:'🇮🇪'},{name:'Deens', flag:'🇩🇰'},
+  {name:'Zweeds', flag:'🇸🇪'},{name:'Noors', flag:'🇳🇴'},
+  {name:'Fins', flag:'🇫🇮'},{name:'IJslands', flag:'🇮🇸'},
+  {name:'Oostenrijks', flag:'🇦🇹'},{name:'Zwitsers', flag:'🇨🇭'},
+  {name:'Luxemburgs', flag:'🇱🇺'},{name:'Liechtensteins', flag:'🇱🇮'},
+  {name:'Pools', flag:'🇵🇱'},{name:'Tsjechisch', flag:'🇨🇿'},
+  {name:'Slowaaks', flag:'🇸🇰'},{name:'Hongaars', flag:'🇭🇺'},
+  {name:'Roemeens', flag:'🇷🇴'},{name:'Bulgaars', flag:'🇧🇬'},
+  {name:'Kroatisch', flag:'🇭🇷'},{name:'Servisch', flag:'🇷🇸'},
+  {name:'Sloveens', flag:'🇸🇮'},{name:'Bosnisch', flag:'🇧🇦'},
+  {name:'Montenegrijns', flag:'🇲🇪'},{name:'Macedonisch', flag:'🇲🇰'},
+  {name:'Albanees', flag:'🇦🇱'},{name:'Kosovaars', flag:'🇽🇰'},
+  {name:'Grieks', flag:'🇬🇷'},{name:'Cypriotisch', flag:'🇨🇾'},
+  {name:'Maltees', flag:'🇲🇹'},{name:'Turks', flag:'🇹🇷'},
+  {name:'Russisch', flag:'🇷🇺'},{name:'Oekraïens', flag:'🇺🇦'},
+  {name:'Wit-Russisch', flag:'🇧🇾'},{name:'Moldavisch', flag:'🇲🇩'},
+  {name:'Georgisch', flag:'🇬🇪'},{name:'Armeens', flag:'🇦🇲'},
+  {name:'Azerbeidzjaans', flag:'🇦🇿'},{name:'Kazachs', flag:'🇰🇿'},
+  {name:'Lets', flag:'🇱🇻'},{name:'Litouws', flag:'🇱🇹'},
+  {name:'Ests', flag:'🇪🇪'},
+  {name:'Amerikaans', flag:'🇺🇸'},{name:'Canadees', flag:'🇨🇦'},
+  {name:'Mexicaans', flag:'🇲🇽'},{name:'Braziliaans', flag:'🇧🇷'},
+  {name:'Argentijns', flag:'🇦🇷'},{name:'Colombiaans', flag:'🇨🇴'},
+  {name:'Chileens', flag:'🇨🇱'},{name:'Uruguayaans', flag:'🇺🇾'},
+  {name:'Ecuadoriaans', flag:'🇪🇨'},{name:'Venezolaans', flag:'🇻🇪'},
+  {name:'Peruaans', flag:'🇵🇪'},{name:'Boliviaans', flag:'🇧🇴'},
+  {name:'Paraguayaans', flag:'🇵🇾'},{name:'Costa Ricaans', flag:'🇨🇷'},
+  {name:'Jamaicaans', flag:'🇯🇲'},{name:'Trinidadiaans', flag:'🇹🇹'},
+  {name:'Haïtiaans', flag:'🇭🇹'},{name:'Hondurees', flag:'🇭🇳'},
+  {name:'Japans', flag:'🇯🇵'},{name:'Koreaans', flag:'🇰🇷'},
+  {name:'Chinees', flag:'🇨🇳'},{name:'Indonesisch', flag:'🇮🇩'},
+  {name:'Australisch', flag:'🇦🇺'},{name:'Nieuw-Zeelands', flag:'🇳🇿'},
+  {name:'Marokkaans', flag:'🇲🇦'},{name:'Algerijns', flag:'🇩🇿'},
+  {name:'Tunesisch', flag:'🇹🇳'},{name:'Egyptisch', flag:'🇪🇬'},
+  {name:'Libisch', flag:'🇱🇾'},{name:'Senegalees', flag:'🇸🇳'},
+  {name:'Ivoriaans', flag:'🇨🇮'},{name:'Ghanees', flag:'🇬🇭'},
+  {name:'Nigeriaans', flag:'🇳🇬'},{name:'Kameroenees', flag:'🇨🇲'},
+  {name:'Congolees', flag:'🇨🇩'},{name:'Malinees', flag:'🇲🇱'},
+  {name:'Guinees', flag:'🇬🇳'},{name:'Burkinabes', flag:'🇧🇫'},
+  {name:'Beninees', flag:'🇧🇯'},{name:'Togolees', flag:'🇹🇬'},
+  {name:'Gaboens', flag:'🇬🇦'},{name:'Zambiaans', flag:'🇿🇲'},
+  {name:'Zimbabwaans', flag:'🇿🇼'},{name:'Zuid-Afrikaans', flag:'🇿🇦'},
+  {name:'Mozambicaans', flag:'🇲🇿'},{name:'Angolees', flag:'🇦🇴'},
+  {name:'Tanzaniaans', flag:'🇹🇿'},{name:'Keniaans', flag:'🇰🇪'},
+  {name:'Ugandees', flag:'🇺🇬'},{name:'Ethiopisch', flag:'🇪🇹'},
+  {name:'Somalisch', flag:'🇸🇴'},{name:'Soedanees', flag:'🇸🇩'},
+  {name:'Kaapverdiaans', flag:'🇨🇻'},{name:'Surinaams', flag:'🇸🇷'},
+  {name:'Curaçaos', flag:'🇨🇼'},{name:'Arubaans', flag:'🇦🇼'},
+  {name:'Israëlisch', flag:'🇮🇱'},{name:'Iraans', flag:'🇮🇷'},
+  {name:'Irakees', flag:'🇮🇶'},{name:'Syrisch', flag:'🇸🇾'},
+  {name:'Libanees', flag:'🇱🇧'},{name:'Jordaans', flag:'🇯🇴'},
+  {name:'Saoedi-Arabisch', flag:'🇸🇦'},{name:'Emiratisch', flag:'🇦🇪'},
+];
+
+
+function natFlag(name) {
+  if (!name) return '';
+  const l = LANDEN.find(x => x.name === name);
+  return l?.flag ? l.flag + ' ' : '';
+}
+function populateNatDropdown(selected) {
+  const sel = document.getElementById('player-nationality');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Selecteer —</option>';
+  // Nederland eerst
+  const ned = document.createElement('option');
+  ned.value = 'Nederlands'; ned.textContent = '🇳🇱 Nederlands'; ned.label = 'Nederlands';
+  if (selected === 'Nederlands') ned.selected = true;
+  sel.appendChild(ned);
+  // Scheidingslijn
+  const sep = document.createElement('option'); sep.disabled = true; sep.textContent = '──────────'; sel.appendChild(sep);
+  // Rest alfabetisch op naam
+  const rest = LANDEN.filter(l => l.name !== 'Nederlands')
+    .sort((a,b) => a.name.localeCompare(b.name,'nl'));
+  rest.forEach(l => {
+    const o = document.createElement('option');
+    o.value = l.name;
+    o.textContent = l.flag ? `${l.flag} ${l.name}` : l.name;
+    o.label = l.name; // zonder emoji voor browser keyboard search
+    if (l.name === selected) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+// ══════════════════════════════
+// SPARKLINE
+// ══════════════════════════════
+function renderSparkline(history, width, height) {
+  if (!history || history.length < 2) return '';
+  const vals = [...history].reverse().map(e => e.amount);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = max - min || 1;
+  const pts = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * width;
+    const y = height - ((v - min) / range) * (height - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const last = vals[vals.length-1], first = vals[0];
+  const color = last >= first ? 'var(--win)' : 'var(--loss)';
+  return `<svg class="sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+// ══════════════════════════════
+// MARKTWAARDE TOTALEN
+// ══════════════════════════════
+function calcValueTotals(players) {
+  // Seizoensgroei = verschil tussen meest recente waarde en
+  // eerste waarde VOOR het huidige seizoen (of de oudste als alles binnen seizoen valt)
+  const season = S.seasons.find(s => s.id === S.currentSeason);
+  const seasonStart = season ? new Date(season.year + '-07-01') : null;
+
+  let total = 0, prev = 0, count = 0;
+  players.forEach(p => {
+    if (!p.valueHistory?.length) return;
+    total += p.valueHistory[0].amount;
+    count++;
+    if (p.valueHistory.length > 1 && seasonStart) {
+      // Find the last value BEFORE the current season started
+      const beforeSeason = p.valueHistory.find(e => new Date(e.date) < seasonStart);
+      if (beforeSeason) {
+        prev += beforeSeason.amount;
+      } else {
+        // All values are within this season — use oldest as baseline
+        prev += p.valueHistory[p.valueHistory.length - 1].amount;
+      }
+    } else if (p.valueHistory.length > 1) {
+      prev += p.valueHistory[1].amount;
+    } else {
+      prev += p.valueHistory[0].amount;
+    }
+  });
+  return { total, prev, growth: total - prev, count };
+}
+
+function formatGrowth(growth) {
+  if (!growth) return '<span class="value-trend-flat">—</span>';
+  const sign = growth > 0 ? '+' : '';
+  const cls = growth > 0 ? 'value-trend-up' : 'value-trend-down';
+  const arrow = growth > 0 ? '▲' : '▼';
+  return `<span class="${cls}">${arrow} ${sign}${formatEuro(growth)}</span>`;
+}
+
+function calcTransferBalance(players) {
+  let inTotal = 0, outTotal = 0, inCount = 0, outCount = 0;
+  players.forEach(p => {
+    const bf = parseFloat(p.buyFee)||0;
+    const sf = parseFloat(p.sellFee)||0;
+    if (bf > 0) { inTotal += bf; inCount++; }
+    if (sf > 0) { outTotal += sf; outCount++; }
+  });
+  return { inTotal, outTotal, profit: outTotal - inTotal, inCount, outCount };
+}
+
+// ══════════════════════════════
+// CONTRACTWAARSCHUWING
+// ══════════════════════════════
+function contractWarning(p, seasonRange) {
+  if (!p.contract) return '';
+  const today = new Date().toISOString().split('T')[0];
+  // Contract loopt af op of na seizoenseinde → geen waarschuwing vanuit dit seizoen
+  if (seasonRange && p.contract >= seasonRange.end) return '';
+  // Historisch seizoen (al voorbij): gebruik seizoenseinde als referentie
+  // Huidig/toekomstig seizoen: gebruik vandaag
+  const isHistorical = seasonRange && seasonRange.end < today;
+  const refDate = isHistorical ? new Date(seasonRange.end) : new Date();
+  const diff = new Date(p.contract) - refDate;
+  const months = diff / (1000 * 60 * 60 * 24 * 30);
+  if (months < 0) return '<span class="badge badge-contract-warn">⚠ Verlopen</span>';
+  if (months < 6) return '<span class="badge badge-contract-warn">⚠ < 6 mnd</span>';
+  return '';
+}
+
+// ══════════════════════════════
+// WAARDE GRAFIEK (volledig)
+// ══════════════════════════════
+function renderValueChart(history, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el || !history || history.length < 2) {
+    if (el) el.innerHTML = '<p class="text-muted" style="font-size:11px">Minimaal 2 meetpunten nodig voor grafiek.</p>';
+    return;
+  }
+  const sorted = [...history].reverse();
+  const vals = sorted.map(e => e.amount);
+  const dates = sorted.map(e => e.date);
+  const min = Math.min(...vals) * 0.95;
+  const max = Math.max(...vals) * 1.05;
+  const range = max - min || 1;
+  const W = 500, H = 100, PADL = 8, PADR = 8, PADT = 12, PADB = 8;
+  const pts = vals.map((v, i) => {
+    const x = PADL + (i / (vals.length - 1)) * (W - PADL - PADR);
+    const y = PADT + (1 - (v - min) / range) * (H - PADT - PADB);
+    return { x, y, v, d: dates[i] };
+  });
+  const polyline = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const last = vals[vals.length-1], first = vals[0];
+  const color = last >= first ? '#22c55e' : '#ef4444';
+  const fillPts = `${pts[0].x.toFixed(1)},${H} ` + polyline + ` ${pts[pts.length-1].x.toFixed(1)},${H}`;
+  const tooltipId = containerId + '-tip';
+
+  // Value table — newest first
+  const tableRows = [...history].map((e, i) => {
+    const prev = history[i + 1];
+    const diff = prev ? e.amount - prev.amount : null;
+    const diffStr = diff !== null
+      ? `<span style="color:${diff>=0?'#22c55e':'#ef4444'};font-size:10px">${diff>=0?'+':''}${formatEuro(diff)}</span>`
+      : '<span style="font-size:10px;color:var(--text-muted)">—</span>';
+    const dateStr = e.date ? new Date(e.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}) : '—';
+    return `<tr>
+      <td style="padding:3px 6px 3px 0;font-size:11px;color:var(--text-muted);white-space:nowrap">${dateStr}</td>
+      <td style="padding:3px 6px;font-size:11px;font-weight:600;white-space:nowrap">${formatEuro(e.amount)}</td>
+      <td style="padding:3px 0;text-align:right">${diffStr}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="flex:0 0 50%;position:relative">
+        <div id="${tooltipId}" style="position:absolute;background:var(--bg-modal);border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:11px;pointer-events:none;display:none;z-index:100;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>
+        <svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="overflow:hidden;display:block;border-radius:6px;background:var(--bg-tertiary)">
+          <defs>
+            <linearGradient id="vgrad_${containerId}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+            </linearGradient>
+            <clipPath id="clip_${containerId}"><rect x="0" y="0" width="${W}" height="${H}"/></clipPath>
+          </defs>
+          <polygon points="${fillPts}" fill="url(#vgrad_${containerId})" clip-path="url(#clip_${containerId})"/>
+          <polyline points="${polyline}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#clip_${containerId})"/>
+          ${pts.map(p => `<circle
+            cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="${color}" stroke="var(--bg-modal)" stroke-width="1.5"
+            style="cursor:pointer"
+            onmouseenter="showChartTip(event,'${tooltipId}','${formatEuro(p.v)}','${p.d}')"
+            onmouseleave="document.getElementById('${tooltipId}').style.display='none'"
+          />`).join('')}
+        </svg>
+      </div>
+      <div style="flex:1;max-height:120px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  el.style.position = 'relative';
+}
+
+function showChartTip(event, tipId, val, date) {
+  const tip = document.getElementById(tipId);
+  if (!tip) return;
+  tip.innerHTML = `<strong>${val}</strong> <span style="color:var(--text-muted)">${date}</span>`;
+  tip.style.display = 'block';
+  const rect = tip.parentElement.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  tip.style.left = Math.min(x + 10, rect.width - 140) + 'px';
+  tip.style.top = Math.max(y - 30, 0) + 'px';
+}
+
+// ══════════════════════════════
+// SUBPOSITIES
+// ══════════════════════════════
+const SUBPOS = {
+  Keeper: ['Keeper','Uitkomende Keeper'],
+  Verdediger: ['Centrale Verdediger','Libero','Linksback','Rechtsback','Linker Wingback','Rechter Wingback','Sweeper'],
+  Middenvelder: ['Verdedigende Middenvelder','Centrale Middenvelder','Aanvallende Middenvelder','Linker Middenvelder','Rechter Middenvelder','Box-to-box Middenvelder','Regisseur','Nummer 10'],
+  Aanvaller: ['Spits','Tweede Spits','Valse Negen','Linksbuiten','Rechtsbuiten','Schaduwspits','Buitenspeler']
+};
+// All subpos options grouped — free selection regardless of main position
+const ALL_SUBPOS_GROUPED = [
+  { group: 'Keeper', opts: SUBPOS.Keeper },
+  { group: 'Verdediger', opts: SUBPOS.Verdediger },
+  { group: 'Middenvelder', opts: SUBPOS.Middenvelder },
+  { group: 'Aanvaller', opts: SUBPOS.Aanvaller },
+];
+
+let selectedSubpos = [];
+let currentValueEntries = []; // temp storage while modal is open
+let playerViewMode = 'kaart';
+let playerSortMode = 'positie';
+let showVertrokken = false;
+let vertrokkenMixed = false; // true = gemengd met actief
+let collapsedGroups = new Set();
+let allGroupsCollapsed = false;
+
+function updateSubposOptions(keepSelected) {
+  const pos = document.getElementById('player-position').value;
+  if (!keepSelected) selectedSubpos = [];
+  const dropdown = document.getElementById('subpos-dropdown');
+  const display = document.getElementById('subpos-display');
+  dropdown.innerHTML = '';
+  dropdown.classList.remove('open');
+  if (!pos) {
+    display.innerHTML = '<span style="color:var(--text-muted);font-size:13px">Selecteer hoofdpositie eerst</span>';
+    return;
+  }
+  ALL_SUBPOS_GROUPED.forEach(group => {
+    // Group header
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'padding:4px 10px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:var(--bg-secondary);margin-top:4px';
+    hdr.textContent = group.group;
+    if (group.group === pos) hdr.style.color = 'var(--cambuur-geel)';
+    dropdown.appendChild(hdr);
+    group.opts.forEach(o => {
+      const div = document.createElement('div');
+      div.className = 'multiselect-option' + (selectedSubpos.includes(o) ? ' selected' : '');
+      div.dataset.val = o;
+      const tick = document.createElement('span');
+      tick.style.cssText = 'width:14px;opacity:' + (selectedSubpos.includes(o) ? '1' : '0');
+      tick.textContent = '✓';
+      div.appendChild(tick);
+      div.appendChild(document.createTextNode(' ' + o));
+      div.onclick = () => toggleSubpos(o, div);
+      dropdown.appendChild(div);
+    });
+  });
+  renderSubposDisplay();
+}
+
+function toggleSubpos(val, el) {
+  if (selectedSubpos.includes(val)) {
+    selectedSubpos = selectedSubpos.filter(s => s !== val);
+    el.classList.remove('selected');
+    el.querySelector('span').style.opacity = '0';
+  } else {
+    selectedSubpos.push(val);
+    el.classList.add('selected');
+    el.querySelector('span').style.opacity = '1';
+  }
+  renderSubposDisplay();
+}
+
+function renderSubposDisplay() {
+  const display = document.getElementById('subpos-display');
+  if (!selectedSubpos.length) {
+    display.innerHTML = '<span style="color:var(--text-muted);font-size:13px">Kies subpositie(s)...</span>';
+  } else {
+    display.innerHTML = selectedSubpos.map(s =>
+      `<span class="subpos-tag">${s}</span>`).join('');
+  }
+}
+
+function toggleSubposDropdown() {
+  const dd = document.getElementById('subpos-dropdown');
+  dd.classList.toggle('open');
+}
+
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('subpos-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('subpos-dropdown')?.classList.remove('open');
+  }
+});
+
+
+// ══════════════════════════════
+// ARCHIEF — SEIZOENSFILTER
+// ══════════════════════════════
+function populateArchiefSeasonFilter() {
+  const sel = document.getElementById('archief-season-filter');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Alle seizoenen</option>';
+  S.seasons.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id; o.textContent = s.name;
+    if (s.id === current) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+
+
+
+// ══════════════════════════════
+// SUBPOSITIE SORT ORDER
+// ══════════════════════════════
+const SUBPOS_SORT = {
+  // Verdedigers
+  'Linksback':2,'Linker Wingback':3,'Centrale Verdediger':4,'Libero':5,'Sweeper':6,'Rechter Wingback':7,'Rechtsback':8,
+  // Middenvelders
+  'Verdedigende Middenvelder':2,'Linker Middenvelder':3,'Centrale Middenvelder':4,'Box-to-box Middenvelder':5,'Regisseur':6,'Rechter Middenvelder':7,'Aanvallende Middenvelder':8,'Nummer 10':9,
+  // Aanvallers
+  'Linksbuiten':2,'Schaduwspits':3,'Tweede Spits':4,'Spits':5,'Valse Negen':6,'Buitenspeler':7,'Rechtsbuiten':8,
+};
+
+function subposSortKey(p) {
+  const first = p.subpos?.[0] || p.position || '';
+  return SUBPOS_SORT[first] || 99;
+}
+
+// ══════════════════════════════
+// AUTO-ARCHIVE DEPARTED PLAYERS
+// ══════════════════════════════
+async function checkDepartedPlayers() {
+  if (!S.players) return;
+  const today = new Date().toISOString().split('T')[0];
+  const nowDeparted = S.players.filter(p =>
+    p.status === 'vertrokken' && p.departureDate && p.departureDate <= today
+    && !p._archiveNotified
+  );
+  if (!nowDeparted.length) return;
+
+  // Show notification popup
+  const names = nowDeparted.map(p => {
+    const d = new Date(p.departureDate).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
+    return `<li><strong>${p.firstname ? p.firstname+' ' : ''}${p.lastname}</strong> — contract/vertrek per ${d}</li>`;
+  }).join('');
+
+  await new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = `<div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;max-width:460px;width:90%">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;margin-bottom:16px;color:var(--cambuur-geel)">⚠ Vertrek verwerkt</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">De volgende speler(s) zijn automatisch naar het archief verplaatst omdat hun vertrekdatum is bereikt:</p>
+      <ul style="font-size:13px;line-height:1.8;color:var(--text-primary);padding-left:18px;margin-bottom:20px">${names}</ul>
+      <button class="btn btn-primary" onclick="this.closest('div').parentElement.remove();document.body.style.overflow='';" style="width:100%">Begrepen</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+    overlay.querySelector('button').addEventListener('click', resolve);
+  });
+
+  // Mark as notified (won't show again)
+  for (const p of nowDeparted) {
+    p._archiveNotified = true;
+    await dbPut('players', p);
+  }
+}
+

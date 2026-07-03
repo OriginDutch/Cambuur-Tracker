@@ -129,12 +129,8 @@ function effectiveStatus(p) {
   return p.status || 'actief';
 }
 
-function statusLabel(p) {
-  const s = p.status || 'actief';
-  const labels = { actief:'Actief', geblesseerd:'Geblesseerd', geschorst:'Geschorst',
-    vertrokken:'Vertrokken', vertrekt:'Vertrekt', uitgeleend:'Uitgeleend', huurder:'Huurder' };
-  return labels[s] || s;
-}
+// NB: statusLabel(p) leeft in selectie.js (naast statusLabelEff) — die versie
+// is datum-bewust (herkent 'Vertrekt' vóór de daadwerkelijke vertrekdatum).
 
 // ══════════════════════════════
 // MISSING-DATA CHECK (alleen relevant voor gespeelde Cambuur-wedstrijden)

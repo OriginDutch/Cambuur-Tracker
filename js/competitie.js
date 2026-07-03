@@ -266,3 +266,32 @@ function renderLeagueTable(comp, clubs, compMatches) {
 }
 
 // ══════════════════════════════
+
+
+// ══════════════════════════════
+// DELETE MATCH(ES)
+// ══════════════════════════════
+async function deleteMatch(matchId) {
+  const m = (S.matches||[]).find(x=>x.id===matchId);
+  if (!m) return;
+  if (!confirm('Wedstrijd verwijderen?')) return;
+  await dbDel('matches', matchId);
+  S.matches = S.matches.filter(x=>x.id!==matchId);
+  window._playerStats = calcAllPlayerStats(S.currentSeason);
+  renderCompDetail(m.competitionId);
+  showToast('Wedstrijd verwijderd', 'success');
+}
+
+async function deleteAllMatchesInComp(compId) {
+  const comp = S.competitions.find(c=>c.id===compId);
+  if (!comp) return;
+  const count = (S.matches||[]).filter(m=>m.competitionId===compId).length;
+  if (!confirm(`Alle ${count} wedstrijden in "${comp.name}" verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return;
+  const ids = (S.matches||[]).filter(m=>m.competitionId===compId).map(m=>m.id);
+  for (const id of ids) await dbDel('matches', id);
+  S.matches = (S.matches||[]).filter(m=>m.competitionId!==compId);
+  window._playerStats = calcAllPlayerStats(S.currentSeason);
+  renderCompDetail(compId);
+  showToast(`${ids.length} wedstrijden verwijderd`, 'success');
+}
+

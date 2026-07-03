@@ -65,3 +65,62 @@ async function init(){
   if(S.seasons.length===0){initWizard();document.getElementById('setup-overlay').classList.add('open');}
   setTimeout(checkDepartedPlayers, 800);
 }
+
+
+// ══════════════════════════════
+// DELETE
+// ══════════════════════════════
+let pendingDel=null;
+function confirmDelete(type,id,name){
+  pendingDel={type,id};
+  const msgs={club:`Club verwijderen: "${name}"? De club wordt ook uit alle competities verwijderd.`,stadion:`Stadion verwijderen: "${name}"?`,competition:`Competitie verwijderen: "${name}"? Alle wedstrijden in deze competitie worden ook verwijderd.`,season:`Seizoen verwijderen: "${name}"? Dit verwijdert ook alle gekoppelde competities.`};
+  document.getElementById('confirm-title').textContent='Verwijdering bevestigen';
+  document.getElementById('confirm-message').textContent=msgs[type]||`"${name}" verwijderen?`;
+  document.getElementById('confirm-ok-btn').textContent='Verwijderen';
+  document.getElementById('modal-confirm').classList.add('open');
+}
+function confirmDeleteAll(){
+  pendingDel={type:'all'};
+  document.getElementById('confirm-title').textContent='ALLE gegevens verwijderen';
+  document.getElementById('confirm-message').textContent='Dit verwijdert permanent alle seizoenen, clubs, stadions, competities en wedstrijden. Dit kan niet ongedaan worden gemaakt.';
+  document.getElementById('confirm-ok-btn').textContent='Alles verwijderen';
+  document.getElementById('modal-confirm').classList.add('open');
+}
+document.getElementById('confirm-ok-btn').addEventListener('click',async()=>{
+  if(!pendingDel)return;
+  const{type,id}=pendingDel;
+  if(type==='player'){
+    await dbDel('players',id);S.players=(S.players||[]).filter(p=>p.id!==id);
+    renderSelectie();renderArchief();
+  } else if(type==='all'){
+    for(const s of['settings','seasons','clubs','stadiums','competitions','players','matches','coaches'])await dbClr(s);
+    S={lang:S.lang,theme:S.theme,currentSeason:null,seasons:[],clubs:[],stadiums:[],competitions:[]};
+    renderSeasonSelect();renderCompetitionsNav();renderDashboard();renderSeasonsManage();
+  }else if(type==='club'){
+    await dbDel('clubs',id);S.clubs=S.clubs.filter(c=>c.id!==id);
+    for(const comp of S.competitions){if((comp.clubIds||[]).includes(id)){comp.clubIds=comp.clubIds.filter(cid=>cid!==id);await dbPut('competitions',comp);}}
+    renderClubsTable();renderCompetitionsNav();
+  }else if(type==='stadion'){await dbDel('stadiums',id);S.stadiums=S.stadiums.filter(s=>s.id!==id);renderStadiumsTable();}
+  else if(type==='competition'){
+    await dbDel('competitions',id);S.competitions=S.competitions.filter(c=>c.id!==id);
+    const compMatches=(S.matches||[]).filter(m=>m.competitionId===id);
+    for(const m of compMatches)await dbDel('matches',m.id);
+    S.matches=(S.matches||[]).filter(m=>m.competitionId!==id);
+    renderCompetitionsNav();renderCompetitionsPage();
+  }
+  else if(type==='season'){
+    await dbDel('seasons',id);S.seasons=S.seasons.filter(s=>s.id!==id);
+    const linked=S.competitions.filter(c=>c.seasonId===id);
+    for(const c of linked)await dbDel('competitions',c.id);
+    S.competitions=S.competitions.filter(c=>c.seasonId!==id);
+    // Cascade: ook alle wedstrijden van dit seizoen verwijderen (anders blijven ze als weesdata staan)
+    const linkedCompIds=new Set(linked.map(c=>c.id));
+    const seasonMatches=(S.matches||[]).filter(m=>m.seasonId===id||linkedCompIds.has(m.competitionId));
+    for(const m of seasonMatches)await dbDel('matches',m.id);
+    S.matches=(S.matches||[]).filter(m=>m.seasonId!==id&&!linkedCompIds.has(m.competitionId));
+    if(S.currentSeason===id){S.currentSeason=S.seasons[0]?.id||null;await saveSetting('currentSeason',S.currentSeason);}
+    renderSeasonSelect();renderCompetitionsNav();renderSeasonsManage();renderDashboard();
+  }
+  closeModal('modal-confirm');showToast('Verwijderd','success');pendingDel=null;
+});
+

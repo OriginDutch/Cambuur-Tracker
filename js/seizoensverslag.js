@@ -24,9 +24,8 @@ function renderSeizoensverslag(seasonId) {
   const cam = S.clubs.find(c=>c.isOwnClub);
   if (!season || !cam) { el.innerHTML = '<p class="text-muted">Seizoen niet gevonden.</p>'; return; }
 
-  const matches = (S.matches||[]).filter(m => m.played && m.seasonId===seasonId &&
-    (m.homeClubId===cam.id || m.awayClubId===cam.id)
-  ).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const seasonRecord = calcSeasonRecord(seasonId, cam);
+  const matches = seasonRecord.matches.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 
   if (!matches.length) {
     el.innerHTML = `<button class="btn btn-ghost" onclick="svBack()" style="font-size:13px;margin-bottom:12px">← Terug</button>
@@ -35,19 +34,10 @@ function renderSeizoensverslag(seasonId) {
   }
 
   // ── Eindstand ──
-  let w=0,d=0,l=0,gf=0,ga=0,cs=0;
-  matches.forEach(m=>{
-    const isCamHome = m.homeClubId===cam.id;
-    const cg = isCamHome?m.homeScore:m.awayScore;
-    const og = isCamHome?m.awayScore:m.homeScore;
-    gf+=cg; ga+=og;
-    if (cg>og) w++; else if (cg===og) d++; else l++;
-    if (og===0) cs++;
-  });
-  const played = matches.length, pts = w*3+d, ppg = (pts/played).toFixed(2);
+  const {w, d, l, gf, ga, cleanSheets:cs, played, pts, ppg} = seasonRecord;
 
   // ── Thuis/uit record ──
-  const record = ms => {
+  const splitRecord = ms => {
     let rw=0,rd=0,rl=0,rgf=0,rga=0;
     ms.forEach(m=>{
       const isCamHome = m.homeClubId===cam.id;
@@ -58,8 +48,8 @@ function renderSeizoensverslag(seasonId) {
     });
     return {w:rw,d:rd,l:rl,gf:rgf,ga:rga,played:ms.length};
   };
-  const homeRec = record(matches.filter(m=>m.homeClubId===cam.id));
-  const awayRec = record(matches.filter(m=>m.awayClubId===cam.id));
+  const homeRec = splitRecord(matches.filter(m=>m.homeClubId===cam.id));
+  const awayRec = splitRecord(matches.filter(m=>m.awayClubId===cam.id));
 
   // ── Grootste overwinning / zwaarste nederlaag ──
   let biggestWin=null, biggestLoss=null;

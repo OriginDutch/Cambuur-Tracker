@@ -469,6 +469,12 @@
           </div>
         </div>
         <div class="settings-section">
+          <div class="settings-title">🔍 Data-integriteit controleren</div>
+          <div class="settings-row-desc" style="margin-bottom:12px">Scant op weeswedstrijden (verwijzend naar een verwijderd seizoen/competitie) en losse verwijzingen naar verwijderde spelers, coaches of clubs. Verandert niets automatisch — jij beslist per categorie of er opgeschoond wordt.</div>
+          <button class="btn btn-secondary" onclick="runDataIntegrityCheck()">🔍 Nu controleren</button>
+          <div id="integrity-check-result" style="margin-top:12px"></div>
+        </div>
+        <div class="settings-section">
           <div class="settings-title">Database viewer</div>
           <div class="settings-row-desc" style="margin-bottom:12px">Bekijk en bewerk data direct via SQL. Wijzigingen worden direct opgeslagen in de database.</div>
           <button class="btn btn-primary" onclick="openDbViewer()">🗄️ Database openen</button>
@@ -1035,7 +1041,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js" async></script>
 <script src="js/core.js"></script>
+<script src="js/ui-core.js"></script>
 <script src="js/helpers.js"></script>
+<script src="js/stats-engine.js"></script>
+<script src="js/backup.js"></script>
 <script src="js/transfers.js"></script>
 <script src="js/injuries.js"></script>
 <script src="js/wizard.js"></script>
@@ -1046,10 +1055,11 @@
 <script src="js/statistieken.js"></script>
 <script src="js/selectie.js"></script>
 <script src="js/competitie.js"></script>
-<script src="js/wedstrijd-modal.js"></script>
+<script src="js/match-import.js"></script>
 <script src="js/wedstrijd-page.js"></script>
 <script src="js/coaches.js"></script>
 <script src="js/db-viewer.js"></script>
+<script src="js/data-integrity.js"></script>
 <script src="js/soccer365.js"></script>
 <script src="js/speler.js"></script>
 <script src="js/hover.js"></script>

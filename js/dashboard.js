@@ -460,8 +460,8 @@ function renderDashboard(){
       const possessions = camMatches.map(m=>isCamHome(m)?m.matchStats.home.possession:m.matchStats.away.possession);
       const avgPoss = Math.round(possessions.reduce((a,b)=>a+b,0)/possessions.length);
 
-      // Keeper save percentage
-      const allStats = calcAllPlayerStats(S.currentSeason);
+      // Keeper save percentage (hergebruikt 'stats', al bovenaan renderDashboard berekend)
+      const allStats = stats;
       const keepers = (S.players||[]).filter(p=>p.position==='Keeper'&&(allStats[p.id]?.appearances||0)>0);
       const keeperRows = keepers.map(p=>{
         const st = allStats[p.id]||{};

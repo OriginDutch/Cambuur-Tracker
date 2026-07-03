@@ -418,3 +418,154 @@ function fmtMatchDate(m) {
   return weekday.charAt(0).toUpperCase()+weekday.slice(1)+' '+day+' '+month+(m.time?' '+m.time:'');
 }
 
+
+
+const DEFAULT_PREFS = {
+  coachYellowThreshold: 3,
+  font: 'inter',
+  fontSize: 'normal',
+  formLength: 5,
+  showTopscorers: true,
+  showAvailability: true,
+  defaultPlayerView: 'kaart',
+  defaultPlayerSort: 'positie',
+  contractWarnMonths: 6,
+  loanWarnMonths: 3,
+};
+
+function getPrefs() {
+  return Object.assign({}, DEFAULT_PREFS, S.prefs || {});
+}
+
+async function savePref(key, value) {
+  if (!S.prefs) S.prefs = {};
+  S.prefs[key] = value;
+  await dbPut('settings', {key:'prefs', value: JSON.stringify(S.prefs)});
+  applyPrefs();
+}
+
+function applyPrefs() {
+  const p = getPrefs();
+  // Font
+  const fonts = {
+    inter: "'Inter','Segoe UI',sans-serif",
+    system: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+    roboto: "'Roboto','Segoe UI',sans-serif",
+    mono: "'JetBrains Mono','Fira Code',monospace"
+  };
+  document.body.style.fontFamily = fonts[p.font] || fonts.inter;
+  // Font size
+  const sizes = {small:'13px', normal:'14px', large:'16px'};
+  document.documentElement.style.setProperty('--base-font-size', sizes[p.fontSize] || '14px');
+  document.body.style.fontSize = sizes[p.fontSize] || '14px';
+}
+
+function setFont(val) { savePref('font', val); }
+function setFontSize(val) { savePref('fontSize', val); }
+
+function renderInstellingen() {
+  const p = getPrefs();
+  // Sync toggle states
+  const dm = document.getElementById('dark-mode-toggle');
+  if (dm) dm.checked = S.theme==='dark';
+  const fs = document.getElementById('font-select');
+  if (fs) fs.value = p.font || 'inter';
+  const fss = document.getElementById('fontsize-select');
+  if (fss) fss.value = p.fontSize || 'normal';
+  const fls = document.getElementById('form-length-select');
+  if (fls) fls.value = String(p.formLength || 5);
+  const pt = document.getElementById('pref-topscorers');
+  if (pt) pt.checked = p.showTopscorers !== false;
+  const pa = document.getElementById('pref-availability');
+  if (pa) pa.checked = p.showAvailability !== false;
+  // Default to algemeen tab
+  switchSettingsTab('algemeen', document.querySelector('#settings-tabs .tab'));
+  renderSeasonsManage();
+}
+
+function switchSettingsTab(tab, el) {
+  ['algemeen','seizoenen','selectie','gegevens'].forEach(t => {
+    const d = document.getElementById('stab-'+t);
+    if (d) d.style.display = t===tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('#settings-tabs .tab').forEach(t=>t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (tab === 'seizoenen') renderSeasonsManage();
+  if (tab === 'selectie') renderSelectieSettings();
+}
+
+function renderSelectieSettings() {
+  const p = getPrefs();
+  const dv = document.getElementById('pref-default-view');
+  const ds = document.getElementById('pref-default-sort');
+  const cw = document.getElementById('pref-contract-warn');
+  const lw = document.getElementById('pref-loan-warn');
+  if (dv) dv.value = p.defaultPlayerView || 'kaart';
+  if (ds) ds.value = p.defaultPlayerSort || 'positie';
+  if (cw) cw.value = String(p.contractWarnMonths || 6);
+  if (lw) lw.value = String(p.loanWarnMonths || 3);
+}
+
+function toggleInlineSeasonForm() {
+  const f = document.getElementById('inline-season-form');
+  if (f) f.style.display = f.style.display==='none'||!f.style.display ? 'block' : 'none';
+}
+
+// ── Seizoenen herordenen ──
+
+async function moveComp(id, dir) {
+  const comps = S.competitions.filter(c=>c.seasonId===S.currentSeason);
+  const idx = comps.findIndex(c=>c.id===id);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= comps.length) return;
+  // Swap in S.competitions
+  const ai = S.competitions.indexOf(comps[idx]);
+  const bi = S.competitions.indexOf(comps[newIdx]);
+  [S.competitions[ai], S.competitions[bi]] = [S.competitions[bi], S.competitions[ai]];
+  // Save order via sortOrder field
+  S.competitions.forEach((c,i) => c.sortOrder = i);
+  for (const c of S.competitions) await dbPut('competitions', c);
+  renderCompetitionsPage();
+  renderCompetitionsNav();
+}
+
+async function moveSeasonUp(id) {
+  const idx = S.seasons.findIndex(s=>s.id===id);
+  if (idx <= 0) return;
+  [S.seasons[idx-1], S.seasons[idx]] = [S.seasons[idx], S.seasons[idx-1]];
+  S.seasons.forEach((s,i) => s.sortOrder = i);
+  for (const s of S.seasons) await dbPut('seasons', s);
+  renderSeasonsManage(); renderSeasonSelect();
+}
+async function moveSeasonDown(id) {
+  const idx = S.seasons.findIndex(s=>s.id===id);
+  if (idx < 0 || idx >= S.seasons.length-1) return;
+  [S.seasons[idx], S.seasons[idx+1]] = [S.seasons[idx+1], S.seasons[idx]];
+  S.seasons.forEach((s,i) => s.sortOrder = i);
+  for (const s of S.seasons) await dbPut('seasons', s);
+  renderSeasonsManage(); renderSeasonSelect();
+}
+async function moveSeasonTop(id) {
+  const idx = S.seasons.findIndex(s=>s.id===id);
+  if (idx <= 0) return;
+  S.seasons.unshift(S.seasons.splice(idx, 1)[0]);
+  S.seasons.forEach((s,i) => s.sortOrder = i);
+  for (const s of S.seasons) await dbPut('seasons', s);
+  renderSeasonsManage(); renderSeasonSelect();
+}
+async function moveSeasonBottom(id) {
+  const idx = S.seasons.findIndex(s=>s.id===id);
+  if (idx < 0 || idx >= S.seasons.length-1) return;
+  S.seasons.push(S.seasons.splice(idx, 1)[0]);
+  S.seasons.forEach((s,i) => s.sortOrder = i);
+  for (const s of S.seasons) await dbPut('seasons', s);
+  renderSeasonsManage(); renderSeasonSelect();
+}
+async function toggleSeasonVisible(id) {
+  const s = S.seasons.find(x=>x.id===id);
+  if (!s) return;
+  s.hidden = !s.hidden;
+  await dbPut('seasons', s);
+  renderSeasonsManage(); renderSeasonSelect();
+}
+

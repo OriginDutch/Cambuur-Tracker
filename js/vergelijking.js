@@ -47,26 +47,13 @@ function renderVergSeizoen(el, seasons, cam) {
 
   // Compute stats per season
   const rows = seasons.map(s => {
-    const matches = (S.matches||[]).filter(m=>m.played && !isMatchOrphaned(m) && (m.homeClubId===cam?.id||m.awayClubId===cam?.id));
-    const seasonMatches = matches.filter(m => {
-      const r = getSeasonDateRange(s.id);
-      if (!r || !m.date) return false;
-      return m.date >= r.start && m.date <= r.end;
-    });
-    let w=0,d=0,l=0,gf=0,ga=0,cs=0,possession=[];
-    seasonMatches.forEach(m=>{
+    const record = calcSeasonRecord(s.id, cam);
+    let possession=[];
+    record.matches.forEach(m=>{
       const isCamHome = m.homeClubId===cam?.id;
-      const camG = isCamHome?m.homeScore:m.awayScore;
-      const oppG = isCamHome?m.awayScore:m.homeScore;
-      gf+=camG; ga+=oppG;
-      if(camG>oppG) w++; else if(camG===oppG) d++; else l++;
-      if(oppG===0) cs++;
       const pos = isCamHome?m.matchStats?.home?.possession:m.matchStats?.away?.possession;
       if(pos!==undefined) possession.push(pos);
     });
-    const played = seasonMatches.length;
-    const pts = w*3+d;
-    const ppg = played>0?(pts/played).toFixed(2):'—';
     const avgPoss = possession.length>0?Math.round(possession.reduce((a,b)=>a+b,0)/possession.length):null;
 
     // Top scorer this season
@@ -74,7 +61,8 @@ function renderVergSeizoen(el, seasons, cam) {
     const topScorer = players_().filter(p=>allStats[p.id]?.goals>0)
       .sort((a,b)=>(allStats[b.id]?.goals||0)-(allStats[a.id]?.goals||0))[0];
 
-    return {s, played, w, d, l, gf, ga, pts, ppg, cs, avgPoss, topScorer, allStats};
+    return {s, played:record.played, w:record.w, d:record.d, l:record.l, gf:record.gf, ga:record.ga,
+      pts:record.pts, ppg:record.ppg, cs:record.cleanSheets, avgPoss, topScorer, allStats};
   }).filter(r=>r.played>0);
 
   if (!rows.length) {
