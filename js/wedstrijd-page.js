@@ -128,6 +128,20 @@ function renderWedstrijdPage(matchId) {
       </div>
       ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'extraTime') : ''}
     </div>
+    ${comp?.type==='beker' ? `<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer">
+        <input type="checkbox" id="wp-went-et" ${m.wentToExtraTime?'checked':''} onchange="wpToggleExtraTimeFields()" style="accent-color:var(--cambuur-geel)">
+        Verlenging gespeeld
+      </label>
+      <div id="wp-penalties-wrap" style="display:${m.wentToExtraTime?'flex':'none'};align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
+        <span>Strafschoppen:</span>
+        <input id="wp-pen-h" type="number" min="0" value="${m.penalties?.home??''}" placeholder="—"
+          class="form-input" style="width:44px;height:28px;text-align:center;font-size:12px;padding:2px 4px;-moz-appearance:textfield" onwheel="this.blur()">
+        <span>-</span>
+        <input id="wp-pen-a" type="number" min="0" value="${m.penalties?.away??''}" placeholder="—"
+          class="form-input" style="width:44px;height:28px;text-align:center;font-size:12px;padding:2px 4px;-moz-appearance:textfield" onwheel="this.blur()">
+      </div>
+    </div>` : ''}
   </div>
 
   <!-- Layout: basiself alleen als Cambuur speelt -->
@@ -583,6 +597,12 @@ function wpRenderGoals() {
   wpRenderTimeline();
 }
 
+function wpToggleExtraTimeFields() {
+  const checked = document.getElementById('wp-went-et')?.checked;
+  const wrap = document.getElementById('wp-penalties-wrap');
+  if (wrap) wrap.style.display = checked ? 'flex' : 'none';
+}
+
 function wpRecalcScore() {
   const camClub = S.clubs.find(c=>c.isOwnClub);
   const m = (S.matches||[]).find(x=>x.id===wpCurrentId);
@@ -830,6 +850,17 @@ async function wpSave() {
   const et2 = document.getElementById('wp-et2')?.value?.trim();
   if (et1 !== '' && et1 !== undefined) m.extraTime1 = parseInt(et1)||0;
   if (et2 !== '' && et2 !== undefined) m.extraTime2 = parseInt(et2)||0;
+  const wentEtEl = document.getElementById('wp-went-et');
+  if (wentEtEl) {
+    m.wentToExtraTime = wentEtEl.checked;
+    const penH = document.getElementById('wp-pen-h')?.value?.trim();
+    const penA = document.getElementById('wp-pen-a')?.value?.trim();
+    if (wentEtEl.checked && penH!=='' && penA!=='' && penH!==undefined && penA!==undefined) {
+      m.penalties = {home: parseInt(penH)||0, away: parseInt(penA)||0};
+    } else {
+      m.penalties = null;
+    }
+  }
   m.coachId = document.getElementById('wp-coach')?.value||null;
   m.motm   = document.getElementById('wp-motm')?.value||'';
   m.events = [

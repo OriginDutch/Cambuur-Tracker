@@ -10,8 +10,8 @@ function renderCompDetail(compId) {
   const typeLabel = {competitie:'Competitie',beker:'Bekertoernooi',voorbereiding:'Voorbereiding'};
 
   const compMatches = (S.matches||[]).filter(m=>m.competitionId===compId);
-  const rounds = [...new Set(compMatches.map(m=>m.round))].sort((a,b)=>a-b);
   const today = new Date().toISOString().split('T')[0];
+  const isKnockout = comp.type === 'beker';
 
   let standingsHtml = '';
   if (comp.type === 'competitie' && clubs.length) {
@@ -19,7 +19,11 @@ function renderCompDetail(compId) {
   }
 
   let roundsHtml = '';
-  if (rounds.length) {
+  if (isKnockout) {
+    roundsHtml = renderKnockoutRounds(comp, compMatches);
+  } else {
+    const rounds = [...new Set(compMatches.map(m=>m.round))].sort((a,b)=>a-b);
+    if (rounds.length) {
     roundsHtml = rounds.map(r => {
       const rMatches = compMatches.filter(m=>m.round===r);
       const cambuurMatch = rMatches.find(m=>isCambuurMatch(m));
@@ -43,6 +47,7 @@ function renderCompDetail(compId) {
         </div>
       </div>`;
     }).join('');
+    }
   }
 
   el.innerHTML = `
@@ -56,14 +61,16 @@ function renderCompDetail(compId) {
     </div>
     ${standingsHtml}
     <div class="section-header mb-8 mt-16">
-      <div class="section-title">Speelschema</div>
-      <div class="flex-center gap-8">
+      <div class="section-title">${isKnockout ? 'Bracket' : 'Speelschema'}</div>
+      ${isKnockout ? '' : `<div class="flex-center gap-8">
         <button class="btn btn-ghost" style="font-size:11px" onclick="expandAllRounds('${compId}')">Alles uitklappen</button>
         <button class="btn btn-ghost" style="font-size:11px" onclick="collapseAllRounds('${compId}')">Alles inklappen</button>
-      </div>
+      </div>`}
     </div>
     ${roundsHtml || '<p class="text-muted" style="font-size:12px">Nog geen wedstrijden. Voeg wedstrijden toe of genereer een schema.</p>'}
   `;
+
+  if (isKnockout) return; // knockout-rondes staan altijd open, geen state-restore nodig
 
   // Restore previously open rounds, or auto-open current round on first visit
   if (window._openRounds?.[compId]?.size > 0) {
@@ -79,6 +86,75 @@ function renderCompDetail(compId) {
 function isCambuurMatch(m) {
   const cam = S.clubs.find(c=>c.isOwnClub);
   return cam && (m.homeClubId===cam.id||m.awayClubId===cam.id);
+}
+
+// ══════════════════════════════
+// KNOCKOUT-WEERGAVE (bekertoernooien, play-offs)
+// ══════════════════════════════
+function renderKnockoutRounds(comp, compMatches) {
+  // Rondevolgorde: uit comp.rounds als die er is, anders op vroegste datum per ronde
+  let roundOrder = (comp.rounds||[]).filter(r => compMatches.some(m=>m.round===r));
+  const roundsWithoutOrder = [...new Set(compMatches.map(m=>m.round))].filter(r => !roundOrder.includes(r));
+  if (roundsWithoutOrder.length) {
+    roundsWithoutOrder.sort((a,b) => {
+      const da = compMatches.filter(m=>m.round===a).map(m=>m.date).filter(Boolean).sort()[0] || '9999';
+      const db = compMatches.filter(m=>m.round===b).map(m=>m.date).filter(Boolean).sort()[0] || '9999';
+      return da.localeCompare(db);
+    });
+    roundOrder = [...roundOrder, ...roundsWithoutOrder];
+  }
+
+  return roundOrder.map(r => {
+    const rMatches = compMatches.filter(m=>m.round===r);
+    const ties = getKnockoutTies(rMatches);
+    const cambuurTie = ties.find(t => t.legs.some(isCambuurMatch));
+    return `<div class="round-accordion open" style="margin-bottom:12px">
+      <div class="round-header open" style="cursor:default">
+        <div class="flex-center gap-8">
+          <span class="round-title">${r}</span>
+          ${cambuurTie ? `<span class="badge badge-competitie" style="font-size:9px">Cambuur</span>` : ''}
+        </div>
+        <span class="round-meta">${ties.length} duel${ties.length!==1?'len':''}</span>
+      </div>
+      <div class="round-body open">
+        ${ties.map(tie => renderKnockoutTie(tie, comp)).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderKnockoutTie(tie, comp) {
+  const clubName = id => S.clubs.find(c=>c.id===id)?.name || '?';
+  const winner = getTieWinner(tie);
+  const [legA] = tie.legs;
+  const clubA = legA.homeClubId, clubB = legA.awayClubId;
+  const cam = S.clubs.find(c=>c.isOwnClub);
+  const isCamTie = cam && (clubA===cam.id || clubB===cam.id);
+
+  let aggHtml = '';
+  if (tie.twoLegged) {
+    let scoreA=0, scoreB=0, allPlayed=true;
+    tie.legs.forEach(leg => {
+      if (leg.homeScore==null || leg.awayScore==null) { allPlayed=false; return; }
+      const aIsHome = leg.homeClubId===clubA;
+      scoreA += aIsHome?leg.homeScore:leg.awayScore;
+      scoreB += aIsHome?leg.awayScore:leg.homeScore;
+    });
+    if (allPlayed) {
+      const lastLeg = tie.legs[1];
+      aggHtml = `<div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">Totaalstand: <strong>${scoreA}-${scoreB}</strong>${lastLeg.penalties?` (${lastLeg.penalties.home}-${lastLeg.penalties.away} n.s.)`:''}</div>`;
+    }
+  }
+
+  return `<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:8px;${isCamTie?'border-color:var(--cambuur-geel)':''}">
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px;padding:0 4px">
+      <span style="${winner===clubA?'color:var(--win)':winner?'color:var(--text-muted);font-weight:400':''}">${winner===clubA?'✓ ':''}${clubName(clubA)}</span>
+      <span style="color:var(--text-muted);font-weight:400;font-size:10px">${tie.twoLegged?'heen/uit':'vs'}</span>
+      <span style="${winner===clubB?'color:var(--win)':winner?'color:var(--text-muted);font-weight:400':''}">${clubName(clubB)}${winner===clubB?' ✓':''}</span>
+    </div>
+    ${tie.legs.map(m=>renderMatchRow(m,comp)).join('')}
+    ${aggHtml}
+  </div>`;
 }
 
 function fmtShortDate(iso) {
@@ -102,8 +178,14 @@ function renderMatchRow(m, comp) {
   if (m.played && m.homeScore !== null) {
     const camScore = camIsHome ? m.homeScore : m.awayScore;
     const oppScore = camIsHome ? m.awayScore : m.homeScore;
-    const cls = isCam ? (camScore > oppScore ? 'won' : camScore === oppScore ? 'draw' : 'lost') : '';
-    scoreHtml = `<span class="match-score ${cls}" onclick="startInlineScore(event,'${m.id}')" style="cursor:pointer" title="Klik om aan te passen">${m.homeScore} - ${m.awayScore}</span>`;
+    let cls = isCam ? (camScore > oppScore ? 'won' : camScore === oppScore ? 'draw' : 'lost') : '';
+    // Bij gelijkspel na verlenging beslissen strafschoppen wie 'wint' (voor de kleur)
+    if (isCam && m.penalties && camScore === oppScore) {
+      const camPen = camIsHome ? m.penalties.home : m.penalties.away;
+      const oppPen = camIsHome ? m.penalties.away : m.penalties.home;
+      cls = camPen > oppPen ? 'won' : 'lost';
+    }
+    scoreHtml = `<span class="match-score ${cls}" onclick="startInlineScore(event,'${m.id}')" style="cursor:pointer" title="Klik om aan te passen">${formatMatchResult(m)}</span>`;
   } else {
     scoreHtml = `<span class="match-score upcoming" onclick="startInlineScore(event,'${m.id}')" style="cursor:pointer" title="Klik om score in te voeren">${m.time||'—'}</span>`;
   }

@@ -90,6 +90,72 @@ function isMatchOrphaned(m) {
   return !(S.competitions||[]).some(c => c.id === m.competitionId);
 }
 
+// Geeft een leesbare uitslagstring inclusief verlenging/strafschoppen-notatie
+// (bijv. "2-2 n.v. (4-3 n.s.)"). Geeft '' als er nog geen uitslag is.
+function formatMatchResult(m) {
+  if (m.homeScore==null || m.awayScore==null) return '';
+  let s = `${m.homeScore} - ${m.awayScore}`;
+  if (m.wentToExtraTime) s += ' n.v.';
+  if (m.penalties) s += ` (${m.penalties.home}-${m.penalties.away} n.s.)`;
+  return s;
+}
+
+// Groepeert wedstrijden van een knockout-competitie (bv. beker) per duel:
+// twee wedstrijden met dezelfde twee clubs in dezelfde ronde horen bij elkaar
+// (heen/uit) — geen los tieId-veld nodig, wordt afgeleid uit de data zelf.
+// legs staan gesorteerd op datum (leg 1 = vroegste wedstrijd).
+function getKnockoutTies(compMatches) {
+  const ties = [];
+  const used = new Set();
+  compMatches.forEach(m => {
+    if (used.has(m.id)) return;
+    const pairKey = [m.homeClubId, m.awayClubId].sort().join('_');
+    const partner = compMatches.find(m2 => m2.id!==m.id && !used.has(m2.id) &&
+      m2.round===m.round && [m2.homeClubId, m2.awayClubId].sort().join('_')===pairKey);
+    if (partner) {
+      used.add(m.id); used.add(partner.id);
+      const legs = [m, partner].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+      ties.push({round: m.round, legs, twoLegged: true});
+    } else {
+      used.add(m.id);
+      ties.push({round: m.round, legs: [m], twoLegged: false});
+    }
+  });
+  return ties;
+}
+
+// Bepaalt welke club een duel wint (clubId, of null als nog niet beslist).
+// Eén wedstrijd: hoogste score, bij gelijkspel na verlenging beslissen strafschoppen.
+// Twee wedstrijden: hoogste opgeteld doelaantal (geen uitdoelpuntenregel), bij
+// gelijke stand beslissen de strafschoppen van de laatste (tweede) wedstrijd.
+function getTieWinner(tie) {
+  const [legA, legB] = tie.legs;
+  if (!tie.twoLegged) {
+    if (legA.homeScore==null || legA.awayScore==null) return null;
+    if (legA.homeScore > legA.awayScore) return legA.homeClubId;
+    if (legA.homeScore < legA.awayScore) return legA.awayClubId;
+    if (legA.penalties) return legA.penalties.home > legA.penalties.away ? legA.homeClubId : legA.awayClubId;
+    return null;
+  }
+  const clubA = legA.homeClubId, clubB = legA.awayClubId;
+  if (legA.homeScore==null || legB.homeScore==null) return null;
+  let scoreA = 0, scoreB = 0;
+  [legA, legB].forEach(leg => {
+    const aIsHome = leg.homeClubId === clubA;
+    scoreA += aIsHome ? leg.homeScore : leg.awayScore;
+    scoreB += aIsHome ? leg.awayScore : leg.homeScore;
+  });
+  if (scoreA > scoreB) return clubA;
+  if (scoreB > scoreA) return clubB;
+  if (legB.penalties) {
+    const bIsHome = legB.homeClubId === clubA;
+    const penA = bIsHome ? legB.penalties.home : legB.penalties.away;
+    const penB = bIsHome ? legB.penalties.away : legB.penalties.home;
+    return penA > penB ? clubA : clubB;
+  }
+  return null;
+}
+
 // Geeft true als speler actief was tijdens het opgegeven seizoen
 function isPlayerInSeason(player, season) {
   if (!season) return true;

@@ -36,6 +36,18 @@ function openMatchImport(compId, defaultTab) {
         `<option value="${c.id}">${c.name}</option>`).join('');
     document.getElementById('manual-match-home').innerHTML = opts;
     document.getElementById('manual-match-away').innerHTML = opts;
+
+    // Rondeveld: nummer voor competities, naamdropdown (uit comp.rounds) voor bekertoernooien
+    const roundNumEl = document.getElementById('manual-match-round');
+    const roundNameEl = document.getElementById('manual-match-round-name');
+    if (selComp?.type === 'beker' && (selComp.rounds||[]).length) {
+      roundNumEl.style.display = 'none';
+      roundNameEl.style.display = 'block';
+      roundNameEl.innerHTML = selComp.rounds.map(r=>`<option value="${r}">${r}</option>`).join('');
+    } else {
+      roundNumEl.style.display = 'block';
+      roundNameEl.style.display = 'none';
+    }
   }
   document.getElementById('manual-match-comp').onchange = updateManualClubOpts;
   updateManualClubOpts();
@@ -641,7 +653,11 @@ async function confirmMatchImport() {
 // Manual match entry
 function addManualMatch() {
   const compId = document.getElementById('manual-match-comp').value;
-  const round = parseInt(document.getElementById('manual-match-round').value);
+  const selComp = S.competitions.find(c=>c.id===compId);
+  const isKnockout = selComp?.type === 'beker' && (selComp.rounds||[]).length;
+  const round = isKnockout
+    ? document.getElementById('manual-match-round-name').value
+    : parseInt(document.getElementById('manual-match-round').value);
   const date = document.getElementById('manual-match-date').value;
   const time = document.getElementById('manual-match-time').value;
   const homeId = document.getElementById('manual-match-home').value;
@@ -650,7 +666,7 @@ function addManualMatch() {
   if (!compId) { showToast('Selecteer een competitie', 'error'); return; }
   if (!homeId || !awayId) { showToast('Selecteer thuis- en uitclub', 'error'); return; }
   if (homeId === awayId) { showToast('Thuis- en uitclub mogen niet hetzelfde zijn', 'error'); return; }
-  if (!round || round < 1) { showToast('Voer een speelronde in', 'error'); return; }
+  if (!round || (!isKnockout && round < 1)) { showToast('Voer een speelronde in', 'error'); return; }
 
   const homeClub = S.clubs.find(c=>c.id===homeId);
   const awayClub = S.clubs.find(c=>c.id===awayId);
