@@ -23,23 +23,35 @@ function renderCoachesPage() {
   const byRole = {};
   COACH_ROLES.forEach(r => byRole[r] = []);
   coaches.forEach(c => {
-    // Find current/most recent appointment
-    const appt = (c.appointments||[]).sort((a,b)=>new Date(b.from)-new Date(a.from))[0];
+    // Vind de aanstelling die vandaag actief is (from <= vandaag <= to, of geen to).
+    // Val terug op de meest recente aanstelling (op startdatum) als er geen actieve is.
+    const today = new Date();
+    const appts = (c.appointments||[]).slice().sort((a,b)=>new Date(b.from)-new Date(a.from));
+    const currentAppt = appts.find(a => {
+      const from = a.from ? new Date(a.from) : null;
+      const to = a.to ? new Date(a.to) : null;
+      if (!from) return false;
+      return from <= today && (!to || to >= today);
+    });
+    const appt = currentAppt || appts[0];
     const role = appt?.role || 'Overig';
     if (!byRole[role]) byRole[role] = [];
-    byRole[role].push({coach:c, appt});
+    byRole[role].push({coach:c, appt, isActive:!!currentAppt});
   });
 
   let html = '';
   COACH_ROLES.forEach(role => {
-    const group = byRole[role] || [];
+    const group = (byRole[role] || []).slice().sort((a,b) => {
+      const oa = a.appt?.order ?? 999, ob = b.appt?.order ?? 999;
+      if (oa !== ob) return oa - ob;
+      return (a.coach.lastname||'').localeCompare(b.coach.lastname||'');
+    });
     if (!group.length) return;
     html += `<div style="margin-bottom:20px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:8px">${role}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
-        ${group.map(({coach:c, appt}) => {
+        ${group.map(({coach:c, appt, isActive}) => {
           const age = c.dob ? Math.floor((Date.now()-new Date(c.dob))/31557600000) : null;
-          const isActive = appt && !appt.to;
           const stats = calcCoachStats(c.id, S.currentSeason);
           return `<div class="card" style="cursor:pointer;padding:14px" onclick="openCoachDetail('${c.id}')">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">

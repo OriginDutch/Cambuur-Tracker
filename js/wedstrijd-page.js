@@ -278,16 +278,18 @@ function wpInitCoach(m) {
   const coaches = S.coaches||[];
   // Get active coaches for this match date
   const mDate = m.date ? new Date(m.date) : new Date();
-  const activeCoaches = coaches.filter(c =>
-    (c.appointments||[]).some(a => {
-      const from = new Date(a.from||'1900-01-01');
-      const to = a.to ? new Date(a.to) : new Date('2099-01-01');
-      return mDate >= from && mDate <= to;
-    })
-  ).sort((a,b) => {
-    // Sort by appointment order
-    const aOrder = Math.min(...(a.appointments||[]).map(ap=>ap.order||99));
-    const bOrder = Math.min(...(b.appointments||[]).map(ap=>ap.order||99));
+  const apptOnDate = c => (c.appointments||[]).find(a => {
+    const from = new Date(a.from||'1900-01-01');
+    const to = a.to ? new Date(a.to) : new Date('2099-01-01');
+    return mDate >= from && mDate <= to;
+  });
+  const activeCoaches = coaches.filter(c => apptOnDate(c))
+  .sort((a,b) => {
+    // Sorteer op de order-waarde van de aanstelling die gold op déze wedstrijddatum
+    // (niet de laagste order over de hele carrière — een oude hoofdtrainer-order
+    // mag een huidige assistent-order niet blijven overstemmen)
+    const aOrder = apptOnDate(a)?.order ?? 99;
+    const bOrder = apptOnDate(b)?.order ?? 99;
     return aOrder - bOrder;
   });
 

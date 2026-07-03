@@ -120,14 +120,40 @@ async function saveSeason(){
 // CLUBS
 // ══════════════════════════════
 function renderClubsPage(){renderClubsTable();renderStadiumsTable();}
+if (!window._clubSort) window._clubSort = {key:'name', dir:1};
+function setClubSort(key){
+  if (window._clubSort.key===key) window._clubSort.dir*=-1;
+  else window._clubSort = {key, dir:1};
+  renderClubsTable();
+}
 function renderClubsTable(){
   const wrap=document.getElementById('clubs-table-wrap');
   const q=(document.getElementById('club-search')?.value||'').toLowerCase();
   const list=S.clubs.filter(c=>!q||c.name.toLowerCase().includes(q)||(c.city||'').toLowerCase().includes(q));
   if(!list.length){wrap.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏟️</div><div class="empty-state-title">Nog geen clubs</div><div class="empty-state-desc">Voeg clubs toe om te beginnen.</div></div>';return;}
   const hl={rivaal:'<span class="badge badge-rival">🔴 Rivaal</span>',interessant:'<span class="badge badge-interesting">⭐ Interessant</span>'};
-  wrap.innerHTML=`<table class="data-table"><thead><tr><th>Club</th><th>Afk.</th><th>Stad</th><th>Stadion</th><th>Markering</th><th>Notitie</th><th></th></tr></thead><tbody>${
-    list.map(c=>{const stad=S.stadiums.find(s=>s.id===c.stadiumId);return`<tr style="${c.highlight==='rivaal'?'border-left:2px solid var(--heerenveen-rood)':c.highlight==='interessant'?'border-left:2px solid var(--interessant)':''}">
+
+  const {key,dir}=window._clubSort;
+  const stadName=c=>S.stadiums.find(s=>s.id===c.stadiumId)?.name||'';
+  const sortVal=c=>{
+    if(key==='city')return (c.city||'').toLowerCase();
+    if(key==='stadium')return stadName(c).toLowerCase();
+    if(key==='highlight')return c.highlight||'zzz'; // clubs zonder markering onderaan
+    return (c.name||'').toLowerCase();
+  };
+  const sortFn=(a,b)=>sortVal(a)<sortVal(b)?-1*dir:sortVal(a)>sortVal(b)?1*dir:0;
+
+  // Groeperen: eigen club altijd bovenaan, dan rivalen/interessant, dan overig — elk intern gesorteerd
+  const own = list.filter(c=>c.isOwnClub).sort(sortFn);
+  const marked = list.filter(c=>!c.isOwnClub && (c.highlight==='rivaal'||c.highlight==='interessant')).sort(sortFn);
+  const rest = list.filter(c=>!c.isOwnClub && c.highlight!=='rivaal' && c.highlight!=='interessant').sort(sortFn);
+
+  const arrow = k => key===k ? (dir===1?' ▲':' ▼') : '';
+  const th = (k,label) => `<th style="cursor:pointer;user-select:none" onclick="setClubSort('${k}')">${label}${arrow(k)}</th>`;
+
+  const rowsHtml = list_ => list_.map(c=>{
+    const stad=S.stadiums.find(s=>s.id===c.stadiumId);
+    return `<tr style="${c.highlight==='rivaal'?'border-left:2px solid var(--heerenveen-rood)':c.highlight==='interessant'?'border-left:2px solid var(--interessant)':''}">
       <td><strong>${c.name}</strong>${c.isOwnClub?' <span class="badge badge-active" style="font-size:9px">Eigen</span>':''}</td>
       <td><span class="tag">${c.abbr||'—'}</span></td>
       <td class="text-secondary">${c.city||'—'}</td>
@@ -135,8 +161,18 @@ function renderClubsTable(){
       <td>${hl[c.highlight]||'<span class="text-muted">—</span>'}</td>
       <td class="text-secondary" style="font-size:11px">${c.note||''}</td>
       <td><div class="action-btns"><button class="icon-btn" onclick="openClubModal('${c.id}')">✏️</button><button class="icon-btn danger" onclick="confirmDelete('club','${c.id}','${c.name}')">🗑️</button></div></td>
-    </tr>`;}).join('')
-  }</tbody></table>`;
+    </tr>`;
+  }).join('');
+
+  const groupHeader = label => `<tr><td colspan="7" style="background:var(--bg-tertiary);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);padding:6px 10px">${label}</td></tr>`;
+
+  wrap.innerHTML=`
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${list.length} club${list.length!==1?'s':''}${q?' gevonden':''}</div>
+    <table class="data-table"><thead><tr>${th('name','Club')}<th>Afk.</th>${th('city','Stad')}${th('stadium','Stadion')}${th('highlight','Markering')}<th>Notitie</th><th></th></tr></thead><tbody>
+    ${own.length?groupHeader('Eigen club')+rowsHtml(own):''}
+    ${marked.length?groupHeader('Rivalen & interessante clubs ('+marked.length+')')+rowsHtml(marked):''}
+    ${rest.length?groupHeader('Overige clubs ('+rest.length+')')+rowsHtml(rest):''}
+    </tbody></table>`;
 }
 function openClubModal(editId){
   populateStadSel('club-stadium');
