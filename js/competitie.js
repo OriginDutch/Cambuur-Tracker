@@ -6,12 +6,12 @@ function renderCompDetail(compId) {
   if (!comp) { el.innerHTML='<p class="text-muted">Niet gevonden.</p>'; return; }
   document.getElementById('topbar-title').textContent = comp.name;
   const clubs = (comp.clubIds||[]).map(cid=>S.clubs.find(c=>c.id===cid)).filter(Boolean);
-  const typeBadge = {competitie:'badge-competitie',beker:'badge-beker',voorbereiding:'badge-voorbereiding'};
-  const typeLabel = {competitie:'Competitie',beker:'Bekertoernooi',voorbereiding:'Voorbereiding'};
+  const typeBadge = {competitie:'badge-competitie',beker:'badge-beker',playoffs:'badge-playoffs',voorbereiding:'badge-voorbereiding'};
+  const typeLabel = {competitie:'Competitie',beker:'Bekertoernooi',playoffs:'Play-offs',voorbereiding:'Voorbereiding'};
 
   const compMatches = (S.matches||[]).filter(m=>m.competitionId===compId);
   const today = new Date().toISOString().split('T')[0];
-  const isKnockout = comp.type === 'beker';
+  const isKnockout = comp.type === 'beker' || comp.type === 'playoffs';
 
   let standingsHtml = '';
   if (comp.type === 'competitie' && clubs.length) {

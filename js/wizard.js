@@ -67,8 +67,9 @@ function swPopulateCompClubs(){
 }
 function swUpdateCompType(){
   const t=document.getElementById('sw-comp-type').value;
-  document.getElementById('sw-comp-clubs-wrap').style.display=t==='beker'?'none':'block';
-  document.getElementById('sw-comp-rounds-wrap').style.display=t==='beker'?'block':'none';
+  const isKnockout = t==='beker'||t==='playoffs';
+  document.getElementById('sw-comp-clubs-wrap').style.display=isKnockout?'none':'block';
+  document.getElementById('sw-comp-rounds-wrap').style.display=isKnockout?'block':'none';
 }
 
 async function swFinish(){
@@ -114,13 +115,14 @@ async function swFinish(){
   // Competition
   const compType=document.getElementById('sw-comp-type').value;
   const compId='comp_'+ts();
+  const isKnockoutType = compType==='beker'||compType==='playoffs';
   let clubIds=savedIds;
-  if(compType!=='beker'){
+  if(!isKnockoutType){
     // Map checked names to club IDs, deduplicate
     const checkedIds=[...document.querySelectorAll('#sw-comp-clubs input:checked')].map(cb=>{const club=S.clubs.find(c=>c.name===cb.value);return club?.id;}).filter(Boolean);
     clubIds=[...new Set(checkedIds)];
   }
-  const rounds=compType==='beker'?document.getElementById('sw-comp-rounds').value.split(',').map(r=>r.trim()).filter(Boolean):[];
+  const rounds=isKnockoutType?document.getElementById('sw-comp-rounds').value.split(',').map(r=>r.trim()).filter(Boolean):[];
   await dbPut('competitions',{id:compId,name:compName,type:compType,seasonId,clubIds,rounds,created:Date.now()});
   S.competitions.push({id:compId,name:compName,type:compType,seasonId,clubIds,rounds,created:Date.now()});
 

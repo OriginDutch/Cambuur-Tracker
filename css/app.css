@@ -115,6 +115,7 @@
   .badge-competitie{background:rgba(245,197,0,0.15);color:var(--cambuur-geel);}
   .badge-beker{background:rgba(139,92,246,0.15);color:#a78bfa;}
   .badge-voorbereiding{background:rgba(34,197,94,0.15);color:var(--win);}
+  .badge-playoffs{background:rgba(249,115,22,0.15);color:#fb923c;}
   .badge-active{background:rgba(34,197,94,0.15);color:var(--win);}
 
   /* FORMS */

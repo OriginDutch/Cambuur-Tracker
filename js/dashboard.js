@@ -177,7 +177,7 @@ function renderDashboard(){
           <span style="font-weight:700;font-size:16px;text-align:left;flex:1;${ac?.isOwnClub?'color:var(--cambuur-geel)':''}">${an}</span>
         </div>
         ${stad?`<div style="font-size:11px;color:var(--text-muted)">📍 ${stad.name}${stad.city?' · '+stad.city:''}</div>`:''}
-        ${comp?`<div style="margin-top:6px"><span class="badge badge-${comp.type==='beker'?'beker':comp.type==='voorbereiding'?'voorbereiding':'competitie'}" style="font-size:9px">${comp.name}</span></div>`:''}
+        ${comp?`<div style="margin-top:6px"><span class="badge badge-${comp.type==='beker'?'beker':comp.type==='playoffs'?'playoffs':comp.type==='voorbereiding'?'voorbereiding':'competitie'}" style="font-size:9px">${comp.name}</span></div>`:''}
         ${isRival?`<div style="margin-top:6px;font-size:11px;font-weight:700;color:var(--heerenveen-rood)">🔴 DE FRIESE DERBY</div>`:''}
       </div>
     </div>`;

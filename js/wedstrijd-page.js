@@ -128,7 +128,7 @@ function renderWedstrijdPage(matchId) {
       </div>
       ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'extraTime') : ''}
     </div>
-    ${comp?.type==='beker' ? `<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
+    ${(comp?.type==='beker'||comp?.type==='playoffs') ? `<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer">
         <input type="checkbox" id="wp-went-et" ${m.wentToExtraTime?'checked':''} onchange="wpToggleExtraTimeFields()" style="accent-color:var(--cambuur-geel)">
         Verlenging gespeeld

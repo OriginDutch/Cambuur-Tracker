@@ -85,7 +85,7 @@ function renderStatistieken(){
         <th class="num">Voor</th><th class="num">Tegen</th><th class="num">Saldo</th>
       </tr></thead><tbody>
         ${compBreakdown.map(b=>`<tr>
-          <td><span class="badge badge-${b.comp.type==='beker'?'beker':b.comp.type==='voorbereiding'?'voorbereiding':'competitie'}" style="font-size:9px">${b.comp.name}</span></td>
+          <td><span class="badge badge-${b.comp.type==='beker'?'beker':b.comp.type==='playoffs'?'playoffs':b.comp.type==='voorbereiding'?'voorbereiding':'competitie'}" style="font-size:9px">${b.comp.name}</span></td>
           <td class="num">${b.played}</td><td class="num" style="color:var(--win)">${b.w}</td>
           <td class="num" style="color:var(--draw)">${b.d}</td><td class="num" style="color:var(--loss)">${b.l}</td>
           <td class="num">${b.gf}</td><td class="num">${b.ga}</td>

@@ -40,7 +40,7 @@ function openMatchImport(compId, defaultTab) {
     // Rondeveld: nummer voor competities, naamdropdown (uit comp.rounds) voor bekertoernooien
     const roundNumEl = document.getElementById('manual-match-round');
     const roundNameEl = document.getElementById('manual-match-round-name');
-    if (selComp?.type === 'beker' && (selComp.rounds||[]).length) {
+    if ((selComp?.type === 'beker' || selComp?.type === 'playoffs') && (selComp.rounds||[]).length) {
       roundNumEl.style.display = 'none';
       roundNameEl.style.display = 'block';
       roundNameEl.innerHTML = selComp.rounds.map(r=>`<option value="${r}">${r}</option>`).join('');
@@ -654,7 +654,7 @@ async function confirmMatchImport() {
 function addManualMatch() {
   const compId = document.getElementById('manual-match-comp').value;
   const selComp = S.competitions.find(c=>c.id===compId);
-  const isKnockout = selComp?.type === 'beker' && (selComp.rounds||[]).length;
+  const isKnockout = (selComp?.type === 'beker' || selComp?.type === 'playoffs') && (selComp.rounds||[]).length;
   const round = isKnockout
     ? document.getElementById('manual-match-round-name').value
     : parseInt(document.getElementById('manual-match-round').value);

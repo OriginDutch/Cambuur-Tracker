@@ -272,7 +272,7 @@ function switchTab(page,tab,el){
 function renderCompetitionsNav(){
   const nav=document.getElementById('competitions-nav');
   const comps=S.competitions.filter(c=>c.seasonId===S.currentSeason);
-  nav.innerHTML=comps.map(c=>{const icon=c.type==='beker'?'🏆':c.type==='voorbereiding'?'⚽':'📋';
+  nav.innerHTML=comps.map(c=>{const icon=c.type==='beker'?'🏆':c.type==='playoffs'?'🔼':c.type==='voorbereiding'?'⚽':'📋';
     return`<div class="nav-item" data-page="competition-detail" data-comp="${c.id}" onclick="navigateToComp('${c.id}')" style="padding-left:32px;font-size:12px">
       <span class="nav-icon">${icon}</span><span class="nav-label">${c.name}</span></div>`;}).join('');
 }
@@ -317,8 +317,9 @@ function openCompModal(editId){
 }
 function updateCompTypeUI(){
   const t=document.getElementById('comp-type').value;
-  document.getElementById('comp-league-options').style.display=t==='beker'?'none':'block';
-  document.getElementById('comp-cup-options').style.display=t==='beker'?'block':'none';
+  const isKnockout = t==='beker'||t==='playoffs';
+  document.getElementById('comp-league-options').style.display=isKnockout?'none':'block';
+  document.getElementById('comp-cup-options').style.display=isKnockout?'block':'none';
 }
 async function saveCompetition(){
   const name=document.getElementById('comp-name').value.trim();if(!name){showToast('Naam is verplicht','error');return;}
@@ -327,7 +328,7 @@ async function saveCompetition(){
   const existing=document.getElementById('edit-comp-id').value;
   const id=existing||'comp_'+Date.now();
   const clubIds=[...document.querySelectorAll('#comp-clubs-checkboxes input:checked')].map(cb=>cb.value);
-  const rounds=type==='beker'?document.getElementById('comp-rounds').value.split(',').map(r=>r.trim()).filter(Boolean):[];
+  const rounds=(type==='beker'||type==='playoffs')?document.getElementById('comp-rounds').value.split(',').map(r=>r.trim()).filter(Boolean):[];
   const comp={id,name,type,seasonId,clubIds,rounds,created:Date.now()};
   await dbPut('competitions',comp);
   if(existing){const i=S.competitions.findIndex(c=>c.id===existing);if(i>=0)S.competitions[i]=comp;}else S.competitions.push(comp);
