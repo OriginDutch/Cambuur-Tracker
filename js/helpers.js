@@ -80,6 +80,16 @@ function isPlayerAvailableOn(player, refDate) {
   return true;
 }
 
+// Geeft true als een wedstrijd verwijst naar een competitie die niet meer bestaat.
+// Kan voorkomen na een bug of handmatige database-aanpassing waarbij een seizoen/
+// competitie verwijderd is zonder de bijbehorende wedstrijden mee te wissen.
+// Gebruikt als defensief filter bij all-time/date-based queries die niet al op
+// een geldige seasonId matchen.
+function isMatchOrphaned(m) {
+  if (!m.competitionId) return false; // geen competitie gekoppeld is een legitieme staat, geen wees
+  return !(S.competitions||[]).some(c => c.id === m.competitionId);
+}
+
 // Geeft true als speler actief was tijdens het opgegeven seizoen
 function isPlayerInSeason(player, season) {
   if (!season) return true;

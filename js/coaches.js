@@ -79,6 +79,7 @@ function calcCoachStats(coachId, seasonId, compId) {
   const cam = S.clubs.find(c=>c.isOwnClub);
   let matches = (S.matches||[]).filter(m => {
     if (!m.played) return false;
+    if (isMatchOrphaned(m)) return false;
     if (seasonId && m.seasonId !== seasonId) return false;
     if (compId && m.competitionId !== compId) return false;
     // Only count matches where Cambuur plays

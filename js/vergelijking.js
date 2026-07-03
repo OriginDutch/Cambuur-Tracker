@@ -47,7 +47,7 @@ function renderVergSeizoen(el, seasons, cam) {
 
   // Compute stats per season
   const rows = seasons.map(s => {
-    const matches = (S.matches||[]).filter(m=>m.played && (m.homeClubId===cam?.id||m.awayClubId===cam?.id));
+    const matches = (S.matches||[]).filter(m=>m.played && !isMatchOrphaned(m) && (m.homeClubId===cam?.id||m.awayClubId===cam?.id));
     const seasonMatches = matches.filter(m => {
       const r = getSeasonDateRange(s.id);
       if (!r || !m.date) return false;
@@ -299,7 +299,7 @@ function renderVergClubs(el, cam) {
   let recordHtml = '';
 
   if (club) {
-    const matches = (S.matches||[]).filter(m=>m.played &&
+    const matches = (S.matches||[]).filter(m=>m.played && !isMatchOrphaned(m) &&
       ((m.homeClubId===cam?.id && m.awayClubId===club.id) || (m.awayClubId===cam?.id && m.homeClubId===club.id))
     ).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
