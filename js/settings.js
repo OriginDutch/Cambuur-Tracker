@@ -267,7 +267,7 @@ function renderClubsTable(){
   const groups = buildClubGroups(list).map(g => ({...g, clubs: sortClubsInGroup(g.clubs)}));
 
   const arrow = k => cs && cs.key===k ? (cs.dir===1?' ▲':' ▼') : '';
-  const th = (k,label) => `<th style="cursor:pointer;user-select:none" onclick="setClubSort('${k}')">${label}${arrow(k)}</th>`;
+  const th = (k,label,width) => `<th style="cursor:pointer;user-select:none${width?';width:'+width:''}" onclick="setClubSort('${k}')">${label}${arrow(k)}</th>`;
 
   const rowsHtml = (groupKey, clubs) => {
     let dragIdx = 0; // index binnen de sleepbare (niet-eigen-club) subset
@@ -303,7 +303,7 @@ function renderClubsTable(){
       <div style="font-size:11px;color:var(--text-muted)">${list.length} club${list.length!==1?'s':''}${q?' gevonden':''}</div>
       <button class="btn btn-ghost" style="font-size:11px;${!cs?'color:var(--cambuur-geel);font-weight:700':''}" onclick="setClubSortManual()" title="Terug naar je eigen sleepvolgorde">🔀 Handmatig${!cs?' ✓':''}</button>
     </div>
-    <table class="data-table"><thead><tr>${th('name','Club')}${th('abbr','Afk.')}${th('city','Stad')}${th('stadium','Stadion')}${th('capacity','Capaciteit')}<th>Divisie</th>${th('highlight','Markering')}<th>Notitie</th><th></th></tr></thead><tbody>
+    <table class="data-table"><thead><tr>${th('name','Club')}${th('abbr','Afk.')}${th('city','Stad')}${th('stadium','Stadion')}${th('capacity','Capaciteit','70px')}<th>Divisie</th>${th('highlight','Markering')}<th>Notitie</th><th></th></tr></thead><tbody>
     ${groups.map(g=>groupHeader(g.label+' ('+g.clubs.length+')')+rowsHtml(g.key,g.clubs)).join('')}
     </tbody></table>`;
 }
