@@ -455,11 +455,14 @@ function openCompModal(editId){
     document.getElementById('comp-name').value=c.name;document.getElementById('comp-type').value=c.type;
     document.getElementById('comp-season').value=c.seasonId;document.getElementById('comp-rounds').value=(c.rounds||[]).join(', ');
     document.getElementById('modal-competition-title').textContent='Competitie bewerken';
+    window._compPeriods = JSON.parse(JSON.stringify(c.periods||[]));
   }else{
     document.getElementById('comp-name').value='';document.getElementById('comp-type').value='competitie';
     document.getElementById('comp-rounds').value='Eerste Ronde, Tweede Ronde, Kwartfinale, Halve Finale, Finale';
     document.getElementById('modal-competition-title').textContent='Competitie toevoegen';
+    window._compPeriods = [];
   }
+  renderPeriodRows(window._compPeriods);
   updateCompTypeUI();document.getElementById('modal-competition').classList.add('open');
 }
 
@@ -484,6 +487,60 @@ function updateCompTypeUI(){
   const t=document.getElementById('comp-type').value;
   const isKnockout = t==='beker'||t==='playoffs';
   document.getElementById('comp-cup-options').style.display=isKnockout?'block':'none';
+  document.getElementById('comp-periods-options').style.display=(t==='competitie')?'block':'none';
+}
+
+// ── Periodes (periodetitel-berekening) ──
+function renderPeriodRows(periods) {
+  const wrap = document.getElementById('comp-periods-rows');
+  wrap.innerHTML = (periods||[]).map((p, i) => `
+    <div style="display:grid;grid-template-columns:1fr 90px 90px 28px;gap:6px;align-items:end">
+      <div>
+        <label class="form-label" style="font-size:10px">Naam</label>
+        <input class="form-input" style="height:28px;font-size:12px" value="${p.name||''}" placeholder="Periode ${i+1}"
+          oninput="window._compPeriods[${i}].name=this.value">
+      </div>
+      <div>
+        <label class="form-label" style="font-size:10px">Van ronde</label>
+        <input class="form-input" type="number" min="1" style="height:28px;font-size:12px" value="${p.fromRound??''}"
+          oninput="window._compPeriods[${i}].fromRound=parseInt(this.value)||1">
+      </div>
+      <div>
+        <label class="form-label" style="font-size:10px">Tot ronde</label>
+        <input class="form-input" type="number" min="1" style="height:28px;font-size:12px" value="${p.toRound??''}"
+          oninput="window._compPeriods[${i}].toRound=parseInt(this.value)||1">
+      </div>
+      <button class="icon-btn danger" style="height:28px" onclick="removePeriodRow(${i})">✕</button>
+    </div>`).join('');
+}
+
+function addPeriodRow() {
+  if (!window._compPeriods) window._compPeriods = [];
+  const n = window._compPeriods.length + 1;
+  window._compPeriods.push({name: `Periode ${n}`, fromRound: 1, toRound: 1});
+  renderPeriodRows(window._compPeriods);
+}
+
+function removePeriodRow(idx) {
+  window._compPeriods.splice(idx, 1);
+  renderPeriodRows(window._compPeriods);
+}
+
+// Verdeelt het totaal aantal rondes (uit de bestaande wedstrijden van deze
+// competitie, of een gok van 38) gelijk over 4 periodes van elk ~9 rondes.
+function autoGeneratePeriods() {
+  const editId = document.getElementById('edit-comp-id').value;
+  const comp = editId ? S.competitions.find(c=>c.id===editId) : null;
+  const matches = comp ? (S.matches||[]).filter(m=>m.competitionId===comp.id) : [];
+  const roundNums = matches.map(m=>parseInt(m.round)).filter(n=>!isNaN(n));
+  const totalRounds = roundNums.length ? Math.max(...roundNums) : 38;
+  const perPeriod = Math.ceil(totalRounds / 4);
+  window._compPeriods = [1,2,3,4].map(i => ({
+    name: `Periode ${i}`,
+    fromRound: (i-1)*perPeriod + 1,
+    toRound: Math.min(i*perPeriod, totalRounds),
+  }));
+  renderPeriodRows(window._compPeriods);
 }
 async function saveCompetition(){
   const name=document.getElementById('comp-name').value.trim();if(!name){showToast('Naam is verplicht','error');return;}
@@ -494,7 +551,8 @@ async function saveCompetition(){
   const clubIds=[...document.querySelectorAll('#comp-clubs-checkboxes input:checked')].map(cb=>cb.value);
   const linkedDivisions=[...document.querySelectorAll('.comp-division-cb:checked')].map(cb=>cb.value);
   const rounds=(type==='beker'||type==='playoffs')?document.getElementById('comp-rounds').value.split(',').map(r=>r.trim()).filter(Boolean):[];
-  const comp={id,name,type,seasonId,clubIds,linkedDivisions,rounds,created:Date.now()};
+  const periods = type==='competitie' ? (window._compPeriods||[]) : [];
+  const comp={id,name,type,seasonId,clubIds,linkedDivisions,rounds,periods,created:Date.now()};
   await dbPut('competitions',comp);
   if(existing){const i=S.competitions.findIndex(c=>c.id===existing);if(i>=0)S.competitions[i]=comp;}else S.competitions.push(comp);
   refreshAll();closeModal('modal-competition');showToast('Competitie opgeslagen: '+name,'success');
@@ -595,6 +653,7 @@ const DEFAULT_PREFS = {
   showAvailability: true,
   defaultPlayerView: 'kaart',
   defaultPlayerSort: 'positie',
+  showGrayedOut: true,
   contractWarnMonths: 6,
   loanWarnMonths: 3,
   divisions: [],

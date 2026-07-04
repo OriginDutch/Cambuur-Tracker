@@ -237,7 +237,7 @@
               <button class="list-view-btn active" id="view-btn-kaart" onclick="setPlayerView('kaart')" title="Kaartjes">⊞</button>
               <button class="list-view-btn" id="view-btn-lijst" onclick="setPlayerView('lijst')" title="Lijst">☰</button>
             </div>
-            <select class="form-select" id="player-sort-select" onchange="playerSortMode=this.value;renderSelectie()" style="height:30px;padding:4px 8px;font-size:12px;width:150px">
+            <select class="form-select" id="player-sort-select" onchange="setPlayerSortMode(this.value)" style="height:30px;padding:4px 8px;font-size:12px;width:150px">
               <option value="positie">Sortering: Positie</option>
               <option value="rugnummer">Rugnummer</option>
               <option value="naam">Naam</option>
@@ -246,8 +246,8 @@
               <option value="assists">Assists ↓</option>
               <option value="leeftijd">Leeftijd ↑</option>
             </select>
-            <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;height:30px" onclick="document.getElementById('player-sort-select').value='positie';playerSortMode='positie';document.getElementById('selectie-search').value='';renderSelectie()">↺ Reset</button>
-            <button class="btn btn-ghost" id="toggle-gray-btn" style="font-size:11px;padding:3px 8px;height:30px" onclick="showGrayedOut=!showGrayedOut;renderSelectie()" title="Vertrokken/uitgeleende spelers grijs of normaal tonen">◐ Grijze weergave</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;height:30px" onclick="document.getElementById('player-sort-select').value='positie';setPlayerSortMode('positie');document.getElementById('selectie-search').value=''">↺ Reset</button>
+            <button class="btn btn-ghost" id="toggle-gray-btn" style="font-size:11px;padding:3px 8px;height:30px" onclick="toggleGrayedOut()" title="Vertrokken/uitgeleende spelers grijs of normaal tonen">◐ Grijze weergave</button>
             <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;height:30px" onclick="allGroupsCollapsed=!allGroupsCollapsed;collapsedGroups=allGroupsCollapsed?new Set(['Aanvaller','Middenvelder','Verdediger','Keeper']):new Set();renderSelectie()">⊟ Alles inklappen</button>
           </div>
           <button class="btn btn-primary" onclick="openPlayerModal()">+ Speler toevoegen</button>
@@ -520,10 +520,15 @@
       </div>
       <!-- SQL editor + results -->
       <div style="display:flex;flex-direction:column;gap:8px;overflow:hidden">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-ghost" style="height:30px;font-size:12px" onclick="dbQuickQuery('SELECT * FROM \"{table}\" LIMIT 100')">📋 Alles ({table})</button>
+          <button class="btn btn-ghost" style="height:30px;font-size:12px" onclick="dbQuickQuery('SELECT COUNT(*) as aantal FROM \"{table}\"')">🔢 Aantal rijen</button>
+          <button class="btn btn-ghost" style="height:30px;font-size:12px" onclick="dbInsertTemplate()">➕ Insert-template</button>
+          <button class="btn btn-ghost" style="height:30px;font-size:12px" onclick="dbShowSchema()">🗂️ Schema tonen</button>
+          <button class="btn btn-ghost" style="height:30px;font-size:12px" onclick="dbFormatQuery()">🪄 Formatteren</button>
+          <button class="btn btn-ghost" style="height:30px;font-size:12px;color:var(--loss)" onclick="dbClearQuery()">✕ Wissen</button>
+        </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <select class="form-select" id="db-insert-template" style="font-size:12px;height:30px" onchange="dbLoadTemplate(this.value)">
-            <option value="">— INSERT template —</option>
-          </select>
           <button class="btn btn-primary" style="height:30px;font-size:12px" onclick="dbRunQuery()">▶ Uitvoeren</button>
           <button class="btn btn-ghost" style="height:30px;font-size:12px" onclick="dbSyncBackToIndexedDB()">↺ Sync naar app</button>
         </div>
@@ -655,6 +660,16 @@
         <div class="form-group">
           <label class="form-label">Rondes (kommagescheiden)</label>
           <input class="form-input" id="comp-rounds" placeholder="Eerste Ronde, Tweede Ronde, ...">
+        </div>
+      </div>
+      <div id="comp-periods-options" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Periodes (voor periodetitel-berekening — puur informatief)</label>
+          <div id="comp-periods-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
+          <div style="display:flex;gap:6px">
+            <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="addPeriodRow()">+ Periode toevoegen</button>
+            <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="autoGeneratePeriods()">🔀 Genereer 4 standaard periodes</button>
+          </div>
         </div>
       </div>
       <div class="form-group">
@@ -889,6 +904,7 @@
     <div class="modal-body" id="coach-detail-body" style="overflow-y:auto;max-height:calc(94vh - 140px)"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="coach-detail-edit-btn">✏️ Bewerken</button>
+      <button class="btn btn-secondary" id="coach-detail-delete-btn" style="color:var(--loss)">🗑️ Verwijderen</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-coach-detail')">Sluiten</button>
     </div>
   </div>

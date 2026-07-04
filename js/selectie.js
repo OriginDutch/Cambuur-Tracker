@@ -244,6 +244,14 @@ async function savePlayer() {
 
   if (!S.players) S.players = [];
 
+  // Promotie naar eerste elftal: leg het moment zelf vast als transfer-ingang,
+  // net als bij een gewone transfer — puur als je hem daadwerkelijk overzet
+  // (was jeugd, wordt nu eerste elftal), niet omgekeerd.
+  const oldPlayer = existing ? (S.players||[]).find(p=>p.id===existing) : null;
+  if (oldPlayer && oldPlayer.squadLevel === 'jeugd' && player.squadLevel === 'eerste-elftal') {
+    player.transfers = [...player.transfers, {type:'promotie', club:'', date:new Date().toISOString().split('T')[0], dateTo:null, note:'', amount:null}];
+  }
+
   // "In dienst sinds" volgt de vroegste inkomende transfer-ingang, als die er is
   // (anders blijft staan wat handmatig is ingevuld — bv. voor spelers zonder
   // volledige transferhistorie).
@@ -278,6 +286,7 @@ function switchSelectieTab(tab, el) {
 function setPlayerView(mode) {
   if (mode === 'veld') mode = 'kaart'; // veld view removed
   playerViewMode = mode;
+  savePref('defaultPlayerView', mode);
   document.getElementById('view-btn-kaart').classList.toggle('active', mode === 'kaart');
   document.getElementById('view-btn-lijst').classList.toggle('active', mode === 'lijst');
   renderSelectie();
@@ -296,6 +305,7 @@ function posGroup(p) {
 
 function renderSelectie() {
   if (!S.players) S.players = [];
+  applySelectiePrefsOnce();
   const today = new Date().toISOString().split('T')[0];
 
   const currentSeason = (S.seasons||[]).find(s=>s.id===S.currentSeason);
@@ -1110,6 +1120,35 @@ let currentValueEntries = []; // temp storage while modal is open
 let playerViewMode = 'kaart';
 let showGrayedOut = true; // vertrokken/uitgeleende spelers grijs tonen (aan/uit)
 let playerSortMode = 'positie';
+let _selectiePrefsApplied = false;
+
+// Past de opgeslagen weergavevoorkeuren één keer toe (bij de eerste keer dat
+// de Selectie-pagina gerenderd wordt) — daarna blijft de keuze binnen de
+// sessie gewoon in de live variabelen staan, zoals voorheen.
+function applySelectiePrefsOnce() {
+  if (_selectiePrefsApplied) return;
+  _selectiePrefsApplied = true;
+  const p = getPrefs();
+  playerViewMode = p.defaultPlayerView || 'kaart';
+  playerSortMode = p.defaultPlayerSort || 'positie';
+  showGrayedOut = p.showGrayedOut !== false;
+  document.getElementById('view-btn-kaart')?.classList.toggle('active', playerViewMode==='kaart');
+  document.getElementById('view-btn-lijst')?.classList.toggle('active', playerViewMode==='lijst');
+  const sortSel = document.getElementById('player-sort-select');
+  if (sortSel) sortSel.value = playerSortMode;
+}
+
+function setPlayerSortMode(mode) {
+  playerSortMode = mode;
+  savePref('defaultPlayerSort', mode);
+  renderSelectie();
+}
+
+function toggleGrayedOut() {
+  showGrayedOut = !showGrayedOut;
+  savePref('showGrayedOut', showGrayedOut);
+  renderSelectie();
+}
 let collapsedGroups = new Set();
 let allGroupsCollapsed = false;
 

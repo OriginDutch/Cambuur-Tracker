@@ -15,7 +15,9 @@ function renderCompDetail(compId) {
 
   let standingsHtml = '';
   if (comp.type === 'competitie' && clubs.length) {
-    standingsHtml = renderLeagueTable(comp, clubs, compMatches);
+    standingsHtml = renderLeagueTable(comp, clubs, compMatches) + renderPeriodStandings(comp, clubs, compMatches);
+  } else if (isKnockout) {
+    standingsHtml = renderKnockoutSummary(comp, compMatches);
   }
 
   let roundsHtml = '';
@@ -91,18 +93,47 @@ function isCambuurMatch(m) {
 // ══════════════════════════════
 // KNOCKOUT-WEERGAVE (bekertoernooien, play-offs)
 // ══════════════════════════════
-function renderKnockoutRounds(comp, compMatches) {
-  // Rondevolgorde: uit comp.rounds als die er is, anders op vroegste datum per ronde
-  let roundOrder = (comp.rounds||[]).filter(r => compMatches.some(m=>m.round===r));
-  const roundsWithoutOrder = [...new Set(compMatches.map(m=>m.round))].filter(r => !roundOrder.includes(r));
-  if (roundsWithoutOrder.length) {
-    roundsWithoutOrder.sort((a,b) => {
-      const da = compMatches.filter(m=>m.round===a).map(m=>m.date).filter(Boolean).sort()[0] || '9999';
-      const db = compMatches.filter(m=>m.round===b).map(m=>m.date).filter(Boolean).sort()[0] || '9999';
-      return da.localeCompare(db);
+// Uitschakelingsoverzicht: per ronde welke clubs afvielen, plus een
+// winnaar-banner zodra de laatste ronde (Finale) een winnaar heeft.
+function renderKnockoutSummary(comp, compMatches) {
+  const roundOrder = getKnockoutRoundOrder(comp, compMatches);
+  if (!roundOrder.length) return '';
+
+  const clubName = id => S.clubs.find(c=>c.id===id)?.name || '?';
+  const eliminationRows = [];
+  let winner = null;
+
+  roundOrder.forEach((r, idx) => {
+    const rMatches = compMatches.filter(m=>m.round===r);
+    const ties = getKnockoutTies(rMatches);
+    const eliminated = [];
+    ties.forEach(tie => {
+      const w = getTieWinner(tie);
+      if (!w) return;
+      const [legA] = tie.legs;
+      const loser = legA.homeClubId===w ? legA.awayClubId : legA.homeClubId;
+      eliminated.push(loser);
+      if (idx === roundOrder.length-1) winner = w;
     });
-    roundOrder = [...roundOrder, ...roundsWithoutOrder];
-  }
+    if (eliminated.length) eliminationRows.push({round:r, clubs:eliminated});
+  });
+
+  if (!eliminationRows.length && !winner) return '';
+
+  return `<div class="card mb-12">
+    <div class="card-title">📋 Uitschakelingen</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${eliminationRows.map(row=>`<div style="display:flex;gap:8px;align-items:baseline;font-size:12px">
+        <span style="min-width:110px;color:var(--text-muted);font-weight:600">${row.round}</span>
+        <span>${row.clubs.map(clubName).join(', ')}</span>
+      </div>`).join('')}
+    </div>
+    ${winner?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);text-align:center;font-size:14px;font-weight:800;color:var(--cambuur-geel)">🏆 Winnaar: ${clubName(winner)}</div>`:''}
+  </div>`;
+}
+
+function renderKnockoutRounds(comp, compMatches) {
+  const roundOrder = getKnockoutRoundOrder(comp, compMatches);
 
   return roundOrder.map(r => {
     const rMatches = compMatches.filter(m=>m.round===r);
@@ -311,13 +342,10 @@ function autoOpenCurrentRound(compId, today) {
 // ══════════════════════════════
 // STANDINGS — met live berekening
 // ══════════════════════════════
-function renderLeagueTable(comp, clubs, compMatches) {
-  const cam = S.clubs.find(c=>c.isOwnClub);
-  // Build standings from played matches
+function calcStandings(clubs, compMatches) {
   const table = {};
   clubs.forEach(c => { table[c.id] = {id:c.id,name:c.name,isOwn:c.isOwnClub,highlight:c.highlight,g:0,w:0,d:0,l:0,gf:0,ga:0,pts:0}; });
   compMatches.filter(m=>m.played&&m.homeScore!==null).forEach(m => {
-    // Match by ID first, fall back to name matching
     let h = table[m.homeClubId];
     let a = table[m.awayClubId];
     if (!h) h = Object.values(table).find(t=>t.name===m.homeName||t.name.toLowerCase()===m.homeName?.toLowerCase());
@@ -328,7 +356,11 @@ function renderLeagueTable(comp, clubs, compMatches) {
     else if (m.homeScore<m.awayScore) { a.w++;a.pts+=3;h.l++; }
     else { h.d++;a.d++;h.pts++;a.pts++; }
   });
-  const sorted = Object.values(table).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.name.localeCompare(b.name));
+  return Object.values(table).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.name.localeCompare(b.name));
+}
+
+function renderLeagueTable(comp, clubs, compMatches) {
+  const sorted = calcStandings(clubs, compMatches);
 
   return `<div class="card mb-12">
     <div class="card-title">Ranglijst</div>
@@ -344,6 +376,40 @@ function renderLeagueTable(comp, clubs, compMatches) {
         <td class="num">${c.gf}</td><td class="num">${c.ga}</td><td class="num">${c.gf-c.ga>0?'+':''}${c.gf-c.ga}</td>
         <td class="num" style="font-weight:700">${c.pts}</td>
       </tr>`).join('')}</tbody></table>
+  </div>`;
+}
+
+// Periodestanden — puur informatief, geen automatische play-off-toewijzing.
+// Elke periode is een rondebereik (bv. ronde 1 t/m 9); de "winnaar" hier is
+// gewoon wie de meeste punten had binnen dat bereik, niets meer.
+function renderPeriodStandings(comp, clubs, compMatches) {
+  const periods = comp.periods || [];
+  if (!periods.length) return '';
+  return `<div class="card mb-12">
+    <div class="card-title">Periodestanden</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+      ${periods.map(period => {
+        const periodMatches = compMatches.filter(m => {
+          const rn = parseInt(m.round);
+          return !isNaN(rn) && rn >= period.fromRound && rn <= period.toRound;
+        });
+        const played = periodMatches.filter(m=>m.played).length;
+        const total = periodMatches.length;
+        const complete = total>0 && played===total;
+        const standings = calcStandings(clubs, periodMatches);
+        const leader = standings[0];
+        return `<div style="background:var(--bg-tertiary);border-radius:var(--radius-sm);padding:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-weight:700;font-size:12px">${period.name}</span>
+            <span style="font-size:10px;color:var(--text-muted)">${played}/${total}${complete?' ✓':''}</span>
+          </div>
+          ${standings.filter(c=>c.g>0).slice(0,5).map((c,i)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;${i===0?'font-weight:700;color:var(--cambuur-geel)':''}">
+            <span>${i+1}. ${c.name}</span><span>${c.pts} pt</span>
+          </div>`).join('') || '<div style="font-size:11px;color:var(--text-muted)">Nog geen wedstrijden</div>'}
+          ${complete&&leader?`<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border-light);font-size:11px;color:var(--cambuur-geel);font-weight:700">🏆 ${leader.name}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
   </div>`;
 }
 

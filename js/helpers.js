@@ -113,6 +113,23 @@ function isMatchOrphaned(m) {
   return !(S.competitions||[]).some(c => c.id === m.competitionId);
 }
 
+// Rondevolgorde van een knockout-competitie: uit comp.rounds als die er is,
+// anders op vroegste datum per ronde. Gedeeld tussen de bracket-weergave en
+// het uitschakelingsoverzicht, zodat ze nooit uit de pas kunnen lopen.
+function getKnockoutRoundOrder(comp, compMatches) {
+  let roundOrder = (comp.rounds||[]).filter(r => compMatches.some(m=>m.round===r));
+  const roundsWithoutOrder = [...new Set(compMatches.map(m=>m.round))].filter(r => !roundOrder.includes(r));
+  if (roundsWithoutOrder.length) {
+    roundsWithoutOrder.sort((a,b) => {
+      const da = compMatches.filter(m=>m.round===a).map(m=>m.date).filter(Boolean).sort()[0] || '9999';
+      const db = compMatches.filter(m=>m.round===b).map(m=>m.date).filter(Boolean).sort()[0] || '9999';
+      return da.localeCompare(db);
+    });
+    roundOrder = [...roundOrder, ...roundsWithoutOrder];
+  }
+  return roundOrder;
+}
+
 // Geeft een leesbare uitslagstring inclusief verlenging/strafschoppen-notatie
 // (bijv. "2-2 n.v. (4-3 n.s.)"). Geeft '' als er nog geen uitslag is.
 function formatMatchResult(m) {

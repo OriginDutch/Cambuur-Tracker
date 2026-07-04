@@ -9,6 +9,7 @@ const TRANSFER_TYPES = [
   {value:'transfer-in', label:'📥 Transfer in',        icon:'📥', hasClub:true,  hasDates:false, hasAmount:true},
   {value:'transfer-uit',label:'📤 Transfer uit',       icon:'📤', hasClub:true,  hasDates:false, hasAmount:true},
   {value:'verlenging',  label:'📝 Contractverlenging', icon:'📝', hasClub:false, hasDates:true,  hasAmount:false},
+  {value:'promotie',    label:'⬆️ Promotie naar 1e elftal', icon:'⬆️', hasClub:false, hasDates:false, hasAmount:false},
 ];
 
 const ALL_TRANSFER_TYPES = TRANSFER_TYPES;

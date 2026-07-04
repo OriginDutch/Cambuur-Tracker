@@ -163,6 +163,7 @@ function openCoachDetail(id) {
   if (!c) return;
   document.getElementById('coach-detail-title').textContent = (c.firstname||'')+' '+c.lastname;
   document.getElementById('coach-detail-edit-btn').onclick = () => { closeModal('modal-coach-detail'); openCoachModal(id); };
+  document.getElementById('coach-detail-delete-btn').onclick = () => deleteCoach(id);
 
   const age = c.dob ? Math.floor((Date.now()-new Date(c.dob))/31557600000) : null;
   const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}) : '—';
