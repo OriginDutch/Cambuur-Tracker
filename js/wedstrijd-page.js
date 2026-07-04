@@ -421,7 +421,11 @@ function wpSortedPlayers(players, onlyStarters, onlyBench) {
   let list = players||[];
   if (onlyStarters) list = list.filter(p=>wpStarters.has(p.id));
   if (onlyBench) list = list.filter(p=>!wpStarters.has(p.id));
-  return list.sort((a,b)=>(go[a.position]??4)-(go[b.position]??4)||(a.number||99)-(b.number||99));
+  return list.sort((a,b)=>{
+    const ay = a.squadLevel==='jeugd'?1:0, by = b.squadLevel==='jeugd'?1:0;
+    if (ay !== by) return ay - by; // jeugd altijd onderaan
+    return (go[a.position]??4)-(go[b.position]??4)||(a.number||99)-(b.number||99);
+  });
 }
 
 function wpPlayerOpts(excludeId, selectedId, onlyStarters, onlyBench, groupFirst) {

@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<!-- SETUP WIZARDD -->
+<!-- SETUP WIZARD -->
 <div id="setup-overlay">
   <div class="setup-container">
     <div class="setup-logo">
@@ -226,6 +226,7 @@
     <div class="page" id="page-selectie">
       <div class="tabs" id="selectie-tabs">
         <div class="tab active" onclick="switchSelectieTab('actief',this)">Actieve selectie</div>
+        <div class="tab" onclick="switchSelectieTab('jeugd',this)">Jeugd</div>
         <div class="tab" onclick="switchSelectieTab('archief',this)">Archief</div>
       </div>
       <div id="selectie-actief">
@@ -246,11 +247,21 @@
               <option value="leeftijd">Leeftijd ↑</option>
             </select>
             <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;height:30px" onclick="document.getElementById('player-sort-select').value='positie';playerSortMode='positie';document.getElementById('selectie-search').value='';renderSelectie()">↺ Reset</button>
+            <button class="btn btn-ghost" id="toggle-gray-btn" style="font-size:11px;padding:3px 8px;height:30px" onclick="showGrayedOut=!showGrayedOut;renderSelectie()" title="Vertrokken/uitgeleende spelers grijs of normaal tonen">◐ Grijze weergave</button>
             <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;height:30px" onclick="allGroupsCollapsed=!allGroupsCollapsed;collapsedGroups=allGroupsCollapsed?new Set(['Aanvaller','Middenvelder','Verdediger','Keeper']):new Set();renderSelectie()">⊟ Alles inklappen</button>
           </div>
           <button class="btn btn-primary" onclick="openPlayerModal()">+ Speler toevoegen</button>
         </div>
         <div id="selectie-content"></div>
+      </div>
+      <div id="selectie-jeugd" style="display:none">
+        <div class="section-header mb-12">
+          <div class="flex-center gap-8">
+            <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="jeugd-search" placeholder="Naam, rugnummer, positie..." oninput="renderJeugd()"></div>
+          </div>
+          <button class="btn btn-primary" onclick="openPlayerModal()">+ Speler toevoegen</button>
+        </div>
+        <div id="jeugd-content"></div>
       </div>
       <div id="selectie-archief" style="display:none">
         <div class="section-header mb-12">
@@ -742,6 +753,12 @@
               <div class="multiselect-dropdown" id="subpos-dropdown"></div>
             </div>
           </div>
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="player-is-youth" style="accent-color:var(--cambuur-geel)">
+            <span>Jeugdspeler — staat in het tabblad "Jeugd" i.p.v. de hoofdselectie (blijft gewoon selecteerbaar bij wedstrijden)</span>
+          </label>
         </div>
         <div class="form-row cols-2">
           <div class="form-group"><label class="form-label">In dienst sinds</label><input class="form-input" id="player-joined" type="date"></div>

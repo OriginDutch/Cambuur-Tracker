@@ -20,6 +20,7 @@ function openPlayerModal(editId) {
     document.getElementById('player-dob').value = p.dob || '';
     populateNatDropdown(p.nationality || '');
     document.getElementById('player-position').value = p.position || '';
+    document.getElementById('player-is-youth').checked = p.squadLevel === 'jeugd';
     document.getElementById('player-joined').value = p.joined || '';
     document.getElementById('player-contract').value = p.contract || '';
     document.getElementById('player-available-from').value = p.availableFrom || '';
@@ -47,6 +48,7 @@ function openPlayerModal(editId) {
     if (p.status === 'geschorst') { document.getElementById('sf-suspension-end') && (document.getElementById('sf-suspension-end').value = p.suspensionEnd || ''); }
   } else {
     document.getElementById('modal-player-title').textContent = 'Speler toevoegen';
+    document.getElementById('player-is-youth').checked = false;
     ['player-photo','player-firstname','player-lastname','player-number','player-dob',
      'player-joined','player-contract','player-available-from','player-note'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
@@ -223,6 +225,7 @@ async function savePlayer() {
     nationality: document.getElementById('player-nationality').value.trim(),
     position: pos,
     subpos: [...selectedSubpos],
+    squadLevel: document.getElementById('player-is-youth').checked ? 'jeugd' : 'eerste-elftal',
     joined: document.getElementById('player-joined').value,
     contract: document.getElementById('player-contract').value,
     availableFrom: document.getElementById('player-available-from').value || null,
@@ -264,10 +267,12 @@ async function savePlayer() {
 // ══════════════════════════════
 function switchSelectieTab(tab, el) {
   document.getElementById('selectie-actief').style.display = tab === 'actief' ? 'block' : 'none';
+  document.getElementById('selectie-jeugd').style.display = tab === 'jeugd' ? 'block' : 'none';
   document.getElementById('selectie-archief').style.display = tab === 'archief' ? 'block' : 'none';
   document.querySelectorAll('#selectie-tabs .tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
   if (tab === 'archief') renderArchief();
+  if (tab === 'jeugd') renderJeugd();
 }
 
 function setPlayerView(mode) {
@@ -318,6 +323,7 @@ function renderSelectie() {
   // ── 1. FILTEREN ── alle spelers die dit seizoen bij de club hoorden + zoekfilter
   const searchQ = (document.getElementById('selectie-search')?.value||'').toLowerCase().trim();
   const active = S.players.filter(p => {
+    if (p.squadLevel === 'jeugd') return false;
     if (!currentSeason) {
       const es = getSeasonStatus(p);
       if (['vertrokken','uitgeleend'].includes(es)) return false;
@@ -419,6 +425,8 @@ function renderSelectie() {
     });
   }
   el.innerHTML = html;
+  const grayBtn = document.getElementById('toggle-gray-btn');
+  if (grayBtn) grayBtn.classList.toggle('active', showGrayedOut);
 }
 
 
@@ -455,7 +463,7 @@ function playerCard(p, effStatus) {
   const nameLine = `${p.firstname ? p.firstname[0]+'.\u00a0' : ''}${p.lastname}`;
   const loanBadge = ''; // removed: statusBadge already shows huurder status
   const isLeaving = effStatus === 'vertrekt';
-  const isInactive = effStatus === 'vertrokken' || effStatus === 'uitgeleend';
+  const isInactive = showGrayedOut && (effStatus === 'vertrokken' || effStatus === 'uitgeleend');
 
   // Club duration — end: departureDate → expired contract → today
   const clubStart = p.joined || null;
@@ -529,7 +537,7 @@ function playerListView(players, effectiveStatus) {
     const age = p.dob ? Math.floor((Date.now()-new Date(p.dob))/31557600000) : '—';
     const val = p.valueHistory?.length ? formatEuro(p.valueHistory[0].amount) : '—';
     const es = effectiveStatus(p);
-    const isInactive = es === 'vertrokken' || es === 'uitgeleend';
+    const isInactive = showGrayedOut && (es === 'vertrokken' || es === 'uitgeleend');
     return `<tr onclick="navigateToPlayer('${p.id}')" onmouseenter="playerHoverShow(event,'${p.id}')" onmouseleave="playerHoverHide()" style="cursor:pointer${es==='vertrekt'?';border-left:2px solid #ff8c00':''}${isInactive?';opacity:0.6;filter:grayscale(25%)':''}">
       <td class="text-muted">${p.number||'—'}</td>
       <td><div style="display:flex;align-items:center;gap:8px">${playerAvatarHTML(p,'player-avatar',28)}<strong>${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</strong></div></td>
@@ -588,6 +596,57 @@ function statusLabelEff(p, effStatus) {
 
 // ── SPELERSPROFIEL DETAIL ──
 // ── ARCHIEF ──
+// ── JEUGD ──
+// Spelers met squadLevel:'jeugd' staan hier apart, niet tussen de hoofdselectie.
+// Blijven gewoon gegroepeerd op positie, net als de hoofdselectie — puur een
+// andere "laag", geen ander soort overzicht.
+function renderJeugd() {
+  if (!S.players) S.players = [];
+  const currentSeason = (S.seasons||[]).find(s=>s.id===S.currentSeason);
+  const searchQ = (document.getElementById('jeugd-search')?.value||'').toLowerCase().trim();
+
+  const players = S.players.filter(p => {
+    if (p.squadLevel !== 'jeugd') return false;
+    if (currentSeason && !isPlayerInSeason(p, currentSeason)) return false;
+    if (!searchQ) return true;
+    return (p.firstname||'').toLowerCase().includes(searchQ) ||
+           (p.lastname||'').toLowerCase().includes(searchQ) ||
+           (p.number?.toString()||'').includes(searchQ) ||
+           (p.position||'').toLowerCase().includes(searchQ);
+  });
+
+  const el = document.getElementById('jeugd-content');
+  if (!players.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🌱</div><div class="empty-state-title">Geen jeugdspelers</div><div class="empty-state-desc">Vink "Jeugdspeler" aan bij een speler om die hier te tonen.</div></div>';
+    return;
+  }
+
+  const groups = [
+    { key: 'Aanvaller', label: 'Aanvallers' },
+    { key: 'Middenvelder', label: 'Middenvelders' },
+    { key: 'Verdediger', label: 'Verdedigers' },
+    { key: 'Keeper', label: 'Keepers' },
+  ];
+  const sortFn = (a,b) => {
+    const sk = subposSortKey(a) - subposSortKey(b);
+    return sk !== 0 ? sk : (a.number||99) - (b.number||99);
+  };
+  const renderGroup = pl => playerViewMode === 'kaart'
+    ? `<div class="player-grid">${pl.map(p => playerCard(p, effectiveStatus(p))).join('')}</div>`
+    : playerListView(pl, effectiveStatus);
+
+  let html = '';
+  groups.forEach(g => {
+    const groupPlayers = players.filter(p => posGroup(p) === g.key).sort(sortFn);
+    if (!groupPlayers.length) return;
+    html += `<div class="posgroup-header">
+      <span class="position-group-title" style="margin:0;border:none;padding:0">${g.label} <span style="font-size:13px;font-weight:400;color:var(--text-muted)">(${groupPlayers.length})</span></span>
+    </div>`;
+    html += renderGroup(groupPlayers);
+  });
+  el.innerHTML = html;
+}
+
 function renderArchief() {
   if (!S.players) { document.getElementById('archief-content').innerHTML = ''; return; }
   populateArchiefSeasonFilter();
@@ -1049,6 +1108,7 @@ const ALL_SUBPOS_GROUPED = [
 let selectedSubpos = [];
 let currentValueEntries = []; // temp storage while modal is open
 let playerViewMode = 'kaart';
+let showGrayedOut = true; // vertrokken/uitgeleende spelers grijs tonen (aan/uit)
 let playerSortMode = 'positie';
 let collapsedGroups = new Set();
 let allGroupsCollapsed = false;
