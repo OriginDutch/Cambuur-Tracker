@@ -156,6 +156,27 @@ function getTieWinner(tie) {
   return null;
 }
 
+// Geeft de divisie waarin een club op de gegeven datum (of nu) uitkomt,
+// gebaseerd op de meest recente divisionHistory-ingang vóór die datum.
+// Geeft null als er geen (relevante) historie is.
+function effectiveDivision(club, refDate) {
+  const hist = club.divisionHistory;
+  if (!hist || !hist.length) return null;
+  const ref = refDate || new Date().toISOString().split('T')[0];
+  const applicable = hist.filter(h => h.startDate && h.startDate <= ref)
+    .sort((a,b) => b.startDate.localeCompare(a.startDate));
+  return applicable[0]?.division || null;
+}
+
+// Geeft de index van een divisie in de ingestelde volgorde (S.prefs.divisions),
+// of Infinity als de divisie niet (meer) in de lijst staat — zo'n club zakt
+// dan automatisch naar de "onbekend"-positie in gesorteerde lijsten.
+function divisionSortIndex(divisionName) {
+  const list = S.prefs?.divisions || [];
+  const idx = list.indexOf(divisionName);
+  return idx === -1 ? Infinity : idx;
+}
+
 // Geeft true als speler actief was tijdens het opgegeven seizoen
 function isPlayerInSeason(player, season) {
   if (!season) return true;

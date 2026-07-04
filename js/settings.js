@@ -119,8 +119,70 @@ async function saveSeason(){
 // ══════════════════════════════
 // CLUBS
 // ══════════════════════════════
-function renderClubsPage(){renderClubsTable();renderStadiumsTable();}
+function renderClubsPage(){renderClubsTable();renderStadiumsTable();renderDivisionsSettings();}
 if (!window._clubSort) window._clubSort = {key:'name', dir:1};
+function renderDivisionsSettings() {
+  const el = document.getElementById('divisions-settings-list');
+  if (!el) return;
+  const divisions = getPrefs().divisions || [];
+  const counts = {};
+  divisions.forEach(d => counts[d] = 0);
+  let unknownCount = 0;
+  (S.clubs||[]).forEach(c => {
+    const d = effectiveDivision(c);
+    if (d && counts[d] !== undefined) counts[d]++;
+    else unknownCount++;
+  });
+  el.innerHTML = divisions.map((d,i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg-tertiary);border-radius:var(--radius-sm);margin-bottom:4px">
+      <span style="flex:1;font-size:13px">${d}</span>
+      <span style="font-size:11px;color:var(--text-muted)">${counts[d]} club${counts[d]!==1?'s':''}</span>
+      <button class="icon-btn" style="height:24px" onclick="moveDivision(${i},-1)" ${i===0?'disabled':''}>▲</button>
+      <button class="icon-btn" style="height:24px" onclick="moveDivision(${i},1)" ${i===divisions.length-1?'disabled':''}>▼</button>
+      <button class="icon-btn danger" style="height:24px" onclick="removeDivision(${i})">✕</button>
+    </div>`).join('') + `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin-top:2px;font-size:11px;color:var(--text-muted)">
+      <span style="flex:1">Onbekend niveau</span>
+      <span>${unknownCount} club${unknownCount!==1?'s':''}</span>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <input class="form-input" id="new-division-name" placeholder="Nieuwe divisie, bv. Eredivisie" style="flex:1"
+        onkeydown="if(event.key==='Enter')addDivisionToList()">
+      <button class="btn btn-secondary" onclick="addDivisionToList()">+ Toevoegen</button>
+    </div>`;
+}
+
+async function addDivisionToList() {
+  const input = document.getElementById('new-division-name');
+  const name = input.value.trim();
+  if (!name) return;
+  const divisions = getPrefs().divisions || [];
+  if (divisions.some(d=>d.toLowerCase()===name.toLowerCase())) { showToast('Deze divisie bestaat al', 'error'); return; }
+  await savePref('divisions', [...divisions, name]);
+  input.value = '';
+  renderDivisionsSettings();
+}
+
+async function removeDivision(idx) {
+  const divisions = [...(getPrefs().divisions||[])];
+  const removed = divisions[idx];
+  if (!confirm(`Divisie "${removed}" verwijderen? Clubs met deze divisie in hun historie vallen terug naar 'Onbekend niveau' in overzichten (de historie-ingang zelf blijft bestaan).`)) return;
+  divisions.splice(idx, 1);
+  await savePref('divisions', divisions);
+  renderDivisionsSettings();
+  renderClubsTable();
+}
+
+async function moveDivision(idx, dir) {
+  const divisions = [...(getPrefs().divisions||[])];
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= divisions.length) return;
+  [divisions[idx], divisions[newIdx]] = [divisions[newIdx], divisions[idx]];
+  await savePref('divisions', divisions);
+  renderDivisionsSettings();
+  renderClubsTable();
+}
+
 function setClubSort(key){
   if (window._clubSort.key===key) window._clubSort.dir*=-1;
   else window._clubSort = {key, dir:1};
@@ -143,35 +205,44 @@ function renderClubsTable(){
   };
   const sortFn=(a,b)=>sortVal(a)<sortVal(b)?-1*dir:sortVal(a)>sortVal(b)?1*dir:0;
 
-  // Groeperen: eigen club altijd bovenaan, dan rivalen/interessant, dan overig — elk intern gesorteerd
+  // Groeperen: eigen club altijd bovenaan, dan rivalen/interessant, dan per divisie (in ingestelde volgorde), dan onbekend
   const own = list.filter(c=>c.isOwnClub).sort(sortFn);
   const marked = list.filter(c=>!c.isOwnClub && (c.highlight==='rivaal'||c.highlight==='interessant')).sort(sortFn);
-  const rest = list.filter(c=>!c.isOwnClub && c.highlight!=='rivaal' && c.highlight!=='interessant').sort(sortFn);
+  const restPool = list.filter(c=>!c.isOwnClub && c.highlight!=='rivaal' && c.highlight!=='interessant');
+  const divisions = getPrefs().divisions || [];
+  const byDivision = divisions.map(d => ({
+    name: d,
+    clubs: restPool.filter(c => effectiveDivision(c) === d).sort(sortFn)
+  })).filter(g => g.clubs.length);
+  const unknown = restPool.filter(c => !divisions.includes(effectiveDivision(c))).sort(sortFn);
 
   const arrow = k => key===k ? (dir===1?' ▲':' ▼') : '';
   const th = (k,label) => `<th style="cursor:pointer;user-select:none" onclick="setClubSort('${k}')">${label}${arrow(k)}</th>`;
 
   const rowsHtml = list_ => list_.map(c=>{
     const stad=S.stadiums.find(s=>s.id===c.stadiumId);
+    const div=effectiveDivision(c);
     return `<tr style="${c.highlight==='rivaal'?'border-left:2px solid var(--heerenveen-rood)':c.highlight==='interessant'?'border-left:2px solid var(--interessant)':''}">
       <td><strong>${c.name}</strong>${c.isOwnClub?' <span class="badge badge-active" style="font-size:9px">Eigen</span>':''}</td>
       <td><span class="tag">${c.abbr||'—'}</span></td>
       <td class="text-secondary">${c.city||'—'}</td>
       <td>${stad?stad.name:'<span class="text-muted">—</span>'}</td>
+      <td class="text-secondary" style="font-size:11px">${div||'<span class="text-muted">—</span>'}</td>
       <td>${hl[c.highlight]||'<span class="text-muted">—</span>'}</td>
       <td class="text-secondary" style="font-size:11px">${c.note||''}</td>
       <td><div class="action-btns"><button class="icon-btn" onclick="openClubModal('${c.id}')">✏️</button><button class="icon-btn danger" onclick="confirmDelete('club','${c.id}','${c.name}')">🗑️</button></div></td>
     </tr>`;
   }).join('');
 
-  const groupHeader = label => `<tr><td colspan="7" style="background:var(--bg-tertiary);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);padding:6px 10px">${label}</td></tr>`;
+  const groupHeader = label => `<tr><td colspan="8" style="background:var(--bg-tertiary);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);padding:6px 10px">${label}</td></tr>`;
 
   wrap.innerHTML=`
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${list.length} club${list.length!==1?'s':''}${q?' gevonden':''}</div>
-    <table class="data-table"><thead><tr>${th('name','Club')}<th>Afk.</th>${th('city','Stad')}${th('stadium','Stadion')}${th('highlight','Markering')}<th>Notitie</th><th></th></tr></thead><tbody>
+    <table class="data-table"><thead><tr>${th('name','Club')}<th>Afk.</th>${th('city','Stad')}${th('stadium','Stadion')}<th>Divisie</th>${th('highlight','Markering')}<th>Notitie</th><th></th></tr></thead><tbody>
     ${own.length?groupHeader('Eigen club')+rowsHtml(own):''}
     ${marked.length?groupHeader('Rivalen & interessante clubs ('+marked.length+')')+rowsHtml(marked):''}
-    ${rest.length?groupHeader('Overige clubs ('+rest.length+')')+rowsHtml(rest):''}
+    ${byDivision.map(g=>groupHeader(g.name+' ('+g.clubs.length+')')+rowsHtml(g.clubs)).join('')}
+    ${unknown.length?groupHeader('Onbekend niveau ('+unknown.length+')')+rowsHtml(unknown):''}
     </tbody></table>`;
 }
 function openClubModal(editId){
@@ -183,11 +254,14 @@ function openClubModal(editId){
     document.getElementById('club-city').value=c.city||'';document.getElementById('club-stadium').value=c.stadiumId||'';
     document.getElementById('club-highlight').value=c.highlight||'';document.getElementById('club-note').value=c.note||'';
     document.getElementById('modal-club-title').textContent='Club bewerken';
+    window._clubDivisions = JSON.parse(JSON.stringify(c.divisionHistory||[]));
   }else{
     ['club-name','club-abbr','club-city','club-note'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('club-stadium').value='';document.getElementById('club-highlight').value='';
     document.getElementById('modal-club-title').textContent='Club toevoegen';
+    window._clubDivisions = [];
   }
+  renderDivisionHistory();
   document.getElementById('modal-club').classList.add('open');
 }
 async function saveClub(){
@@ -196,10 +270,10 @@ async function saveClub(){
   const existing=document.getElementById('edit-club-id').value;
   if(S.clubs.find(c=>c.name.toLowerCase()===name.toLowerCase()&&c.id!==existing)){showToast('Er bestaat al een club met deze naam','error');return;}
   const id=existing||'club_'+Date.now();
-  const club={id,name,abbr:document.getElementById('club-abbr').value.trim().toUpperCase(),stadiumId:document.getElementById('club-stadium').value||null,city:document.getElementById('club-city').value.trim(),highlight:document.getElementById('club-highlight').value,note:document.getElementById('club-note').value.trim(),isOwnClub:existing?(S.clubs.find(c=>c.id===existing)?.isOwnClub||false):false};
+  const club={id,name,abbr:document.getElementById('club-abbr').value.trim().toUpperCase(),stadiumId:document.getElementById('club-stadium').value||null,city:document.getElementById('club-city').value.trim(),highlight:document.getElementById('club-highlight').value,note:document.getElementById('club-note').value.trim(),isOwnClub:existing?(S.clubs.find(c=>c.id===existing)?.isOwnClub||false):false,divisionHistory:window._clubDivisions||[]};
   await dbPut('clubs',club);
   if(existing){const i=S.clubs.findIndex(c=>c.id===existing);if(i>=0)S.clubs[i]=club;}else S.clubs.push(club);
-  renderClubsTable();renderCompetitionsNav();renderCompetitionsPage();closeModal('modal-club');showToast('Club opgeslagen: '+name,'success');
+  renderClubsTable();renderCompetitionsNav();renderCompetitionsPage();renderDivisionsSettings();closeModal('modal-club');showToast('Club opgeslagen: '+name,'success');
 }
 function populateStadSel(selId){
   const sel=document.getElementById(selId);const cur=sel.value;
@@ -260,7 +334,7 @@ async function saveStadion(){
   renderStadiumsTable();renderClubsTable();closeModal('modal-stadion');showToast('Stadion opgeslagen: '+name,'success');
 }
 function switchTab(page,tab,el){
-  const map={clubs:['alle-clubs','stadions']};
+  const map={clubs:['alle-clubs','stadions','divisies']};
   (map[page]||[]).forEach(t=>{const e=document.getElementById('tab-'+t);if(e)e.style.display='none';});
   const tgt=document.getElementById('tab-'+tab);if(tgt)tgt.style.display='block';
   el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
@@ -298,13 +372,23 @@ function openCompModal(editId){
   document.getElementById('edit-comp-id').value=editId||'';
   const sel=document.getElementById('comp-season');sel.innerHTML='<option value="">— Selecteer seizoen —</option>';
   S.seasons.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;if(s.id===S.currentSeason)o.selected=true;sel.appendChild(o);});
-  const selIds=editId?(S.competitions.find(c=>c.id===editId)?.clubIds||[]):[];
+  const editComp = editId ? S.competitions.find(c=>c.id===editId) : null;
+  const selIds=editComp?.clubIds||[];
+  const linkedDivisions=editComp?.linkedDivisions||[];
   const cbWrap=document.getElementById('comp-clubs-checkboxes');
   cbWrap.innerHTML=!S.clubs.length?'<p class="text-muted" style="font-size:11px;padding:6px">Nog geen clubs.</p>':
     S.clubs.map(c=>`<label style="display:flex;align-items:center;gap:6px;padding:5px 6px;cursor:pointer;border-radius:3px;font-size:12px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
       <input type="checkbox" value="${c.id}" ${selIds.includes(c.id)?'checked':''} style="accent-color:var(--cambuur-geel)">
       <span>${c.name}</span>${c.isOwnClub?'<span class="badge badge-active" style="font-size:9px">Eigen</span>':''}${c.highlight==='rivaal'?'<span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}</label>`).join('');
-  if(editId){const c=S.competitions.find(x=>x.id===editId);if(!c)return;
+
+  const divisions = getPrefs().divisions || [];
+  const divWrap = document.getElementById('comp-divisions-checkboxes');
+  divWrap.innerHTML = !divisions.length ? '<p class="text-muted" style="font-size:11px">Nog geen divisies ingesteld (bij Clubs → Divisies).</p>' :
+    divisions.map(d=>`<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer">
+      <input type="checkbox" class="comp-division-cb" value="${d}" ${linkedDivisions.includes(d)?'checked':''} style="accent-color:var(--cambuur-geel)">
+      <span>${d}</span></label>`).join('');
+
+  if(editId){const c=editComp;if(!c)return;
     document.getElementById('comp-name').value=c.name;document.getElementById('comp-type').value=c.type;
     document.getElementById('comp-season').value=c.seasonId;document.getElementById('comp-rounds').value=(c.rounds||[]).join(', ');
     document.getElementById('modal-competition-title').textContent='Competitie bewerken';
@@ -315,10 +399,27 @@ function openCompModal(editId){
   }
   updateCompTypeUI();document.getElementById('modal-competition').classList.add('open');
 }
+
+// Vinkt clubs aan waarvan de huidige divisie overeenkomt met een van de gekoppelde
+// divisies — vult alleen aan, vinkt nooit iets uit.
+function fillClubsFromDivisions() {
+  const chosen = [...document.querySelectorAll('.comp-division-cb:checked')].map(cb=>cb.value);
+  if (!chosen.length) { showToast('Vink eerst één of meer divisies aan', 'error'); return; }
+  let added = 0;
+  document.querySelectorAll('#comp-clubs-checkboxes input[type=checkbox]').forEach(cb => {
+    if (cb.checked) return;
+    const club = S.clubs.find(c=>c.id===cb.value);
+    if (club && chosen.includes(effectiveDivision(club))) { cb.checked = true; added++; }
+  });
+  showToast(added ? `${added} club${added!==1?'s':''} toegevoegd` : 'Geen nieuwe clubs gevonden in deze divisie(s)', added?'success':'error');
+}
+
+function unselectAllCompClubs() {
+  document.querySelectorAll('#comp-clubs-checkboxes input[type=checkbox]').forEach(cb => cb.checked = false);
+}
 function updateCompTypeUI(){
   const t=document.getElementById('comp-type').value;
   const isKnockout = t==='beker'||t==='playoffs';
-  document.getElementById('comp-league-options').style.display=isKnockout?'none':'block';
   document.getElementById('comp-cup-options').style.display=isKnockout?'block':'none';
 }
 async function saveCompetition(){
@@ -328,8 +429,9 @@ async function saveCompetition(){
   const existing=document.getElementById('edit-comp-id').value;
   const id=existing||'comp_'+Date.now();
   const clubIds=[...document.querySelectorAll('#comp-clubs-checkboxes input:checked')].map(cb=>cb.value);
+  const linkedDivisions=[...document.querySelectorAll('.comp-division-cb:checked')].map(cb=>cb.value);
   const rounds=(type==='beker'||type==='playoffs')?document.getElementById('comp-rounds').value.split(',').map(r=>r.trim()).filter(Boolean):[];
-  const comp={id,name,type,seasonId,clubIds,rounds,created:Date.now()};
+  const comp={id,name,type,seasonId,clubIds,linkedDivisions,rounds,created:Date.now()};
   await dbPut('competitions',comp);
   if(existing){const i=S.competitions.findIndex(c=>c.id===existing);if(i>=0)S.competitions[i]=comp;}else S.competitions.push(comp);
   refreshAll();closeModal('modal-competition');showToast('Competitie opgeslagen: '+name,'success');
@@ -432,6 +534,7 @@ const DEFAULT_PREFS = {
   defaultPlayerSort: 'positie',
   contractWarnMonths: 6,
   loanWarnMonths: 3,
+  divisions: [],
 };
 
 function getPrefs() {

@@ -201,6 +201,7 @@
       <div class="tabs">
         <div class="tab active" onclick="switchTab('clubs','alle-clubs',this)">Alle clubs</div>
         <div class="tab" onclick="switchTab('clubs','stadions',this)">Stadions</div>
+        <div class="tab" onclick="switchTab('clubs','divisies',this)">Divisies</div>
       </div>
       <div id="tab-alle-clubs">
         <div class="section-header mb-12">
@@ -215,6 +216,10 @@
           <button class="btn btn-primary" onclick="openStadiumModal()">+ Stadion toevoegen</button>
         </div>
         <div id="stadions-table-wrap"></div>
+      </div>
+      <div id="tab-divisies" style="display:none;max-width:520px">
+        <div class="settings-row-desc" style="margin-bottom:12px">Stel hier de divisies/niveaus in die je bijhoudt (bijv. Eredivisie, KKD, Amateur). De volgorde bepaalt hoe clubs gegroepeerd/gesorteerd worden in het clubsoverzicht en in keuzelijsten. Per club stel je in het bewerkscherm in welke divisie ze zitten (met historie, net als transfers).</div>
+        <div id="divisions-settings-list"></div>
       </div>
     </div>
 
@@ -570,6 +575,14 @@
         </select>
       </div>
       <div class="form-group"><label class="form-label">Notitie (optioneel)</label><input class="form-input" id="club-note" placeholder=""></div>
+
+      <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">📊 Divisiehistorie</div>
+          <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="addDivisionEntry()">+ Toevoegen</button>
+        </div>
+        <div id="division-history-list" style="max-height:200px;overflow-y:auto"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-club')">Annuleren</button>
@@ -614,11 +627,17 @@
           <option value="voorbereiding">Voorbereiding (vriendschappelijk)</option>
         </select>
       </div>
-      <div id="comp-league-options">
-        <div class="form-group">
-          <label class="form-label">Clubs in deze competitie</label>
-          <div id="comp-clubs-checkboxes" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:6px"></div>
+      <div class="form-group">
+        <label class="form-label">Gekoppelde divisies (optioneel)</label>
+        <div id="comp-divisions-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:6px 0"></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="fillClubsFromDivisions()">✓ Vul clubs uit gekoppelde divisies aan</button>
+          <button type="button" class="btn btn-ghost" style="font-size:11px;color:var(--loss)" onclick="unselectAllCompClubs()">Alles uitvinken</button>
         </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Clubs in deze competitie</label>
+        <div id="comp-clubs-checkboxes" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:6px"></div>
       </div>
       <div id="comp-cup-options" style="display:none">
         <div class="form-group">
@@ -1050,6 +1069,7 @@
 <script src="js/backup.js"></script>
 <script src="js/transfers.js"></script>
 <script src="js/injuries.js"></script>
+<script src="js/divisions.js"></script>
 <script src="js/wizard.js"></script>
 <script src="js/navigation.js"></script>
 <script src="js/settings.js"></script>

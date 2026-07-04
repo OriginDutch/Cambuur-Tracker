@@ -32,7 +32,10 @@ function openMatchImport(compId, defaultTab) {
       ? S.clubs.filter(c=>selComp.clubIds.includes(c.id))
       : S.clubs;
     const opts = '<option value="">— Selecteer club —</option>' +
-      compClubs.sort((a,b)=>a.name.localeCompare(b.name)).map(c=>
+      compClubs.sort((a,b)=>{
+        const da = divisionSortIndex(effectiveDivision(a)), db = divisionSortIndex(effectiveDivision(b));
+        return da!==db ? da-db : a.name.localeCompare(b.name);
+      }).map(c=>
         `<option value="${c.id}">${c.name}</option>`).join('');
     document.getElementById('manual-match-home').innerHTML = opts;
     document.getElementById('manual-match-away').innerHTML = opts;
