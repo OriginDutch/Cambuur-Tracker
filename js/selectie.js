@@ -327,43 +327,50 @@ function setPlayerView(mode) {
   renderSelectie();
 }
 
+// Positiegroep van een speler — leunt op de canonieke SUBPOS-indeling (zie
+// verderop in dit bestand) i.p.v. een eigen, losse kopie van positienamen.
+function posGroup(p) {
+  const pos = p.position || '';
+  if (pos === 'Aanvaller' || SUBPOS.Aanvaller.includes(pos)) return 'Aanvaller';
+  if (pos === 'Middenvelder' || SUBPOS.Middenvelder.includes(pos)) return 'Middenvelder';
+  if (pos === 'Verdediger' || SUBPOS.Verdediger.includes(pos)) return 'Verdediger';
+  if (pos === 'Keeper' || SUBPOS.Keeper.includes(pos)) return 'Keeper';
+  return pos; // fallback: toon als eigen groepje
+}
+
 function renderSelectie() {
   if (!S.players) S.players = [];
   const today = new Date().toISOString().split('T')[0];
 
-  // Effective status: if vertrokken but departureDate in future → treat as 'vertrekt'
-  // Huidige seizoen object
   const currentSeason = (S.seasons||[]).find(s=>s.id===S.currentSeason);
   const seasonRange = currentSeason ? getSeasonDateRange(currentSeason) : null;
   window._currentSeasonRange = seasonRange; // expose for playerCard badges
 
-  const effectiveStatus = (p) => {
+  // Seizoen-bewuste status — apart van de globale effectiveStatus() in helpers.js,
+  // die kijkt naar "nu". Deze houdt rekening met het geselecteerde seizoen.
+  const getSeasonStatus = (p) => {
     const refDate = seasonRange ? seasonRange.end : today;
-    // Try transfers timeline first
     const fromTimeline = effectiveStatusFromTransfers(p, refDate);
     if (fromTimeline) {
-      // For historical seasons: hide future departures
       if (fromTimeline === 'vertrokken' || fromTimeline === 'vertrekt') {
         const t = (p.transfers||[]).find(x=>x.type==='transfer-uit');
         if (t && seasonRange && t.date >= seasonRange.end) return 'actief';
       }
       return fromTimeline;
     }
-    // Fallback: legacy fields
     if (seasonRange && p.departureDate && p.departureDate >= seasonRange.end) {
-      const baseStatus = p.status === 'vertrokken' || p.status === 'vertrekt'
-        ? 'actief' : (p.status || 'actief');
+      const baseStatus = p.status === 'vertrokken' || p.status === 'vertrekt' ? 'actief' : (p.status || 'actief');
       return baseStatus;
     }
     if (p.status === 'vertrokken' && p.departureDate && p.departureDate > today) return 'vertrekt';
     return p.status || 'actief';
   };
-  // Search filter
-  const searchQ = (document.getElementById('selectie-search')?.value||'').toLowerCase().trim();
 
+  // ── 1. FILTEREN ── alle spelers die dit seizoen bij de club hoorden + zoekfilter
+  const searchQ = (document.getElementById('selectie-search')?.value||'').toLowerCase().trim();
   const active = S.players.filter(p => {
     if (!currentSeason) {
-      const es = effectiveStatus(p);
+      const es = getSeasonStatus(p);
       if (['vertrokken','uitgeleend'].includes(es)) return false;
     } else {
       if (!isPlayerInSeason(p, currentSeason)) return false;
@@ -377,46 +384,33 @@ function renderSelectie() {
            (p.subpos||[]).some(s=>s.toLowerCase().includes(searchQ));
   });
 
-  const groups = [
-    { key: 'Aanvaller', label: 'Aanvallers' },
-    { key: 'Middenvelder', label: 'Middenvelders' },
-    { key: 'Verdediger', label: 'Verdedigers' },
-    { key: 'Keeper', label: 'Keepers' },
-  ];
-  // Position mapping: subpositions used as main position → parent group
-  const posGroup = p => {
-    const pos = p.position || '';
-    if (['Aanvaller','Linksbuiten','Rechtsbuiten','Spits','Tweede Spits','Schaduwspits'].includes(pos)) return 'Aanvaller';
-    if (['Middenvelder','Defensieve Middenvelder','Centrale Middenvelder','Aanvallende Middenvelder','Controleur'].includes(pos)) return 'Middenvelder';
-    if (['Verdediger','Centrale Verdediger','Linksback','Rechtsback','Linker Wingback','Rechter Wingback','Libero','Stopper'].includes(pos)) return 'Verdediger';
-    if (['Keeper','Uitkomende Keeper'].includes(pos)) return 'Keeper';
-    return pos; // fallback: show as-is
-  };
-  // Uitgeleende spelers apart
-  const refDate = seasonRange ? seasonRange.end : today;
-  const uitgeleend = active.filter(p => effectiveStatus(p) === 'uitgeleend');
-
-  // Vertrokken spelers dit seizoen (departureDate valt binnen het seizoen)
-  const vertrokken = currentSeason ? active.filter(p => {
-    const dep = p.departureDate || null;
-    if (!dep) return false;
-    const range = getSeasonDateRange(currentSeason);
-    if (!range) return false;
-    return dep > range.start && dep <= range.end;
-  }) : [];
-  const vertrokkenIds = new Set(vertrokken.map(p => p.id));
-
-  // Actieve selectie: niet uitgeleend, niet vertrokken dit seizoen
-  const activeInSquad = active.filter(p =>
-    effectiveStatus(p) !== 'uitgeleend' && !vertrokkenIds.has(p.id)
-  );
   const el = document.getElementById('selectie-content');
   if (!active.length) {
     el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><div class="empty-state-title">Nog geen spelers</div><div class="empty-state-desc">Voeg spelers toe via de knop rechtsboven.</div></div>';
     return;
   }
 
-  // Sort function based on mode
+  // Spelers die niet meer "actief in de wedstrijdselectie" zijn (vertrokken dit
+  // seizoen, of uitgeleend) tellen niet mee in de waardetotalen, maar worden wel
+  // gewoon getoond — inline, gegroepeerd op positie, alleen visueel gedempt.
+  const isSquadValue = p => {
+    const es = getSeasonStatus(p);
+    if (es === 'uitgeleend') return false;
+    if (currentSeason) {
+      const range = getSeasonDateRange(currentSeason);
+      if (range && p.departureDate && p.departureDate > range.start && p.departureDate <= range.end) return false;
+    }
+    return true;
+  };
+
+  const groups = [
+    { key: 'Aanvaller', label: 'Aanvallers' },
+    { key: 'Middenvelder', label: 'Middenvelders' },
+    { key: 'Verdediger', label: 'Verdedigers' },
+    { key: 'Keeper', label: 'Keepers' },
+  ];
+
+  // ── 2. SORTEREN ──
   const stats = window._playerStats || {};
   const sortFn = (a, b) => {
     switch (playerSortMode) {
@@ -432,9 +426,10 @@ function renderSelectie() {
     }
   };
 
-  // Totale selectiewaarde balk
-  const displayPlayers = showVertrokken ? [...activeInSquad, ...vertrokken] : activeInSquad;
-  const totals = calcValueTotals(displayPlayers);
+  // ── 3. RENDEREN ──
+  // Totale selectiewaarde balk — alleen spelers die nog echt "in de selectie" zitten
+  const squadValuePlayers = active.filter(isSquadValue);
+  const totals = calcValueTotals(squadValuePlayers);
   let summaryHtml = '';
   if (totals.count > 0) {
     summaryHtml = `<div class="value-summary-bar">
@@ -442,115 +437,38 @@ function renderSelectie() {
       <div class="value-summary-divider"></div>
       <div class="value-summary-item"><div class="value-summary-val" style="font-size:16px">${formatGrowth(totals.growth)}</div><div class="value-summary-lbl">Seizoensgroei</div></div>
       <div class="value-summary-divider"></div>
-      <div class="value-summary-item"><div class="value-summary-val" style="font-size:16px;color:var(--text-secondary)">${displayPlayers.length}</div><div class="value-summary-lbl">${showVertrokken?"Seizoen":"Spelers"}</div></div>
+      <div class="value-summary-item"><div class="value-summary-val" style="font-size:16px;color:var(--text-secondary)">${active.length}</div><div class="value-summary-lbl">Spelers dit seizoen</div></div>
     </div>`;
   }
+
+  // Eén functie die een groep spelers rendert (kaart of lijst) — gebruikt door
+  // zowel het per-positie pad als het platte (niet-positie-sortering) pad.
+  const renderGroup = (players) => playerViewMode === 'kaart'
+    ? `<div class="player-grid">${players.map(p => playerCard(p, getSeasonStatus(p))).join('')}</div>`
+    : playerListView(players, getSeasonStatus);
 
   let html = summaryHtml;
 
   if (playerSortMode !== 'positie') {
-    // Flat sorted list across all groups
-    const sorted = [...activeInSquad, ...(showVertrokken?vertrokken:[])].sort(sortFn);
-    if (playerViewMode === 'kaart') {
-      html += `<div class="player-grid">${sorted.map(p => playerCard(p, effectiveStatus(p))).join('')}</div>`;
-    } else {
-      html += playerListView(sorted, effectiveStatus);
-    }
+    html += renderGroup([...active].sort(sortFn));
   } else {
     groups.forEach(g => {
-      const activePl = activeInSquad.filter(p => posGroup(p) === g.key).sort(sortFn);
-      const vertrokkenPl = showVertrokken ? vertrokken.filter(p => posGroup(p) === g.key).sort(sortFn) : [];
-      if (!activePl.length && !vertrokkenPl.length) return;
-      const total = activePl.length + vertrokkenPl.length;
-      const gTotals = calcValueTotals(activePl);
+      const groupPlayers = active.filter(p => posGroup(p) === g.key).sort(sortFn);
+      if (!groupPlayers.length) return;
+      const gTotals = calcValueTotals(groupPlayers.filter(isSquadValue));
       const gValStr = gTotals.count > 0 ? `${formatEuro(gTotals.total)} ${formatGrowth(gTotals.growth)}` : '';
       const isCollapsed = collapsedGroups.has(g.key);
       html += `<div class="posgroup-header" style="cursor:pointer" onclick="collapsedGroups.has('${g.key}')?collapsedGroups.delete('${g.key}'):collapsedGroups.add('${g.key}');renderSelectie()">
-        <span class="position-group-title" style="margin:0;border:none;padding:0">${g.label} <span style="font-size:13px;font-weight:400;color:var(--text-muted)">(${total})</span></span>
+        <span class="position-group-title" style="margin:0;border:none;padding:0">${g.label} <span style="font-size:13px;font-weight:400;color:var(--text-muted)">(${groupPlayers.length})</span></span>
         <div style="display:flex;align-items:center;gap:8px">
           ${gValStr ? `<span class="posgroup-total">${gValStr}</span>` : ''}
           <span style="font-size:12px;color:var(--text-muted)">${isCollapsed?'▼':'▲'}</span>
         </div>
       </div>`;
-      if (!isCollapsed) {
-        if (playerViewMode === 'kaart') {
-          html += `<div class="player-grid">${activePl.map(p => playerCard(p, effectiveStatus(p))).join('')}</div>`;
-          if (vertrokkenPl.length) {
-            if (!vertrokkenMixed) {
-              html += `<div style="border-top:1px dashed var(--border-light);margin:6px 0"></div>`;
-              html += `<div class="player-grid" style="opacity:0.55;filter:grayscale(30%)">${vertrokkenPl.map(p => playerCard(p, 'vertrokken')).join('')}</div>`;
-            } else {
-              html += `<div class="player-grid">${vertrokkenPl.map(p => playerCard(p, effectiveStatus(p))).join('')}</div>`;
-            }
-          }
-        } else {
-          html += playerListView(activePl, effectiveStatus);
-          if (vertrokkenPl.length) {
-            if (!vertrokkenMixed) {
-              html += `<table class="data-table" style="margin-bottom:8px;opacity:0.6"><tbody>`;
-              vertrokkenPl.forEach(p => {
-                const depDate = p.departureDate ? new Date(p.departureDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}) : '—';
-                html += `<tr onclick="navigateToPlayer('${p.id}')" onmouseenter="playerHoverShow(event,'${p.id}')" onmouseleave="playerHoverHide()" style="cursor:pointer">
-                  <td class="text-muted">${p.number||'—'}</td>
-                  <td><div style="display:flex;align-items:center;gap:8px">${playerAvatarHTML(p,'player-avatar',26)}<strong style="color:var(--text-muted)">${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</strong></div></td>
-                  <td style="font-size:12px;color:var(--text-muted)">${posGroup(p)||'—'}</td>
-                  <td style="font-size:12px;color:var(--text-muted)">${p.departureClub?'→ '+p.departureClub:''}</td>
-                  <td style="font-size:11px;font-weight:600;color:var(--loss);white-space:nowrap">📤 ${depDate}</td>
-                </tr>`;
-              });
-              html += `</tbody></table>`;
-            } else {
-              html += playerListView(vertrokkenPl, effectiveStatus);
-            }
-          }
-        }
-      }
+      if (!isCollapsed) html += renderGroup(groupPlayers);
     });
-
-    // Uitgeleend sectie
-    if (uitgeleend.length) {
-      const isCollapsedUit = collapsedGroups.has('Uitgeleend');
-      html += `<div class="posgroup-header" style="margin-top:16px;border-top:2px solid var(--border);cursor:pointer" onclick="collapsedGroups.has('Uitgeleend')?collapsedGroups.delete('Uitgeleend'):collapsedGroups.add('Uitgeleend');renderSelectie()">
-        <span class="position-group-title" style="margin:0;border:none;padding:0;color:var(--text-muted)">Uitgeleend <span style="font-size:13px;font-weight:400">(${uitgeleend.length})</span></span>
-        <span style="font-size:12px;color:var(--text-muted)">${isCollapsedUit?'▼':'▲'}</span>
-      </div>`;
-      if (!isCollapsedUit) {
-        if (playerViewMode === 'kaart') {
-          html += `<div class="player-grid">${uitgeleend.map(p => playerCard(p, 'uitgeleend')).join('')}</div>`;
-        } else {
-          html += `<table class="data-table" style="margin-bottom:12px;opacity:0.75"><tbody>`;
-          uitgeleend.forEach(p => {
-            const loan = (p.transfers||[]).find(t =>
-              t.type==='huur-uit' && t.date && t.date <= refDate && (!t.dateTo || t.dateTo > refDate)
-            );
-            const loanClub = loan?.club || p.loanClub || '—';
-            const loanTo = loan?.dateTo ? new Date(loan.dateTo).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}) : (p.loanReturn || '—');
-            html += `<tr onclick="navigateToPlayer('${p.id}')" onmouseenter="playerHoverShow(event,'${p.id}')" onmouseleave="playerHoverHide()" style="cursor:pointer">
-              <td class="text-muted">${p.number||'—'}</td>
-              <td><div style="display:flex;align-items:center;gap:8px">${playerAvatarHTML(p,'player-avatar',26)}<strong>${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</strong></div></td>
-              <td style="font-size:12px;color:var(--text-muted)">${p.position||'—'}</td>
-              <td style="font-size:12px">➡️ ${loanClub}</td>
-              <td style="font-size:11px;color:var(--text-muted)">t/m ${loanTo}</td>
-            </tr>`;
-          });
-          html += `</tbody></table>`;
-        }
-      }
-    }
   }
   el.innerHTML = html;
-  // Update toggle button labels
-  const toggleBtn = document.getElementById('toggle-vertrokken-btn');
-  if (toggleBtn) {
-    toggleBtn.textContent = showVertrokken ? '👥 Huidig' : '📅 Volledig seizoen';
-    toggleBtn.classList.toggle('active', showVertrokken);
-  }
-  const mixedBtn = document.getElementById('toggle-mixed-btn');
-  if (mixedBtn) {
-    mixedBtn.style.display = showVertrokken ? 'block' : 'none';
-    mixedBtn.textContent = vertrokkenMixed ? '⊟ Gescheiden' : '⊞ Gemengd';
-    mixedBtn.classList.toggle('active', vertrokkenMixed);
-  }
 }
 
 
@@ -587,6 +505,7 @@ function playerCard(p, effStatus) {
   const nameLine = `${p.firstname ? p.firstname[0]+'.\u00a0' : ''}${p.lastname}`;
   const loanBadge = ''; // removed: statusBadge already shows huurder status
   const isLeaving = effStatus === 'vertrekt';
+  const isInactive = effStatus === 'vertrokken' || effStatus === 'uitgeleend';
 
   // Club duration — end: departureDate → expired contract → today
   const clubStart = p.joined || null;
@@ -605,7 +524,7 @@ function playerCard(p, effStatus) {
     if (months === 0) return `${years} jr`;
     return `${years} jr ${months} mnd`;
   })();
-  return `<div class="player-card${isLeaving ? ' player-card-leaving' : ''}" data-player-id="${p.id}" onclick="navigateToPlayer('${p.id}')" onmouseenter="playerHoverShow(event,'${p.id}')" onmouseleave="playerHoverHide()">
+  return `<div class="player-card${isLeaving ? ' player-card-leaving' : ''}" style="${isInactive?'opacity:0.55;filter:grayscale(30%);':''}" data-player-id="${p.id}" onclick="navigateToPlayer('${p.id}')" onmouseenter="playerHoverShow(event,'${p.id}')" onmouseleave="playerHoverHide()">
     <div class="player-card-top">
       ${av}
       <div style="flex:1;min-width:0;overflow:hidden">
@@ -660,7 +579,8 @@ function playerListView(players, effectiveStatus) {
     const age = p.dob ? Math.floor((Date.now()-new Date(p.dob))/31557600000) : '—';
     const val = p.valueHistory?.length ? formatEuro(p.valueHistory[0].amount) : '—';
     const es = effectiveStatus(p);
-    return `<tr onclick="navigateToPlayer('${p.id}')" onmouseenter="playerHoverShow(event,'${p.id}')" onmouseleave="playerHoverHide()" style="cursor:pointer${es==='vertrekt'?';border-left:2px solid #ff8c00':''}">
+    const isInactive = es === 'vertrokken' || es === 'uitgeleend';
+    return `<tr onclick="navigateToPlayer('${p.id}')" onmouseenter="playerHoverShow(event,'${p.id}')" onmouseleave="playerHoverHide()" style="cursor:pointer${es==='vertrekt'?';border-left:2px solid #ff8c00':''}${isInactive?';opacity:0.6;filter:grayscale(25%)':''}">
       <td class="text-muted">${p.number||'—'}</td>
       <td><div style="display:flex;align-items:center;gap:8px">${playerAvatarHTML(p,'player-avatar',28)}<strong>${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</strong></div></td>
       <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.subpos?.length ? p.subpos.join(', ') : (p.position||'')}">${p.subpos?.length ? p.subpos[0] : (p.position||'—')}</td>
@@ -701,9 +621,18 @@ function statusLabel(p) {
 }
 
 function statusLabelEff(p, effStatus) {
-  if (effStatus === 'vertrekt') {
-    const d = p.departureDate ? new Date(p.departureDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}) : '';
-    return 'Vertrekt' + (d ? ' ' + d : '');
+  if (effStatus === 'vertrekt' || effStatus === 'vertrokken') {
+    const d = p.departureDate ? new Date(p.departureDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}) : '';
+    const club = p.departureClub ? ' → '+p.departureClub : '';
+    return (effStatus === 'vertrekt' ? 'Vertrekt' : 'Vertrokken') + (d ? ' '+d : '') + club;
+  }
+  if (effStatus === 'uitgeleend') {
+    const today = new Date().toISOString().split('T')[0];
+    const loan = (p.transfers||[]).find(t => t.type==='huur-uit' && t.date && t.date<=today && (!t.dateTo||t.dateTo>today));
+    if (loan) {
+      const to = loan.dateTo ? ' t/m '+new Date(loan.dateTo).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}) : '';
+      return 'Uitgeleend' + (loan.club ? ' → '+loan.club : '') + to;
+    }
   }
   return statusLabel(p);
 }
@@ -1164,8 +1093,6 @@ let selectedSubpos = [];
 let currentValueEntries = []; // temp storage while modal is open
 let playerViewMode = 'kaart';
 let playerSortMode = 'positie';
-let showVertrokken = false;
-let vertrokkenMixed = false; // true = gemengd met actief
 let collapsedGroups = new Set();
 let allGroupsCollapsed = false;
 

@@ -246,9 +246,7 @@
               <option value="leeftijd">Leeftijd ↑</option>
             </select>
             <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;height:30px" onclick="document.getElementById('player-sort-select').value='positie';playerSortMode='positie';document.getElementById('selectie-search').value='';renderSelectie()">↺ Reset</button>
-            <button class="btn btn-ghost" id="toggle-vertrokken-btn" style="font-size:11px;padding:3px 8px;height:30px" onclick="showVertrokken=!showVertrokken;if(!showVertrokken)vertrokkenMixed=false;renderSelectie()">📤 Vertrokken</button>
-            <button class="btn btn-ghost" id="toggle-mixed-btn" style="font-size:11px;padding:3px 8px;height:30px;display:none" onclick="vertrokkenMixed=!vertrokkenMixed;renderSelectie()">⊞ Gemengd</button>
-            <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;height:30px" onclick="allGroupsCollapsed=!allGroupsCollapsed;collapsedGroups=allGroupsCollapsed?new Set(['Aanvaller','Middenvelder','Verdediger','Keeper','Uitgeleend']):new Set();renderSelectie()">⊟ Alles inklappen</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;height:30px" onclick="allGroupsCollapsed=!allGroupsCollapsed;collapsedGroups=allGroupsCollapsed?new Set(['Aanvaller','Middenvelder','Verdediger','Keeper']):new Set();renderSelectie()">⊟ Alles inklappen</button>
           </div>
           <button class="btn btn-primary" onclick="openPlayerModal()">+ Speler toevoegen</button>
         </div>
