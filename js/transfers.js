@@ -13,6 +13,18 @@ const TRANSFER_TYPES = [
 
 const ALL_TRANSFER_TYPES = TRANSFER_TYPES;
 
+let _transferDragIdx = null;
+function transferDragStart(idx) { _transferDragIdx = idx; }
+function transferDragOver(ev) { ev.preventDefault(); }
+function transferDrop(idx) {
+  if (_transferDragIdx === null || _transferDragIdx === idx) return;
+  const arr = window._playerTransfers || [];
+  const [moved] = arr.splice(_transferDragIdx, 1);
+  arr.splice(idx, 0, moved);
+  _transferDragIdx = null;
+  renderTransferHistory();
+}
+
 function renderTransferHistory() {
   const el = document.getElementById('transfer-history-list');
   if (!el) return;
@@ -21,13 +33,14 @@ function renderTransferHistory() {
     el.innerHTML = '<p style="font-size:12px;color:var(--text-muted)">Nog geen transfers toegevoegd.</p>';
     return;
   }
-  const sorted = [...entries].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  el.innerHTML = sorted.map((t) => {
-    const realIdx = entries.indexOf(t);
+  el.innerHTML = entries.map((t, realIdx) => {
     const typeDef = TRANSFER_TYPES.find(x=>x.value===t.type) || TRANSFER_TYPES[0];
     const clubLabel = t.type==='huur-in'?'Van club':t.type==='huur-uit'?'Aan club':t.type==='transfer-in'?'Van club':t.type==='transfer-uit'?'Naar club':null;
     const clubPlaceholder = t.type==='huur-in'?'FC Utrecht':t.type==='huur-uit'?'Helmond Sport':t.type==='transfer-in'?'FC Utrecht':'SC Heerenveen';
-    return `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border-light)">
+    return `<div draggable="true" ondragstart="transferDragStart(${realIdx})" ondragover="transferDragOver(event)" ondrop="transferDrop(${realIdx})"
+      style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border-light);display:flex;gap:6px">
+      <div style="cursor:grab;color:var(--text-muted);padding-top:18px;user-select:none" title="Sleep om te herordenen">⠿</div>
+      <div style="flex:1">
       <!-- Rij 1: Type · Club · Van -->
       <div style="display:grid;grid-template-columns:130px ${typeDef.hasClub?'1fr ':''} 120px;gap:5px;align-items:end;margin-bottom:4px">
         <div>
@@ -67,6 +80,7 @@ function renderTransferHistory() {
         </div>
         <button class="icon-btn danger" style="height:26px;margin-top:16px" onclick="window._playerTransfers.splice(${realIdx},1);renderTransferHistory()">✕</button>
       </div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -77,6 +91,13 @@ function addTransferEntry() {
   renderTransferHistory();
 }
 
+function clearAllTransfers() {
+  if (!(window._playerTransfers||[]).length) return;
+  if (!confirm('Alle transferhistorie van deze speler wissen? Dit kan niet ongedaan worden gemaakt.')) return;
+  window._playerTransfers = [];
+  renderTransferHistory();
+}
+
 // ── Derive effective status from transfers ──
 function effectiveStatusFromTransfers(player, refDate) {
   const transfers = player.transfers;
@@ -84,22 +105,23 @@ function effectiveStatusFromTransfers(player, refDate) {
 
   const ref = refDate || new Date().toISOString().split('T')[0];
 
-  // Find active huur-uit (player is currently loaned out)
-  const activeHuurUit = transfers.find(t =>
+  // Find active huur-uit (player is currently loaned out) — meest recente bij meerdere matches
+  const activeHuurUit = transfers.filter(t =>
     t.type === 'huur-uit' && t.date && t.date <= ref &&
     (!t.dateTo || t.dateTo > ref)
-  );
+  ).sort((a,b)=>b.date.localeCompare(a.date))[0];
   if (activeHuurUit) return 'uitgeleend';
 
   // Find active huur-in (player is on loan from another club)
-  const activeHuurIn = transfers.find(t =>
+  const activeHuurIn = transfers.filter(t =>
     t.type === 'huur-in' && t.date && t.date <= ref &&
     (!t.dateTo || t.dateTo > ref)
-  );
+  ).sort((a,b)=>b.date.localeCompare(a.date))[0];
   if (activeHuurIn) return 'huurder';
 
-  // Check for transfer-uit (departure)
-  const transferUit = transfers.find(t => t.type === 'transfer-uit' && t.date);
+  // Check for transfer-uit (departure) — meest recente vertrek is leidend
+  const transferUit = transfers.filter(t => t.type === 'transfer-uit' && t.date)
+    .sort((a,b)=>b.date.localeCompare(a.date))[0];
   if (transferUit) {
     if (transferUit.date > ref) return 'vertrekt';
     if (transferUit.date <= ref) return 'vertrokken';

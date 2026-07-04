@@ -579,7 +579,10 @@
       <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">📊 Divisiehistorie</div>
-          <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="addDivisionEntry()">+ Toevoegen</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost" style="font-size:11px;height:26px;color:var(--loss)" onclick="clearAllDivisionHistory()">Alles wissen</button>
+            <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="addDivisionEntry()">+ Toevoegen</button>
+          </div>
         </div>
         <div id="division-history-list" style="max-height:200px;overflow-y:auto"></div>
       </div>
@@ -787,7 +790,10 @@
         <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">Verhuur & Verlengingen</div>
-            <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="addTransferEntry()">+ Toevoegen</button>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost" style="font-size:11px;height:26px;color:var(--loss)" onclick="clearAllTransfers()">Alles wissen</button>
+              <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="addTransferEntry()">+ Toevoegen</button>
+            </div>
           </div>
           <div id="transfer-history-list" style="max-height:180px;overflow-y:auto"></div>
         </div>
@@ -830,7 +836,10 @@
         <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">🩹 Blessurehistorie</div>
-            <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="addInjuryEntry()">+ Toevoegen</button>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost" style="font-size:11px;height:26px;color:var(--loss)" onclick="clearAllInjuries()">Alles wissen</button>
+              <button class="btn btn-ghost" style="font-size:11px;height:26px" onclick="addInjuryEntry()">+ Toevoegen</button>
+            </div>
           </div>
           <div id="injury-history-list" style="max-height:220px;overflow-y:auto"></div>
         </div>

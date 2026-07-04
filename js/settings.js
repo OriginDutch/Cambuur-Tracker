@@ -184,10 +184,78 @@ async function moveDivision(idx, dir) {
 }
 
 function setClubSort(key){
-  if (window._clubSort.key===key) window._clubSort.dir*=-1;
+  if (window._clubSort && window._clubSort.key===key) window._clubSort.dir*=-1;
   else window._clubSort = {key, dir:1};
   renderClubsTable();
 }
+function setClubSortManual(){
+  window._clubSort = null;
+  renderClubsTable();
+}
+
+// Bouwt de groepen (per divisie in ingestelde volgorde + Onbekend niveau) op basis
+// van de huidige (evt. gefilterde) clublijst. Losstaande functie zodat drag-and-drop
+// exact dezelfde indeling kan herberekenen als de render zelf.
+function buildClubGroups(list){
+  const divisions = getPrefs().divisions || [];
+  const groups = divisions.map(d => ({
+    key: 'div:'+d, label: d,
+    clubs: list.filter(c => effectiveDivision(c) === d)
+  })).filter(g => g.clubs.length);
+  const unknown = list.filter(c => !divisions.includes(effectiveDivision(c)));
+  if (unknown.length) groups.push({key:'unknown', label:'Onbekend niveau', clubs: unknown});
+  return groups;
+}
+
+// Sorteert clubs binnen één groep: eigen club altijd eerst, daarna kolomsortering
+// of (in handmatige modus) de opgeslagen sortOrder.
+function sortClubsInGroup(clubs){
+  const cs = window._clubSort;
+  const stadName=c=>S.stadiums.find(s=>s.id===c.stadiumId)?.name||'';
+  const sortVal=c=>{
+    if(!cs) return 0;
+    if(cs.key==='abbr')return (c.abbr||'').toLowerCase();
+    if(cs.key==='city')return (c.city||'').toLowerCase();
+    if(cs.key==='stadium')return stadName(c).toLowerCase();
+    if(cs.key==='capacity'){const cap=S.stadiums.find(s=>s.id===c.stadiumId)?.capacity;return cap==null?-1:cap;}
+    if(cs.key==='highlight')return c.highlight||'zzz';
+    return (c.name||'').toLowerCase();
+  };
+  return [...clubs].sort((a,b)=>{
+    if (a.isOwnClub && !b.isOwnClub) return -1;
+    if (b.isOwnClub && !a.isOwnClub) return 1;
+    if (!cs) { // handmatige modus
+      const oa = a.sortOrder ?? Infinity, ob = b.sortOrder ?? Infinity;
+      return oa - ob;
+    }
+    const va=sortVal(a), vb=sortVal(b);
+    return va<vb?-1*cs.dir:va>vb?1*cs.dir:0;
+  });
+}
+
+let _clubDragCtx = null;
+function clubDragStart(groupKey, idx){ _clubDragCtx = {group:groupKey, idx}; }
+function clubDragOver(ev){ ev.preventDefault(); }
+async function clubDrop(groupKey, idx){
+  if (!_clubDragCtx || _clubDragCtx.group !== groupKey || _clubDragCtx.idx === idx) { _clubDragCtx=null; return; }
+  const q=(document.getElementById('club-search')?.value||'').toLowerCase();
+  const list=S.clubs.filter(c=>!q||c.name.toLowerCase().includes(q)||(c.city||'').toLowerCase().includes(q));
+  const group = buildClubGroups(list).find(g=>g.key===groupKey);
+  if (!group) { _clubDragCtx=null; return; }
+  // Eigen club telt niet mee in de sleepvolgorde (staat altijd los vast bovenaan)
+  const draggable = sortClubsInGroup(group.clubs).filter(c=>!c.isOwnClub);
+  const fromIdx = _clubDragCtx.idx, toIdx = idx;
+  if (fromIdx<0||fromIdx>=draggable.length||toIdx<0||toIdx>=draggable.length) { _clubDragCtx=null; return; }
+  const [moved] = draggable.splice(fromIdx,1);
+  draggable.splice(toIdx,0,moved);
+  for (let i=0;i<draggable.length;i++){
+    draggable[i].sortOrder = i;
+    await dbPut('clubs', draggable[i]);
+  }
+  _clubDragCtx=null;
+  renderClubsTable();
+}
+
 function renderClubsTable(){
   const wrap=document.getElementById('clubs-table-wrap');
   const q=(document.getElementById('club-search')?.value||'').toLowerCase();
@@ -195,54 +263,48 @@ function renderClubsTable(){
   if(!list.length){wrap.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏟️</div><div class="empty-state-title">Nog geen clubs</div><div class="empty-state-desc">Voeg clubs toe om te beginnen.</div></div>';return;}
   const hl={rivaal:'<span class="badge badge-rival">🔴 Rivaal</span>',interessant:'<span class="badge badge-interesting">⭐ Interessant</span>'};
 
-  const {key,dir}=window._clubSort;
-  const stadName=c=>S.stadiums.find(s=>s.id===c.stadiumId)?.name||'';
-  const sortVal=c=>{
-    if(key==='city')return (c.city||'').toLowerCase();
-    if(key==='stadium')return stadName(c).toLowerCase();
-    if(key==='highlight')return c.highlight||'zzz'; // clubs zonder markering onderaan
-    return (c.name||'').toLowerCase();
-  };
-  const sortFn=(a,b)=>sortVal(a)<sortVal(b)?-1*dir:sortVal(a)>sortVal(b)?1*dir:0;
+  const cs = window._clubSort; // {key,dir} of null (= handmatige modus)
+  const groups = buildClubGroups(list).map(g => ({...g, clubs: sortClubsInGroup(g.clubs)}));
 
-  // Groeperen: eigen club altijd bovenaan, dan rivalen/interessant, dan per divisie (in ingestelde volgorde), dan onbekend
-  const own = list.filter(c=>c.isOwnClub).sort(sortFn);
-  const marked = list.filter(c=>!c.isOwnClub && (c.highlight==='rivaal'||c.highlight==='interessant')).sort(sortFn);
-  const restPool = list.filter(c=>!c.isOwnClub && c.highlight!=='rivaal' && c.highlight!=='interessant');
-  const divisions = getPrefs().divisions || [];
-  const byDivision = divisions.map(d => ({
-    name: d,
-    clubs: restPool.filter(c => effectiveDivision(c) === d).sort(sortFn)
-  })).filter(g => g.clubs.length);
-  const unknown = restPool.filter(c => !divisions.includes(effectiveDivision(c))).sort(sortFn);
-
-  const arrow = k => key===k ? (dir===1?' ▲':' ▼') : '';
+  const arrow = k => cs && cs.key===k ? (cs.dir===1?' ▲':' ▼') : '';
   const th = (k,label) => `<th style="cursor:pointer;user-select:none" onclick="setClubSort('${k}')">${label}${arrow(k)}</th>`;
 
-  const rowsHtml = list_ => list_.map(c=>{
-    const stad=S.stadiums.find(s=>s.id===c.stadiumId);
-    const div=effectiveDivision(c);
-    return `<tr style="${c.highlight==='rivaal'?'border-left:2px solid var(--heerenveen-rood)':c.highlight==='interessant'?'border-left:2px solid var(--interessant)':''}">
-      <td><strong>${c.name}</strong>${c.isOwnClub?' <span class="badge badge-active" style="font-size:9px">Eigen</span>':''}</td>
-      <td><span class="tag">${c.abbr||'—'}</span></td>
-      <td class="text-secondary">${c.city||'—'}</td>
-      <td>${stad?stad.name:'<span class="text-muted">—</span>'}</td>
-      <td class="text-secondary" style="font-size:11px">${div||'<span class="text-muted">—</span>'}</td>
-      <td>${hl[c.highlight]||'<span class="text-muted">—</span>'}</td>
-      <td class="text-secondary" style="font-size:11px">${c.note||''}</td>
-      <td><div class="action-btns"><button class="icon-btn" onclick="openClubModal('${c.id}')">✏️</button><button class="icon-btn danger" onclick="confirmDelete('club','${c.id}','${c.name}')">🗑️</button></div></td>
-    </tr>`;
-  }).join('');
+  const rowsHtml = (groupKey, clubs) => {
+    let dragIdx = 0; // index binnen de sleepbare (niet-eigen-club) subset
+    return clubs.map(c=>{
+      const stad=S.stadiums.find(s=>s.id===c.stadiumId);
+      const div=effectiveDivision(c);
+      const isManual = !cs;
+      const canDrag = isManual && !c.isOwnClub;
+      const myDragIdx = canDrag ? dragIdx++ : null;
+      const dragAttrs = canDrag
+        ? `draggable="true" ondragstart="clubDragStart('${groupKey}',${myDragIdx})" ondragover="clubDragOver(event)" ondrop="clubDrop('${groupKey}',${myDragIdx})"`
+        : '';
+      const ownBg = c.isOwnClub ? 'background:rgba(232,124,42,0.12);' : '';
+      const rivalBorder = c.highlight==='rivaal'?'border-left:2px solid var(--heerenveen-rood);':c.highlight==='interessant'?'border-left:2px solid var(--interessant);':'';
+      return `<tr ${dragAttrs} style="${ownBg}${rivalBorder}${canDrag?'cursor:grab;':''}">
+        <td>${canDrag?'<span style="color:var(--text-muted);margin-right:4px" title="Sleep om te herordenen">⠿</span>':''}<strong>${c.name}</strong>${c.isOwnClub?' <span class="badge badge-active" style="font-size:9px">Eigen</span>':''}</td>
+        <td><span class="tag">${c.abbr||'—'}</span></td>
+        <td class="text-secondary">${c.city||'—'}</td>
+        <td>${stad?stad.name:'<span class="text-muted">—</span>'}</td>
+        <td class="num text-secondary">${stad?.capacity?stad.capacity.toLocaleString('nl-NL'):'—'}</td>
+        <td class="text-secondary" style="font-size:11px">${div||'<span class="text-muted">—</span>'}</td>
+        <td>${hl[c.highlight]||'<span class="text-muted">—</span>'}</td>
+        <td class="text-secondary" style="font-size:11px">${c.note||''}</td>
+        <td><div class="action-btns"><button class="icon-btn" onclick="openClubModal('${c.id}')">✏️</button><button class="icon-btn danger" onclick="confirmDelete('club','${c.id}','${c.name}')">🗑️</button></div></td>
+      </tr>`;
+    }).join('');
+  };
 
-  const groupHeader = label => `<tr><td colspan="8" style="background:var(--bg-tertiary);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);padding:6px 10px">${label}</td></tr>`;
+  const groupHeader = label => `<tr><td colspan="9" style="background:var(--bg-tertiary);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);padding:6px 10px">${label}</td></tr>`;
 
   wrap.innerHTML=`
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${list.length} club${list.length!==1?'s':''}${q?' gevonden':''}</div>
-    <table class="data-table"><thead><tr>${th('name','Club')}<th>Afk.</th>${th('city','Stad')}${th('stadium','Stadion')}<th>Divisie</th>${th('highlight','Markering')}<th>Notitie</th><th></th></tr></thead><tbody>
-    ${own.length?groupHeader('Eigen club')+rowsHtml(own):''}
-    ${marked.length?groupHeader('Rivalen & interessante clubs ('+marked.length+')')+rowsHtml(marked):''}
-    ${byDivision.map(g=>groupHeader(g.name+' ('+g.clubs.length+')')+rowsHtml(g.clubs)).join('')}
-    ${unknown.length?groupHeader('Onbekend niveau ('+unknown.length+')')+rowsHtml(unknown):''}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="font-size:11px;color:var(--text-muted)">${list.length} club${list.length!==1?'s':''}${q?' gevonden':''}</div>
+      <button class="btn btn-ghost" style="font-size:11px;${!cs?'color:var(--cambuur-geel);font-weight:700':''}" onclick="setClubSortManual()" title="Terug naar je eigen sleepvolgorde">🔀 Handmatig${!cs?' ✓':''}</button>
+    </div>
+    <table class="data-table"><thead><tr>${th('name','Club')}${th('abbr','Afk.')}${th('city','Stad')}${th('stadium','Stadion')}${th('capacity','Capaciteit')}<th>Divisie</th>${th('highlight','Markering')}<th>Notitie</th><th></th></tr></thead><tbody>
+    ${groups.map(g=>groupHeader(g.label+' ('+g.clubs.length+')')+rowsHtml(g.key,g.clubs)).join('')}
     </tbody></table>`;
 }
 function openClubModal(editId){
@@ -270,7 +332,8 @@ async function saveClub(){
   const existing=document.getElementById('edit-club-id').value;
   if(S.clubs.find(c=>c.name.toLowerCase()===name.toLowerCase()&&c.id!==existing)){showToast('Er bestaat al een club met deze naam','error');return;}
   const id=existing||'club_'+Date.now();
-  const club={id,name,abbr:document.getElementById('club-abbr').value.trim().toUpperCase(),stadiumId:document.getElementById('club-stadium').value||null,city:document.getElementById('club-city').value.trim(),highlight:document.getElementById('club-highlight').value,note:document.getElementById('club-note').value.trim(),isOwnClub:existing?(S.clubs.find(c=>c.id===existing)?.isOwnClub||false):false,divisionHistory:window._clubDivisions||[]};
+  const existingClub=existing?S.clubs.find(c=>c.id===existing):null;
+  const club={id,name,abbr:document.getElementById('club-abbr').value.trim().toUpperCase(),stadiumId:document.getElementById('club-stadium').value||null,city:document.getElementById('club-city').value.trim(),highlight:document.getElementById('club-highlight').value,note:document.getElementById('club-note').value.trim(),isOwnClub:existingClub?.isOwnClub||false,divisionHistory:window._clubDivisions||[],sortOrder:existingClub?.sortOrder};
   await dbPut('clubs',club);
   if(existing){const i=S.clubs.findIndex(c=>c.id===existing);if(i>=0)S.clubs[i]=club;}else S.clubs.push(club);
   renderClubsTable();renderCompetitionsNav();renderCompetitionsPage();renderDivisionsSettings();closeModal('modal-club');showToast('Club opgeslagen: '+name,'success');

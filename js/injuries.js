@@ -6,6 +6,18 @@
 // (bv. 'uitgeleend') én geblesseerd zijn. Blessure is dus geen keuze meer
 // in de status-dropdown, maar een eigen tijdlijn zoals transfers.
 
+let _injuryDragIdx = null;
+function injuryDragStart(idx) { _injuryDragIdx = idx; }
+function injuryDragOver(ev) { ev.preventDefault(); }
+function injuryDrop(idx) {
+  if (_injuryDragIdx === null || _injuryDragIdx === idx) return;
+  const arr = window._playerInjuries || [];
+  const [moved] = arr.splice(_injuryDragIdx, 1);
+  arr.splice(idx, 0, moved);
+  _injuryDragIdx = null;
+  renderInjuryHistory();
+}
+
 function renderInjuryHistory() {
   const el = document.getElementById('injury-history-list');
   if (!el) return;
@@ -14,11 +26,12 @@ function renderInjuryHistory() {
     el.innerHTML = '<p style="font-size:12px;color:var(--text-muted)">Nog geen blessures geregistreerd.</p>';
     return;
   }
-  const sorted = [...entries].sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
-  el.innerHTML = sorted.map((inj) => {
-    const realIdx = entries.indexOf(inj);
+  el.innerHTML = entries.map((inj, realIdx) => {
     const active = !inj.actualReturn;
-    return `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border-light);${active?'background:rgba(245,158,11,0.05);border-radius:4px;padding:8px':''}">
+    return `<div draggable="true" ondragstart="injuryDragStart(${realIdx})" ondragover="injuryDragOver(event)" ondrop="injuryDrop(${realIdx})"
+      style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border-light);display:flex;gap:6px;${active?'background:rgba(245,158,11,0.05);border-radius:4px;padding:8px':''}">
+      <div style="cursor:grab;color:var(--text-muted);padding-top:18px;user-select:none" title="Sleep om te herordenen">⠿</div>
+      <div style="flex:1">
       <div style="display:grid;grid-template-columns:1fr 120px;gap:5px;align-items:end;margin-bottom:4px">
         <div>
           <label class="form-label" style="font-size:10px">Type blessure</label>
@@ -50,6 +63,7 @@ function renderInjuryHistory() {
         <button class="icon-btn danger" style="height:26px;margin-top:16px" onclick="window._playerInjuries.splice(${realIdx},1);renderInjuryHistory()">✕</button>
       </div>
       ${active?'<div style="font-size:10px;color:var(--draw);font-weight:700;margin-top:4px">● Actief (nog geen terugkeerdatum ingevuld)</div>':''}
+      </div>
     </div>`;
   }).join('');
 }
@@ -57,6 +71,13 @@ function renderInjuryHistory() {
 function addInjuryEntry() {
   if (!window._playerInjuries) window._playerInjuries = [];
   window._playerInjuries.unshift({type:'', startDate:new Date().toISOString().split('T')[0], expectedReturn:'', actualReturn:'', note:''});
+  renderInjuryHistory();
+}
+
+function clearAllInjuries() {
+  if (!(window._playerInjuries||[]).length) return;
+  if (!confirm('Alle blessurehistorie van deze speler wissen? Dit kan niet ongedaan worden gemaakt.')) return;
+  window._playerInjuries = [];
   renderInjuryHistory();
 }
 
@@ -68,12 +89,12 @@ function effectiveInjuryStatus(player, refDate) {
   if (!injuries || !injuries.length) return null;
   const ref = refDate || new Date().toISOString().split('T')[0];
 
-  const active = injuries.find(inj => {
+  const candidates = injuries.filter(inj => {
     if (!inj.startDate || inj.startDate > ref) return false;
     if (inj.actualReturn) return inj.actualReturn > ref; // al terug op refDate? dan niet actief
     return true; // geen actualReturn ingevuld = nog altijd geblesseerd
-  });
-  return active || null;
+  }).sort((a,b) => b.startDate.localeCompare(a.startDate)); // meest recente eerst, ongeacht array-volgorde
+  return candidates[0] || null;
 }
 
 // ══════════════════════════════════════════════════════
