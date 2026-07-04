@@ -471,13 +471,17 @@ function openCompModal(editId){
 function fillClubsFromDivisions() {
   const chosen = [...document.querySelectorAll('.comp-division-cb:checked')].map(cb=>cb.value);
   if (!chosen.length) { showToast('Vink eerst één of meer divisies aan', 'error'); return; }
+  const seasonId = document.getElementById('comp-season').value;
+  const season = seasonId ? S.seasons.find(s=>s.id===seasonId) : null;
+  const range = season ? getSeasonDateRange(season) : null;
+  const refDate = range?.start || null; // divisie bij de start van dít seizoen, niet 'vandaag'
   let added = 0;
   document.querySelectorAll('#comp-clubs-checkboxes input[type=checkbox]').forEach(cb => {
     if (cb.checked) return;
     const club = S.clubs.find(c=>c.id===cb.value);
-    if (club && chosen.includes(effectiveDivision(club))) { cb.checked = true; added++; }
+    if (club && chosen.includes(effectiveDivision(club, refDate))) { cb.checked = true; added++; }
   });
-  showToast(added ? `${added} club${added!==1?'s':''} toegevoegd` : 'Geen nieuwe clubs gevonden in deze divisie(s)', added?'success':'error');
+  showToast(added ? `${added} club${added!==1?'s':''} toegevoegd` : 'Geen nieuwe clubs gevonden in deze divisie(s) voor het gekozen seizoen', added?'success':'error');
 }
 
 function unselectAllCompClubs() {

@@ -21,6 +21,7 @@ function openPlayerModal(editId) {
     populateNatDropdown(p.nationality || '');
     document.getElementById('player-position').value = p.position || '';
     document.getElementById('player-is-youth').checked = p.squadLevel === 'jeugd';
+    window._editingPlayerOrigSquadLevel = p.squadLevel || 'eerste-elftal';
     document.getElementById('player-joined').value = p.joined || '';
     document.getElementById('player-contract').value = p.contract || '';
     document.getElementById('player-available-from').value = p.availableFrom || '';
@@ -49,6 +50,7 @@ function openPlayerModal(editId) {
   } else {
     document.getElementById('modal-player-title').textContent = 'Speler toevoegen';
     document.getElementById('player-is-youth').checked = false;
+    window._editingPlayerOrigSquadLevel = null;
     ['player-photo','player-firstname','player-lastname','player-number','player-dob',
      'player-joined','player-contract','player-available-from','player-note'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
@@ -106,6 +108,16 @@ function formatEuro(val) {
   if (val >= 1000000) return '€' + (val/1000000).toFixed(2).replace(/\.?0+$/, '') + 'M';
   if (val >= 1000) return '€' + (val/1000).toFixed(0) + 'K';
   return '€' + val;
+}
+
+// Vraagt bevestiging als je een jeugdspeler promoveert (vinkje uitzetten) —
+// zodat duidelijk is dat er bij opslaan automatisch een transfer-ingang komt.
+function confirmYouthToggle(el) {
+  if (!el.checked && window._editingPlayerOrigSquadLevel === 'jeugd') {
+    if (!confirm('Deze speler wordt bij het opslaan gepromoveerd naar het eerste elftal, met een automatische transferhistorie-ingang voor dit moment. Doorgaan?')) {
+      el.checked = true;
+    }
+  }
 }
 
 function updateStatusFields() {
@@ -214,6 +226,7 @@ async function savePlayer() {
   const existing = document.getElementById('edit-player-id').value;
   const id = existing || 'player_' + Date.now();
   const status = document.getElementById('player-status').value;
+  const existingPlayerForFlags = existing ? (S.players||[]).find(p=>p.id===existing) : null;
 
   const player = {
     id,
@@ -232,6 +245,7 @@ async function savePlayer() {
     note: document.getElementById('player-note').value.trim(),
     foot: document.getElementById('player-foot')?.value || '',
     height: parseInt(document.getElementById('player-height')?.value) || null,
+    _archiveNotified: existingPlayerForFlags?._archiveNotified || false,
     status,
     valueHistory: [...currentValueEntries],
     // Status-specifiek: alleen geschorst is nog een handmatige status.
@@ -247,7 +261,7 @@ async function savePlayer() {
   // Promotie naar eerste elftal: leg het moment zelf vast als transfer-ingang,
   // net als bij een gewone transfer — puur als je hem daadwerkelijk overzet
   // (was jeugd, wordt nu eerste elftal), niet omgekeerd.
-  const oldPlayer = existing ? (S.players||[]).find(p=>p.id===existing) : null;
+  const oldPlayer = existingPlayerForFlags;
   if (oldPlayer && oldPlayer.squadLevel === 'jeugd' && player.squadLevel === 'eerste-elftal') {
     player.transfers = [...player.transfers, {type:'promotie', club:'', date:new Date().toISOString().split('T')[0], dateTo:null, note:'', amount:null}];
   }
@@ -267,6 +281,7 @@ async function savePlayer() {
   }
   closeModal('modal-player');
   renderSelectie();
+  renderJeugd();
   showToast('Speler opgeslagen: ' + (fn ? fn + ' ' : '') + ln, 'success');
 }
 
@@ -645,7 +660,17 @@ function renderJeugd() {
     ? `<div class="player-grid">${pl.map(p => playerCard(p, effectiveStatus(p))).join('')}</div>`
     : playerListView(pl, effectiveStatus);
 
+  const totals = calcValueTotals(players);
   let html = '';
+  if (totals.count > 0) {
+    html += `<div class="value-summary-bar">
+      <div class="value-summary-item"><div class="value-summary-val">${formatEuro(totals.total)}</div><div class="value-summary-lbl">Totale waarde</div></div>
+      <div class="value-summary-divider"></div>
+      <div class="value-summary-item"><div class="value-summary-val" style="font-size:16px">${formatGrowth(totals.growth)}</div><div class="value-summary-lbl">Seizoensgroei</div></div>
+      <div class="value-summary-divider"></div>
+      <div class="value-summary-item"><div class="value-summary-val" style="font-size:16px;color:var(--text-secondary)">${players.length}</div><div class="value-summary-lbl">Jeugdspelers</div></div>
+    </div>`;
+  }
   groups.forEach(g => {
     const groupPlayers = players.filter(p => posGroup(p) === g.key).sort(sortFn);
     if (!groupPlayers.length) return;
