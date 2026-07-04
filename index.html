@@ -760,30 +760,6 @@
           <div class="form-group"><label class="form-label">Lengte cm (optioneel)</label><input class="form-input" id="player-height" type="number" placeholder=""></div>
         </div>
         <div class="form-group"><label class="form-label">Notitie (optioneel)</label><input class="form-input" id="player-note" placeholder=""></div>
-        <div class="form-row cols-2">
-          <div class="form-group">
-            <label class="form-label">Aankoopbedrag (optioneel)</label>
-            <input class="form-input" id="player-buy-fee" type="number" placeholder="0">
-            <div class="form-hint">Laat leeg als onbekend</div>
-          </div>
-          <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end;gap:8px;padding-bottom:20px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
-              <input type="checkbox" id="player-free-transfer-in" style="accent-color:var(--cambuur-geel)">
-              <span>Vrije transfer</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
-              <input type="checkbox" id="player-youth-product" style="accent-color:var(--cambuur-geel)">
-              <span>Eigen jeugd</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
-              <input type="checkbox" id="player-loan-in" style="accent-color:var(--cambuur-geel)" onchange="document.getElementById('player-previous-club-wrap').style.display=this.checked?'block':'none'">
-              <span>Huurspeler</span>
-            </label>
-            <div id="player-previous-club-wrap" style="display:none">
-              <input class="form-input" id="player-previous-club" placeholder="Van club (bijv. FC Utrecht)" style="font-size:12px;margin-top:4px">
-            </div>
-          </div>
-        </div>
         <!-- Verhuur & Verlengingen -->
         <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -823,10 +799,9 @@
           <label class="form-label">Status</label>
           <select class="form-select" id="player-status" onchange="updateStatusFields()">
             <option value="actief">Actief</option>
-            <option value="huurder">Huurling (ingehuurd)</option>
             <option value="geschorst">Geschorst</option>
-            <option value="vertrokken">Vertrokken</option>
           </select>
+          <div class="form-hint">Huur/vertrek/transfer regel je via het tabblad "Transfers" hieronder</div>
         </div>
         <div id="status-fields"></div>
 

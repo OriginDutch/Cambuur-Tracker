@@ -95,8 +95,9 @@ function renderSeizoensverslag(seasonId) {
   let transferSpent=0, transferReceived=0, joinedCount=0, departedCount=0;
   if (range) {
     players.forEach(p => {
-      if (p.joined && p.joined>=range.start && p.joined<=range.end) { joinedCount++; transferSpent += parseFloat(p.buyFee)||0; }
-      if (p.departureDate && p.departureDate>=range.start && p.departureDate<=range.end) { departedCount++; transferReceived += parseFloat(p.sellFee)||0; }
+      if (p.joined && p.joined>=range.start && p.joined<=range.end) { joinedCount++; transferSpent += parseFloat(getIncomingTransferInfo(p)?.amount)||0; }
+      const depDate = getDepartureDate(p);
+      if (depDate && depDate>=range.start && depDate<=range.end) { departedCount++; transferReceived += parseFloat(getOutgoingTransferInfo(p)?.amount)||0; }
     });
   }
   const transferNet = transferReceived - transferSpent;

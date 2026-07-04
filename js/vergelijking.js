@@ -131,12 +131,12 @@ function renderVergTransfer(el, seasons, players) {
     });
     // Players who left this season
     const departed = players.filter(p => {
-      const d = p.departureDate||'';
+      const d = getDepartureDate(p)||'';
       return d >= range.start && d <= range.end;
     });
 
-    const spent = joined.reduce((sum,p)=>sum+(parseFloat(p.buyFee)||0),0);
-    const received = departed.reduce((sum,p)=>sum+(parseFloat(p.sellFee)||0),0);
+    const spent = joined.reduce((sum,p)=>sum+(parseFloat(getIncomingTransferInfo(p)?.amount)||0),0);
+    const received = departed.reduce((sum,p)=>sum+(parseFloat(getOutgoingTransferInfo(p)?.amount)||0),0);
     const net = received - spent;
 
     return {s, joined: joined.length, departed: departed.length, spent, received, net, joinedPlayers: joined, departedPlayers: departed};
@@ -160,19 +160,25 @@ function renderVergTransfer(el, seasons, players) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         ${r.joinedPlayers.length?`<div>
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--win);margin-bottom:6px">Binnengekomen (${r.joinedPlayers.length})</div>
-          ${r.joinedPlayers.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
+          ${r.joinedPlayers.map(p=>{
+            const info = getIncomingTransferInfo(p);
+            const label = info?.note || (info?.amount ? formatEuro(info.amount) : '—');
+            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
             ${playerAvatarHTML(p,'player-avatar',22)}
             <span style="flex:1">${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</span>
-            <span style="color:var(--text-muted)">${p.youthProduct?'Eigen jeugd':p.freeTransferIn?'Vrije transfer':p.buyFee?formatEuro(parseFloat(p.buyFee)):'—'}</span>
-          </div>`).join('')}
+            <span style="color:var(--text-muted)">${label}</span>
+          </div>`;}).join('')}
         </div>`:'<div></div>'}
         ${r.departedPlayers.length?`<div>
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--loss);margin-bottom:6px">Vertrokken (${r.departedPlayers.length})</div>
-          ${r.departedPlayers.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
+          ${r.departedPlayers.map(p=>{
+            const info = getOutgoingTransferInfo(p);
+            const label = info?.note || (info?.amount ? '+'+formatEuro(info.amount) : '—');
+            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
             ${playerAvatarHTML(p,'player-avatar',22)}
             <span style="flex:1">${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</span>
-            <span style="color:var(--text-muted)">${p.freeTransferOut?'Vrije transfer':p.sellFee?'+'+formatEuro(parseFloat(p.sellFee)):'—'}</span>
-          </div>`).join('')}
+            <span style="color:var(--text-muted)">${label}</span>
+          </div>`;}).join('')}
         </div>`:'<div></div>'}
       </div>
     </div>

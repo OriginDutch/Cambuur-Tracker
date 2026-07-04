@@ -45,6 +45,29 @@ function sortSeasons(seasons) {
   return seasons;
 }
 
+// ── Afgeleide transfer-info uit transfers[] ──
+// Vervangen de losse legacy velden (departureDate, loanFromReturn, buyFee,
+// freeTransferIn, youthProduct, previousClub, sellFee, freeTransferOut) die
+// vroeger apart werden ingevuld naast de transferhistorie.
+function getDepartureDate(player) {
+  const t = (player.transfers||[]).filter(x=>x.type==='transfer-uit'&&x.date).sort((a,b)=>b.date.localeCompare(a.date))[0];
+  return t?.date || null;
+}
+function getLoanInReturnDate(player) {
+  const t = (player.transfers||[]).filter(x=>x.type==='huur-in'&&x.dateTo).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
+  return t?.dateTo || null;
+}
+// Vroegste inkomende ingang (transfer-in of huur-in) — voor "hoe/wanneer kwam deze speler"
+function getIncomingTransferInfo(player) {
+  return (player.transfers||[]).filter(x=>(x.type==='transfer-in'||x.type==='huur-in')&&x.date)
+    .sort((a,b)=>a.date.localeCompare(b.date))[0] || null;
+}
+// Meest recente uitgaande ingang (transfer-uit) — voor "hoe/wanneer vertrok deze speler"
+function getOutgoingTransferInfo(player) {
+  return (player.transfers||[]).filter(x=>x.type==='transfer-uit'&&x.date)
+    .sort((a,b)=>b.date.localeCompare(a.date))[0] || null;
+}
+
 // Geeft true als een speler beschikbaar was voor selectie op de gegeven datum
 // (of "nu" als er geen datum is). Sluit uit: nog niet toegevoegd, al vertrokken/
 // huur-in afgelopen, of actief uitgeleend (huur-uit) op dat moment.
@@ -56,8 +79,8 @@ function isPlayerAvailableOn(player, refDate) {
   if (!refDate) return true;
 
   const availFrom = player.availableFrom || player.joined || null;
-  const departed = player.departureDate || null;
-  const loanEnd = player.loanFromReturn || null;
+  const departed = getDepartureDate(player);
+  const loanEnd = getLoanInReturnDate(player);
   const effectiveDep = departed || loanEnd || null;
 
   // Nog niet beschikbaar
@@ -184,8 +207,8 @@ function isPlayerInSeason(player, season) {
   if (!range) return true;
 
   const joined   = player.joined        || null;
-  const departed = player.departureDate || null;
-  const loanEnd  = player.loanFromReturn || null;
+  const departed = getDepartureDate(player);
+  const loanEnd  = getLoanInReturnDate(player);
   // Als geen expliciete vertrekdatum maar wel een verlopen contract, gebruik contractdatum
   const contractEnd = player.contract || null;
   const effectiveDeparture = departed || loanEnd ||
@@ -212,7 +235,6 @@ function effectiveStatus(p) {
   const today = new Date().toISOString().split('T')[0];
   const fromTimeline = effectiveStatusFromTransfers(p, today);
   if (fromTimeline) return fromTimeline;
-  if (p.status === 'vertrokken' && p.departureDate && p.departureDate > today) return 'vertrekt';
   return p.status || 'actief';
 }
 

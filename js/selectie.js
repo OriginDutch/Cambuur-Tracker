@@ -24,12 +24,6 @@ function openPlayerModal(editId) {
     document.getElementById('player-contract').value = p.contract || '';
     document.getElementById('player-available-from').value = p.availableFrom || '';
     document.getElementById('player-note').value = p.note || '';
-    document.getElementById('player-buy-fee').value = p.buyFee || '';
-    document.getElementById('player-free-transfer-in').checked = p.freeTransferIn || false;
-    document.getElementById('player-youth-product').checked = p.youthProduct || false;
-    document.getElementById('player-loan-in').checked = p.loanIn || false;
-    document.getElementById('player-previous-club').value = p.previousClub || '';
-    document.getElementById('player-previous-club-wrap').style.display = p.loanIn ? 'block' : 'none';
     window._playerTransfers = JSON.parse(JSON.stringify(p.transfers||[]));
     renderTransferHistory();
     window._playerInjuries = JSON.parse(JSON.stringify(p.injuries||[]));
@@ -50,21 +44,13 @@ function openPlayerModal(editId) {
     updateStatusFields();
     // Fill status-specific fields
     const sf = document.getElementById('status-fields');
-    if (p.status === 'huurder') { document.getElementById('sf-loan-from-club') && (document.getElementById('sf-loan-from-club').value = p.loanFromClub || ''); document.getElementById('sf-loan-from-return') && (document.getElementById('sf-loan-from-return').value = p.loanFromReturn || ''); document.getElementById('sf-buy-option') && (document.getElementById('sf-buy-option').value = p.buyOption || ''); }
     if (p.status === 'geschorst') { document.getElementById('sf-suspension-end') && (document.getElementById('sf-suspension-end').value = p.suspensionEnd || ''); }
-    if (p.status === 'uitgeleend') { document.getElementById('sf-loan-club') && (document.getElementById('sf-loan-club').value = p.loanClub || ''); document.getElementById('sf-loan-return') && (document.getElementById('sf-loan-return').value = p.loanReturn || ''); }
-    if (p.status === 'vertrokken') { document.getElementById('sf-departure-date') && (document.getElementById('sf-departure-date').value = p.departureDate || ''); document.getElementById('sf-departure-club') && (document.getElementById('sf-departure-club').value = p.departureClub || ''); }
   } else {
     document.getElementById('modal-player-title').textContent = 'Speler toevoegen';
     ['player-photo','player-firstname','player-lastname','player-number','player-dob',
-     'player-joined','player-contract','player-available-from','player-note','player-buy-fee'].forEach(id => {
+     'player-joined','player-contract','player-available-from','player-note'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
-    document.getElementById('player-free-transfer-in').checked = false;
-    document.getElementById('player-youth-product').checked = false;
-    document.getElementById('player-loan-in').checked = false;
-    document.getElementById('player-previous-club').value = '';
-    document.getElementById('player-previous-club-wrap').style.display = 'none';
     window._playerTransfers = [];
     renderTransferHistory();
     window._playerInjuries = [];
@@ -124,32 +110,9 @@ function updateStatusFields() {
   const status = document.getElementById('player-status').value;
   const sf = document.getElementById('status-fields');
   const fields = {
-    huurder: `<div class="form-row cols-2">
-      <div class="form-group"><label class="form-label">Moederclub</label><input class="form-input" id="sf-loan-from-club" placeholder="Club van herkomst"></div>
-      <div class="form-group"><label class="form-label">Huur loopt tot</label><input class="form-input" id="sf-loan-from-return" type="date"></div>
-    </div>
-    <div class="form-group"><label class="form-label">Koopoptie</label>
-      <select class="form-select" id="sf-buy-option">
-        <option value="">Geen koopoptie</option>
-        <option value="optie">Koopoptie aanwezig</option>
-        <option value="verplicht">Verplichte doorkoop</option>
-      </select>
-    </div>`,
     geschorst: `<div class="form-group"><label class="form-label">Geschorst tot</label><input class="form-input" id="sf-suspension-end" type="date"></div>`,
-    uitgeleend: `<div class="form-row cols-2">
-      <div class="form-group"><label class="form-label">Uitleenclub</label><input class="form-input" id="sf-loan-club" placeholder=""></div>
-      <div class="form-group"><label class="form-label">Terugkeer datum</label><input class="form-input" id="sf-loan-return" type="date"></div>
-    </div>`,
-    vertrokken: `<div class="form-row cols-2">
-      <div class="form-group"><label class="form-label">Vertrekdatum</label><input class="form-input" id="sf-departure-date" type="date"></div>
-      <div class="form-group"><label class="form-label">Naar club (optioneel)</label><input class="form-input" id="sf-departure-club" placeholder=""></div>
-    </div>
-    <div class="form-row cols-2">
-      <div class="form-group"><label class="form-label">Verkoopbedrag (optioneel)</label><input class="form-input" id="sf-sell-fee" type="number" placeholder="0"><div class="form-hint">Laat leeg als onbekend</div></div>
-      <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:20px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="sf-free-transfer-out" style="accent-color:var(--cambuur-geel)"><span>Vrije transfer</span></label></div>
-    </div>`,
   };
-  sf.innerHTML = fields[status] || '<p class="text-muted" style="font-size:12px;padding:8px 0">Geen extra velden nodig.</p>';
+  sf.innerHTML = fields[status] || '<p class="text-muted" style="font-size:12px;padding:8px 0">Geen extra velden nodig — huur/vertrek/transfer regel je via het tabblad "Transfers".</p>';
 }
 
 // ── WAARDEHISTORIE ──
@@ -268,33 +231,21 @@ async function savePlayer() {
     height: parseInt(document.getElementById('player-height')?.value) || null,
     status,
     valueHistory: [...currentValueEntries],
-    // Status-specific fields
+    // Status-specifiek: alleen geschorst is nog een handmatige status.
+    // Huurling/uitgeleend/vertrokken worden afgeleid uit de Transfers-tab.
     suspensionEnd: status === 'geschorst' ? (document.getElementById('sf-suspension-end')?.value || '') : '',
-    loanFromClub: status === 'huurder' ? (document.getElementById('sf-loan-from-club')?.value || '') : '',
-    loanFromReturn: status === 'huurder' ? (document.getElementById('sf-loan-from-return')?.value || '') : '',
-    buyOption: status === 'huurder' ? (document.getElementById('sf-buy-option')?.value || '') : '',
-    loanClub: status === 'uitgeleend' ? (document.getElementById('sf-loan-club')?.value || '') : '',
-    loanReturn: status === 'uitgeleend' ? (document.getElementById('sf-loan-return')?.value || '') : '',
-    departureDate: status === 'vertrokken' ? (document.getElementById('sf-departure-date')?.value || '') : '',
-    departureClub: status === 'vertrokken' ? (document.getElementById('sf-departure-club')?.value || '') : '',
     createdAt: existing ? ((S.players||[]).find(p=>p.id===existing)?.createdAt || Date.now()) : Date.now(),
-    buyFee: parseInt(document.getElementById('player-buy-fee').value) || 0,
-    freeTransferIn: document.getElementById('player-free-transfer-in').checked,
-    youthProduct: document.getElementById('player-youth-product').checked,
-    loanIn: document.getElementById('player-loan-in').checked,
-    previousClub: document.getElementById('player-previous-club').value || null,
     transfers: window._playerTransfers || [],
     injuries: window._playerInjuries || [],
-    sellFee: status === 'vertrokken' ? (parseInt(document.getElementById('sf-sell-fee')?.value) || 0) : (existing ? ((S.players||[]).find(p=>p.id===existing)?.sellFee || 0) : 0),
-    freeTransferOut: status === 'vertrokken' ? (document.getElementById('sf-free-transfer-out')?.checked || false) : false,
   };
 
   if (!S.players) S.players = [];
 
-  // Sync legacy fields into transfers array
-  const existingTransfers = window._playerTransfers || [];
-  const syncedTransfers = syncLegacyToTransfers(player, existingTransfers);
-  player.transfers = syncedTransfers;
+  // "In dienst sinds" volgt de vroegste inkomende transfer-ingang, als die er is
+  // (anders blijft staan wat handmatig is ingevuld — bv. voor spelers zonder
+  // volledige transferhistorie).
+  const incoming = getIncomingTransferInfo(player);
+  if (incoming?.date) player.joined = incoming.date;
 
   await dbPut('players', player);
   if (existing) {
@@ -353,16 +304,14 @@ function renderSelectie() {
     const fromTimeline = effectiveStatusFromTransfers(p, refDate);
     if (fromTimeline) {
       if (fromTimeline === 'vertrokken' || fromTimeline === 'vertrekt') {
-        const t = (p.transfers||[]).find(x=>x.type==='transfer-uit');
-        if (t && seasonRange && t.date >= seasonRange.end) return 'actief';
+        // Meest recente transfer-uit is leidend (niet afhankelijk van array-volgorde)
+        const t = (p.transfers||[]).filter(x=>x.type==='transfer-uit' && x.date).sort((a,b)=>b.date.localeCompare(a.date))[0];
+        // Alleen 'actief' als het vertrek ná het einde van dit seizoen valt — een
+        // vertrek op exact de laatste dag van het seizoen telt als vertrokken.
+        if (t && seasonRange && t.date > seasonRange.end) return 'actief';
       }
       return fromTimeline;
     }
-    if (seasonRange && p.departureDate && p.departureDate >= seasonRange.end) {
-      const baseStatus = p.status === 'vertrokken' || p.status === 'vertrekt' ? 'actief' : (p.status || 'actief');
-      return baseStatus;
-    }
-    if (p.status === 'vertrokken' && p.departureDate && p.departureDate > today) return 'vertrekt';
     return p.status || 'actief';
   };
 
@@ -398,7 +347,8 @@ function renderSelectie() {
     if (es === 'uitgeleend') return false;
     if (currentSeason) {
       const range = getSeasonDateRange(currentSeason);
-      if (range && p.departureDate && p.departureDate > range.start && p.departureDate <= range.end) return false;
+      const dep = getDepartureDate(p);
+      if (range && dep && dep > range.start && dep <= range.end) return false;
     }
     return true;
   };
@@ -510,7 +460,7 @@ function playerCard(p, effStatus) {
   // Club duration — end: departureDate → expired contract → today
   const clubStart = p.joined || null;
   const _today = new Date().toISOString().split('T')[0];
-  const clubEnd = p.departureDate || (p.contract && p.contract < _today ? p.contract : null);
+  const clubEnd = getDepartureDate(p) || (p.contract && p.contract < _today ? p.contract : null);
   const clubDur = (() => {
     if (!clubStart) return null;
     const from = new Date(clubStart);
@@ -614,16 +564,15 @@ function getValueTrend(p) {
 }
 
 function statusLabel(p) {
-  const today = new Date().toISOString().split('T')[0];
-  if (p.status === 'vertrokken' && p.departureDate && p.departureDate > today) return 'Vertrekt';
   const labels = {actief:'Actief',huurder:'Huurling',geblesseerd:'Geblesseerd',geschorst:'Geschorst',uitgeleend:'Uitgeleend',vertrokken:'Vertrokken',vertrekt:'Vertrekt'};
   return labels[p.status||'actief'] || p.status;
 }
 
 function statusLabelEff(p, effStatus) {
   if (effStatus === 'vertrekt' || effStatus === 'vertrokken') {
-    const d = p.departureDate ? new Date(p.departureDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}) : '';
-    const club = p.departureClub ? ' → '+p.departureClub : '';
+    const out = getOutgoingTransferInfo(p);
+    const d = out?.date ? new Date(out.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}) : '';
+    const club = out?.club ? ' → '+out.club : '';
     return (effStatus === 'vertrekt' ? 'Vertrekt' : 'Vertrokken') + (d ? ' '+d : '') + club;
   }
   if (effStatus === 'uitgeleend') {
@@ -655,42 +604,48 @@ function renderArchief() {
 
   // Helper: is this player effectively no longer at the club?
   const isGone = p => {
-    if (['vertrokken','uitgeleend'].includes(p.status)) return true;
+    const es = effectiveStatus(p);
+    if (['vertrokken','uitgeleend'].includes(es)) return true;
     // Contract verlopen en geen actieve status update
-    if (p.contract && p.contract < today && p.status === 'actief') return true;
+    if (p.contract && p.contract < today && es === 'actief') return true;
     return false;
   };
 
   // Helper: contract label
   const goneLabel = p => {
-    if (p.status === 'vertrokken') return {label: 'Vertrokken', cls: 'badge-status-vertrokken'};
-    if (p.status === 'uitgeleend') return {label: 'Uitgeleend', cls: 'badge-status-uitgeleend'};
+    const es = effectiveStatus(p);
+    if (es === 'vertrokken') return {label: 'Vertrokken', cls: 'badge-status-vertrokken'};
+    if (es === 'uitgeleend') return {label: 'Uitgeleend', cls: 'badge-status-uitgeleend'};
     if (p.contract && p.contract < today) return {label: 'Contract afgelopen', cls: 'badge-status-vertrokken'};
-    return {label: p.status||'—', cls: ''};
+    return {label: es||'—', cls: ''};
   };
 
   const archived = S.players.filter(p => {
     if (!isGone(p)) return false;
+    const dep = getDepartureDate(p);
+    const loanEnd = getLoanInReturnDate(p);
     // Season filter
     if (seasonFilter && range) {
       const joinedInSeason = p.joined && p.joined >= seasonStart && p.joined <= seasonEnd;
-      const leftInSeason = (p.departureDate && p.departureDate >= seasonStart && p.departureDate <= seasonEnd)
+      const leftInSeason = (dep && dep >= seasonStart && dep <= seasonEnd)
         || (p.contract && p.contract >= seasonStart && p.contract <= seasonEnd);
-      const loanInSeason = p.loanReturn && p.loanReturn >= seasonStart && p.loanReturn <= seasonEnd;
+      const loanInSeason = loanEnd && loanEnd >= seasonStart && loanEnd <= seasonEnd;
       // Also include if player was active during that season
       const activeInSeason = isPlayerInSeason(p, season) ||
-        (p.joined && p.joined <= seasonEnd && (!p.departureDate || p.departureDate >= seasonStart));
+        (p.joined && p.joined <= seasonEnd && (!dep || dep >= seasonStart));
       if (!joinedInSeason && !leftInSeason && !loanInSeason && !activeInSeason) return false;
     }
     if (!q) return true;
-    return (p.lastname+' '+p.firstname+' '+p.position+' '+(p.departureClub||'')+' '+(p.loanClub||'')).toLowerCase().includes(q);
+    const outClub = getOutgoingTransferInfo(p)?.club || '';
+    return (p.lastname+' '+p.firstname+' '+p.position+' '+outClub).toLowerCase().includes(q);
   });
 
   // Transfer stats — filtered by season if selected
   const playersForStats = seasonFilter && season
     ? (S.players||[]).filter(p=>{
         const joinedInSeason = p.joined && p.joined >= seasonStart && p.joined <= seasonEnd;
-        const leftInSeason = p.departureDate && p.departureDate >= seasonStart && p.departureDate <= seasonEnd;
+        const dep = getDepartureDate(p);
+        const leftInSeason = dep && dep >= seasonStart && dep <= seasonEnd;
         return joinedInSeason || leftInSeason;
       })
     : (S.players||[]);
@@ -720,7 +675,7 @@ function renderArchief() {
   const playerSeasons = p => {
     const today = new Date().toISOString().split('T')[0];
     const joined = p.joined || null;
-    const dep = p.departureDate || null;
+    const dep = getDepartureDate(p);
     const effectiveEnd = dep || (p.contract && p.contract < today ? p.contract : null);
     return (S.seasons||[]).filter(s => {
       if (s.hidden) return false;
@@ -756,7 +711,7 @@ function renderArchief() {
     const start = p.joined || null;
     if (!start) return '—';
     const today = new Date().toISOString().split('T')[0];
-    const end = p.departureDate || (p.contract && p.contract < today ? p.contract : null);
+    const end = getDepartureDate(p) || (p.contract && p.contract < today ? p.contract : null);
     const from = new Date(start);
     const to = end ? new Date(end) : new Date();
     if (from > to) return '—'; // joined in future
@@ -774,7 +729,9 @@ function renderArchief() {
       <th>Speler</th><th>Positie</th><th>Status</th><th>Seizoenen</th><th>Totaal</th><th>Duur</th><th>Aankoop</th><th>Verkoop</th><th></th>
     </tr></thead><tbody>${archived.map(p=>{
       const gl = goneLabel(p);
-      const depDate = p.departureDate||p.contract||'';
+      const depDate = getDepartureDate(p)||p.contract||'';
+      const incoming = getIncomingTransferInfo(p);
+      const outgoing = getOutgoingTransferInfo(p);
       const seasons = playerSeasons(p);
       const stats = careerStats(p);
       return `<tr style="cursor:pointer" onclick="navigateToPlayer('${p.id}')">
@@ -789,8 +746,8 @@ function renderArchief() {
           ${!stats.appearances?'<span class="text-muted">—</span>':''}
         </td>
         <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${clubDuration(p)}</td>
-        <td class="text-secondary" style="font-size:11px">${p.youthProduct?'Jeugd':p.loanIn?'Huurspeler':p.freeTransferIn?'Vrije transfer':p.buyFee?formatEuro(p.buyFee):'—'}</td>
-        <td class="text-secondary" style="font-size:11px">${p.freeTransferOut?'Vrije transfer':p.sellFee?formatEuro(p.sellFee):'—'}</td>
+        <td class="text-secondary" style="font-size:11px">${incoming?.note || (incoming?.amount?formatEuro(incoming.amount):'—')}</td>
+        <td class="text-secondary" style="font-size:11px">${outgoing?.note || (outgoing?.amount?formatEuro(outgoing.amount):'—')}</td>
         <td><div class="action-btns"><button class="icon-btn" onclick="event.stopPropagation();openPlayerModal('${p.id}')">✏️</button></div></td>
       </tr>`;
     }).join('')}</tbody></table>`;
@@ -959,8 +916,8 @@ function formatGrowth(growth) {
 function calcTransferBalance(players) {
   let inTotal = 0, outTotal = 0, inCount = 0, outCount = 0;
   players.forEach(p => {
-    const bf = parseFloat(p.buyFee)||0;
-    const sf = parseFloat(p.sellFee)||0;
+    const bf = parseFloat(getIncomingTransferInfo(p)?.amount)||0;
+    const sf = parseFloat(getOutgoingTransferInfo(p)?.amount)||0;
     if (bf > 0) { inTotal += bf; inCount++; }
     if (sf > 0) { outTotal += sf; outCount++; }
   });
@@ -1208,15 +1165,16 @@ function subposSortKey(p) {
 async function checkDepartedPlayers() {
   if (!S.players) return;
   const today = new Date().toISOString().split('T')[0];
-  const nowDeparted = S.players.filter(p =>
-    p.status === 'vertrokken' && p.departureDate && p.departureDate <= today
-    && !p._archiveNotified
-  );
+  const nowDeparted = S.players.filter(p => {
+    if (p._archiveNotified) return false;
+    const dep = getDepartureDate(p);
+    return effectiveStatus(p) === 'vertrokken' && dep && dep <= today;
+  });
   if (!nowDeparted.length) return;
 
   // Show notification popup
   const names = nowDeparted.map(p => {
-    const d = new Date(p.departureDate).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
+    const d = new Date(getDepartureDate(p)).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
     return `<li><strong>${p.firstname ? p.firstname+' ' : ''}${p.lastname}</strong> — contract/vertrek per ${d}</li>`;
   }).join('');
 

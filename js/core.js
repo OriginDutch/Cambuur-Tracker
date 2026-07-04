@@ -61,6 +61,9 @@ async function init(){
   await migrateTransfers();
   // Migrate legacy status:'geblesseerd' to injuries array (runs once)
   await migrateInjuries();
+  // Migrate remaining legacy transfer/status velden (huurder/uitgeleend/vertrokken
+  // + aankoop/verkoop/vrije-transfer/eigen-jeugd) volledig naar transfers[] (runs once)
+  await migrateLegacyPlayerFieldsV2();
   renderSeasonSelect();renderCompetitionsNav();renderDashboard();renderSeasonsManage();
   if(S.seasons.length===0){initWizard();document.getElementById('setup-overlay').classList.add('open');}
   setTimeout(checkDepartedPlayers, 800);

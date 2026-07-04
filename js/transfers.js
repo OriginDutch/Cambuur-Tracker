@@ -134,7 +134,88 @@ function effectiveStatusFromTransfers(player, refDate) {
 // TRANSFER MIGRATIE — legacy velden → transfers array
 // ══════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════
+// MIGRATIE v2 — resterende legacy velden (huurder/uitgeleend/vertrokken +
+// aankoop/verkoop/vrije-transfer/eigen-jeugd) volledig naar transfers[]
+// ══════════════════════════════════════════════════════
+// migrateTransfers() (hierboven) deed dit al gedeeltelijk voor joined/departureDate.
+// Deze ronde vangt ook de status-tab-specifieke velden (loanFromClub/loanClub/
+// departureClub/buyOption) die niet via syncLegacyToTransfers liepen, brengt
+// status terug tot alleen actief/geschorst, en ruimt alle legacy velden op.
+async function migrateLegacyPlayerFieldsV2() {
+  const done = await dbGet('settings', 'legacy_player_fields_v2_migrated');
+  if (done?.value) return;
+
+  const players = S.players || [];
+  let migrated = 0;
+
+  for (const p of players) {
+    let transfers = syncLegacyToTransfers(p, p.transfers || []);
+    let changed = transfers.length !== (p.transfers||[]).length;
+
+    // Huurder-status zonder huur-in ingang (status-tab, los van het join-moment)
+    if (p.status === 'huurder' && p.loanFromClub && !transfers.some(t=>t.type==='huur-in')) {
+      transfers.push({type:'huur-in', club:p.loanFromClub, date:p.joined||new Date().toISOString().split('T')[0],
+        dateTo:p.loanFromReturn||null, note:p.buyOption?('Koopoptie: '+p.buyOption):'', amount:null});
+      changed = true;
+    }
+    // Uitgeleend-status zonder huur-uit ingang — startdatum is bij benadering
+    // (dat werd in het oude model nergens vastgelegd)
+    if (p.status === 'uitgeleend' && p.loanClub && !transfers.some(t=>t.type==='huur-uit')) {
+      transfers.push({type:'huur-uit', club:p.loanClub, date:p.joined||new Date().toISOString().split('T')[0],
+        dateTo:p.loanReturn||null, note:'(gemigreerd, startdatum bij benadering)', amount:null});
+      changed = true;
+    }
+
+    if (changed) {
+      transfers = transfers.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+      p.transfers = transfers;
+    }
+
+    // Check vóórdat we opruimen: komt de afgeleide status (uit transfers[]) nog
+    // overeen met de oude, handmatige status? Zo niet: iets is niet meer actueel
+    // (bv. een huur-einddatum die al verstreken is) — dat lossen we niet
+    // stilzwijgend op, we melden het zodat je de transferhistorie kunt nakijken.
+    if (['huurder','uitgeleend','vertrokken'].includes(p.status)) {
+      const today = new Date().toISOString().split('T')[0];
+      const derived = effectiveStatusFromTransfers(p, today);
+      if (derived !== p.status) {
+        window._migrationMismatches = window._migrationMismatches || [];
+        window._migrationMismatches.push({name: `${p.firstname||''} ${p.lastname}`.trim(), oldStatus: p.status, derived: derived||'actief'});
+      }
+    }
+
+    // Status terugbrengen tot alleen actief/geschorst
+    if (['huurder','uitgeleend','vertrokken'].includes(p.status)) {
+      p.status = 'actief';
+      changed = true;
+    }
+
+    // 'In dienst sinds' bijwerken op basis van de vroegste inkomende ingang
+    const incoming = (p.transfers||[]).filter(t=>(t.type==='transfer-in'||t.type==='huur-in')&&t.date)
+      .sort((a,b)=>a.date.localeCompare(b.date))[0];
+    if (incoming?.date && incoming.date !== p.joined) { p.joined = incoming.date; changed = true; }
+
+    // Legacy velden opruimen — alles zit nu in transfers[]/injuries[]
+    ['loanFromClub','loanFromReturn','buyOption','loanClub','loanReturn','departureDate',
+     'departureClub','buyFee','freeTransferIn','youthProduct','loanIn','previousClub',
+     'freeTransferOut','sellFee','injuryType','returnDate'].forEach(f => { if (f in p) { delete p[f]; changed = true; } });
+
+    if (changed) { await dbPut('players', p); migrated++; }
+  }
+
+  await saveSetting('legacy_player_fields_v2_migrated', true);
+  if (migrated > 0) console.log(`Legacy speler-velden v2 migratie: ${migrated} speler(s) bijgewerkt`);
+
+  if (window._migrationMismatches?.length) {
+    const names = window._migrationMismatches.map(m => `${m.name} (was "${m.oldStatus}", nu "${m.derived}")`).join(', ');
+    console.warn('Let op — status kwam niet overeen met de transferhistorie bij:', names);
+    showToast(`Let op: bij ${window._migrationMismatches.length} speler(s) klopte de status niet meer met de transferhistorie (bv. verlopen huurperiode) — check de console voor details`, 'error');
+  }
+}
+
 async function migrateTransfers() {
+
   // Only run once
   const done = await dbGet('settings', 'transfers_migrated_v1');
   if (done?.value) return;
