@@ -3,6 +3,7 @@
 let wpCurrentId = null;
 let wpStarters = new Set();
 let wpGoals = [], wpCards = [], wpSubs = [];
+let wpOriginalRound = null; // om te detecteren of de ronde/datum wijzigde (rij moet dan structureel verplaatsen)
 
 // Markeert een 'missing data'-veld als bewust leeg gelaten (of haalt de markering weg).
 // Slaat meteen op, los van de 'Opslaan'-knop, zodat het niet verloren gaat bij wegnavigeren.
@@ -47,10 +48,12 @@ function wpBack() {
   }
 }
 
-// Refresh only the single match row in the competition view
-function _refreshMatchRow(matchId) {
+// Refresh only the single match row in the competition view — of forceer een
+// volledige herrender als de ronde is gewijzigd (de rij hoort dan ergens anders)
+function _refreshMatchRow(matchId, forceFullRefresh) {
   const m = (S.matches||[]).find(x=>x.id===matchId);
   if (!m) return;
+  if (forceFullRefresh) { renderCompDetail(m.competitionId); return; }
   // Find the existing match row and replace it
   const existing = document.querySelector(`.match-row[data-match-id="${matchId}"]`);
   if (existing) {
@@ -84,6 +87,7 @@ function renderWedstrijdPage(matchId) {
 
   // Init state
   wpStarters = new Set(m.lineup||[]);
+  wpOriginalRound = m.round;
   wpGoals = JSON.parse(JSON.stringify(m.events?.filter(e=>e.type==='goal')||[]));
   wpCards = JSON.parse(JSON.stringify(m.events?.filter(e=>e.type==='card')||[]));
   wpSubs  = JSON.parse(JSON.stringify(m.events?.filter(e=>e.type==='sub')||[]));
@@ -96,6 +100,26 @@ function renderWedstrijdPage(matchId) {
       <div style="font-size:12px;color:var(--text-muted)">${comp?.name||''} · ${dateStr}${m.time?' · '+m.time:''}</div>
     </div>
     <button class="btn btn-primary" onclick="wpSave()">✓ Opslaan</button>
+  </div>
+
+  <!-- Wedstrijdgegevens: datum/tijd/ronde -->
+  <div class="wp-section" style="margin-bottom:12px">
+    <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+      <div class="form-group" style="margin:0">
+        <label class="form-label" style="font-size:10px">Datum</label>
+        <input class="form-input" id="wp-match-date" type="date" value="${m.date||''}" style="height:32px;font-size:12px">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label" style="font-size:10px">Tijd</label>
+        <input class="form-input" id="wp-match-time" type="time" value="${m.time||''}" style="height:32px;font-size:12px">
+      </div>
+      <div class="form-group" style="margin:0;flex:1;min-width:140px">
+        <label class="form-label" style="font-size:10px">Ronde</label>
+        ${(comp?.type==='beker'||comp?.type==='playoffs') && (comp?.rounds||[]).length
+          ? `<select class="form-select" id="wp-match-round" style="height:32px;font-size:12px">${comp.rounds.map(r=>`<option value="${r}" ${m.round===r?'selected':''}>${r}</option>`).join('')}</select>`
+          : `<input class="form-input" id="wp-match-round" type="number" min="1" value="${m.round||''}" style="height:32px;font-size:12px">`}
+      </div>
+    </div>
   </div>
 
   <!-- Score -->
@@ -113,7 +137,7 @@ function renderWedstrijdPage(matchId) {
     </div>
     ${result?`<div style="font-size:12px;font-weight:700;color:${resultColor}">${result}</div>`:''}
     <button class="btn btn-ghost" style="font-size:11px;margin-top:6px" onclick="wpRecalcScore()">📊 Herbereken uit doelpunten</button>
-    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
         <span>1e helft: 45 +</span>
         <input id="wp-et1" type="number" min="0" max="20" value="${m.extraTime1||''}" placeholder="0"
@@ -126,22 +150,21 @@ function renderWedstrijdPage(matchId) {
           class="form-input" style="width:44px;height:28px;text-align:center;font-size:12px;padding:2px 4px;-moz-appearance:textfield" onwheel="this.blur()">
         <span>min</span>
       </div>
-      ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'extraTime') : ''}
-    </div>
-    ${(comp?.type==='beker'||comp?.type==='playoffs') ? `<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
+      ${(comp?.type==='beker'||comp?.type==='playoffs') ? `
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer">
         <input type="checkbox" id="wp-went-et" ${m.wentToExtraTime?'checked':''} onchange="wpToggleExtraTimeFields()" style="accent-color:var(--cambuur-geel)">
-        Verlenging gespeeld
+        Verlenging
       </label>
       <div id="wp-penalties-wrap" style="display:${m.wentToExtraTime?'flex':'none'};align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
         <span>Strafschoppen:</span>
         <input id="wp-pen-h" type="number" min="0" value="${m.penalties?.home??''}" placeholder="—"
-          class="form-input" style="width:44px;height:28px;text-align:center;font-size:12px;padding:2px 4px;-moz-appearance:textfield" onwheel="this.blur()">
+          class="form-input" style="width:36px;height:28px;text-align:center;font-size:12px;padding:2px 4px;-moz-appearance:textfield" onwheel="this.blur()">
         <span>-</span>
         <input id="wp-pen-a" type="number" min="0" value="${m.penalties?.away??''}" placeholder="—"
-          class="form-input" style="width:44px;height:28px;text-align:center;font-size:12px;padding:2px 4px;-moz-appearance:textfield" onwheel="this.blur()">
-      </div>
-    </div>` : ''}
+          class="form-input" style="width:36px;height:28px;text-align:center;font-size:12px;padding:2px 4px;-moz-appearance:textfield" onwheel="this.blur()">
+      </div>` : ''}
+      ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'extraTime') : ''}
+    </div>
   </div>
 
   <!-- Layout: basiself alleen als Cambuur speelt -->
@@ -193,12 +216,13 @@ function renderWedstrijdPage(matchId) {
         <div id="wp-cards"></div>
       </div>
 
-      <!-- Coach + MOTM + Notities -->
+      <!-- Coach + MOTM (alleen als Cambuur speelt) + Notities -->
       <div class="wp-section">
+        ${isCamPlaying ? `
         <div class="form-group" style="margin-bottom:10px">
           <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
             <span>🧑‍💼 Coach</span>
-            ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'coach') : ''}
+            ${m.played ? wpDataIgnoredToggle(m, 'coach') : ''}
           </label>
           <div style="display:flex;gap:6px;align-items:center">
             <select class="form-select" id="wp-coach" style="flex:1" onchange="wpCoachChanged()"></select>
@@ -209,10 +233,10 @@ function renderWedstrijdPage(matchId) {
         <div class="form-group" style="margin-bottom:10px">
           <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
             <span>🏆 Man of the Match</span>
-            ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'motm') : ''}
+            ${m.played ? wpDataIgnoredToggle(m, 'motm') : ''}
           </label>
           <select class="form-select" id="wp-motm" style="width:100%"></select>
-        </div>
+        </div>` : ''}
         <div class="form-group" style="margin:0">
           <label class="form-label">📝 Notities</label>
           <textarea class="form-input" id="wp-notes" rows="3"
@@ -223,17 +247,17 @@ function renderWedstrijdPage(matchId) {
     </div>
   </div>
 
-  <!-- Wedstrijdstatistieken — volle breedte -->
-  <div class="wp-section" style="margin-top:12px">
+  <!-- Wedstrijdstatistieken — volle breedte, alleen als Cambuur speelt -->
+  ${isCamPlaying ? `<div class="wp-section" style="margin-top:12px">
     <div class="wp-section-title">
       <span>📊 Wedstrijdstatistieken</span>
-      ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'matchStats') : ''}
+      ${m.played ? wpDataIgnoredToggle(m, 'matchStats') : ''}
     </div>
     <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center">
       <!-- Header -->
-      <div style="font-size:11px;font-weight:700;color:var(--cambuur-geel);text-align:center">SC Cambuur</div>
+      <div style="font-size:11px;font-weight:700;color:var(--cambuur-geel);text-align:center">${isCamHome?homeName:awayName}</div>
       <div></div>
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-align:center">Tegenstander</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-align:center">${isCamHome?awayName:homeName}</div>
       ${[
         {key:'possession', label:'Balbezit %', type:'number', min:0, max:100},
         {key:'shots', label:'Schoten', type:'number', min:0},
@@ -250,7 +274,7 @@ function renderWedstrijdPage(matchId) {
           style="text-align:center;height:30px;padding:2px 6px;font-size:13px">
       `).join('')}
     </div>
-  </div>
+  </div>` : ''}
 
   <!-- Tijdlijn — volle breedte -->
   <div class="wp-section" style="margin-top:12px">
@@ -843,6 +867,18 @@ async function wpSave() {
   // Always recalc score from goals if any goals present
   if (wpGoals.length > 0) wpRecalcScore();
 
+  // Wedstrijdgegevens: datum/tijd/ronde
+  const newDate = document.getElementById('wp-match-date')?.value;
+  if (newDate) m.date = newDate;
+  const newTime = document.getElementById('wp-match-time')?.value;
+  m.time = newTime || null;
+  const newRound = document.getElementById('wp-match-round')?.value;
+  if (newRound) {
+    const savComp = S.competitions.find(c=>c.id===m.competitionId);
+    const isKnockoutComp = savComp?.type==='beker'||savComp?.type==='playoffs';
+    m.round = isKnockoutComp ? newRound : (parseInt(newRound)||m.round);
+  }
+
   const hs = document.getElementById('wp-hs')?.value?.trim();
   const as = document.getElementById('wp-as')?.value?.trim();
   if (hs!==''&&as!=='') { m.homeScore=parseInt(hs); m.awayScore=parseInt(as); m.played=true; }
@@ -899,7 +935,9 @@ async function wpSave() {
   window._playerStats = calcAllPlayerStats(S.currentSeason);
   showToast('Wedstrijd opgeslagen ✓','success');
   // Update the match row in the background without navigating away
-  _refreshMatchRow(m.id);
+  // (volledige herrender als de ronde is gewijzigd — de rij hoort dan elders)
+  _refreshMatchRow(m.id, m.round !== wpOriginalRound);
+  wpOriginalRound = m.round;
 }
 
 

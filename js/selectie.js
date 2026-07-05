@@ -282,6 +282,7 @@ async function savePlayer() {
   closeModal('modal-player');
   renderSelectie();
   renderJeugd();
+  renderArchief();
   showToast('Speler opgeslagen: ' + (fn ? fn + ' ' : '') + ln, 'success');
 }
 

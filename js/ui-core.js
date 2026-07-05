@@ -23,8 +23,14 @@ function refreshAll(){
   renderCompetitionsPage();
   // If we're on the clubs page, refresh that too
   if(document.getElementById('page-clubs').classList.contains('active'))renderClubsPage();
-  if(document.getElementById('page-selectie').classList.contains('active'))renderSelectie();
+  if(document.getElementById('page-selectie').classList.contains('active')){
+    renderSelectie();
+    if(document.getElementById('selectie-jeugd')?.style.display==='block')renderJeugd();
+    if(document.getElementById('selectie-archief')?.style.display==='block')renderArchief();
+  }
   if(document.getElementById('page-statistieken').classList.contains('active'))renderStatistieken();
+  if(document.getElementById('page-coaches')?.classList.contains('active'))renderCoachesPage();
+  if(document.getElementById('page-vergelijking')?.classList.contains('active'))renderVergelijking();
   // If we're on a competition detail, refresh it
   const activeComp=document.querySelector('.nav-item[data-comp].active');
   if(activeComp)renderCompDetail(activeComp.dataset.comp);

@@ -19,9 +19,10 @@ function renderCoachesPage() {
     return;
   }
 
-  // Group by role
+  // Group by role — alleen actieve staf; inactieve staf gaat naar het archief onderaan
   const byRole = {};
   COACH_ROLES.forEach(r => byRole[r] = []);
+  const inactive = [];
   coaches.forEach(c => {
     // Vind de aanstelling die vandaag actief is (from <= vandaag <= to, of geen to).
     // Val terug op de meest recente aanstelling (op startdatum) als er geen actieve is.
@@ -35,9 +36,41 @@ function renderCoachesPage() {
     });
     const appt = currentAppt || appts[0];
     const role = appt?.role || 'Overig';
-    if (!byRole[role]) byRole[role] = [];
-    byRole[role].push({coach:c, appt, isActive:!!currentAppt});
+    if (currentAppt) {
+      if (!byRole[role]) byRole[role] = [];
+      byRole[role].push({coach:c, appt, isActive:true});
+    } else {
+      inactive.push({coach:c, appt, isActive:false});
+    }
   });
+
+  const cardHtml = ({coach:c, appt, isActive}) => {
+    const age = c.dob ? Math.floor((Date.now()-new Date(c.dob))/31557600000) : null;
+    const stats = calcCoachStats(c.id, S.currentSeason);
+    return `<div class="card" style="cursor:pointer;padding:14px;position:relative" onclick="openCoachDetail('${c.id}')">
+      <div style="position:absolute;top:10px;right:10px;display:flex;gap:4px" onclick="event.stopPropagation()">
+        <button class="icon-btn" style="height:26px;width:26px" onclick="openCoachModal('${c.id}')" title="Bewerken">✏️</button>
+        <button class="icon-btn danger" style="height:26px;width:26px" onclick="deleteCoach('${c.id}')" title="Verwijderen">🗑️</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding-right:56px">
+        <div style="width:48px;height:48px;border-radius:50%;overflow:hidden;background:var(--bg-tertiary);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px">
+          ${c.photo ? `<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover">` : '🧑‍💼'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px">${c.firstname||''} ${c.lastname}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${appt?.role||''}${isActive?'':' <span style="color:var(--loss)">(inactief)</span>'}</div>
+          ${age?`<div style="font-size:11px;color:var(--text-muted)">${age} jaar${c.nationality?' · '+natFlag(c.nationality)+c.nationality:''}</div>`:''}
+        </div>
+      </div>
+      ${stats.matches>0?`<div style="display:flex;gap:8px;font-size:12px;border-top:1px solid var(--border-light);padding-top:8px">
+        <span style="color:var(--text-muted)">${stats.matches}W</span>
+        <span style="color:var(--win)">W ${stats.wins}</span>
+        <span style="color:var(--draw)">G ${stats.draws}</span>
+        <span style="color:var(--loss)">V ${stats.losses}</span>
+        <span style="margin-left:auto;font-weight:700">${stats.ppg} PPG</span>
+      </div>`:'<div style="font-size:11px;color:var(--text-muted);border-top:1px solid var(--border-light);padding-top:8px">Nog geen wedstrijddata</div>'}
+    </div>`;
+  };
 
   let html = '';
   COACH_ROLES.forEach(role => {
@@ -50,32 +83,27 @@ function renderCoachesPage() {
     html += `<div style="margin-bottom:20px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:8px">${role}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
-        ${group.map(({coach:c, appt, isActive}) => {
-          const age = c.dob ? Math.floor((Date.now()-new Date(c.dob))/31557600000) : null;
-          const stats = calcCoachStats(c.id, S.currentSeason);
-          return `<div class="card" style="cursor:pointer;padding:14px" onclick="openCoachDetail('${c.id}')">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-              <div style="width:48px;height:48px;border-radius:50%;overflow:hidden;background:var(--bg-tertiary);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px">
-                ${c.photo ? `<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover">` : '🧑‍💼'}
-              </div>
-              <div style="flex:1;min-width:0">
-                <div style="font-weight:700;font-size:14px">${c.firstname||''} ${c.lastname}</div>
-                <div style="font-size:11px;color:var(--text-muted)">${appt?.role||''}${isActive?'':' <span style="color:var(--loss)">(inactief)</span>'}</div>
-                ${age?`<div style="font-size:11px;color:var(--text-muted)">${age} jaar${c.nationality?' · '+natFlag(c.nationality)+c.nationality:''}</div>`:''}
-              </div>
-            </div>
-            ${stats.matches>0?`<div style="display:flex;gap:8px;font-size:12px;border-top:1px solid var(--border-light);padding-top:8px">
-              <span style="color:var(--text-muted)">${stats.matches}W</span>
-              <span style="color:var(--win)">W ${stats.wins}</span>
-              <span style="color:var(--draw)">G ${stats.draws}</span>
-              <span style="color:var(--loss)">V ${stats.losses}</span>
-              <span style="margin-left:auto;font-weight:700">${stats.ppg} PPG</span>
-            </div>`:'<div style="font-size:11px;color:var(--text-muted);border-top:1px solid var(--border-light);padding-top:8px">Nog geen wedstrijddata</div>'}
-          </div>`;
-        }).join('')}
+        ${group.map(cardHtml).join('')}
       </div>
     </div>`;
   });
+
+  // Archief — niet meer actieve staf, apart en standaard ingeklapt zodat het
+  // hoofdoverzicht overzichtelijk blijft na jaren van staf-wisselingen
+  if (inactive.length) {
+    inactive.sort((a,b) => (a.coach.lastname||'').localeCompare(b.coach.lastname||''));
+    const isOpen = window._coachArchiefOpen;
+    html += `<div style="margin-top:8px">
+      <div style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:8px" onclick="window._coachArchiefOpen=!window._coachArchiefOpen;renderCoachesPage()">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">📁 Archief — niet meer actief (${inactive.length})</span>
+        <span style="font-size:12px;color:var(--text-muted)">${isOpen?'▲':'▼'}</span>
+      </div>
+      ${isOpen ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;opacity:0.7">
+        ${inactive.map(cardHtml).join('')}
+      </div>` : ''}
+    </div>`;
+  }
+
   el.innerHTML = html;
 }
 

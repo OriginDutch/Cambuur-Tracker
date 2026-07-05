@@ -94,7 +94,7 @@ document.getElementById('confirm-ok-btn').addEventListener('click',async()=>{
   const{type,id}=pendingDel;
   if(type==='player'){
     await dbDel('players',id);S.players=(S.players||[]).filter(p=>p.id!==id);
-    renderSelectie();renderArchief();
+    renderSelectie();renderArchief();renderJeugd();
   } else if(type==='all'){
     for(const s of['settings','seasons','clubs','stadiums','competitions','players','matches','coaches'])await dbClr(s);
     S={lang:S.lang,theme:S.theme,currentSeason:null,seasons:[],clubs:[],stadiums:[],competitions:[]};
@@ -102,14 +102,12 @@ document.getElementById('confirm-ok-btn').addEventListener('click',async()=>{
   }else if(type==='club'){
     await dbDel('clubs',id);S.clubs=S.clubs.filter(c=>c.id!==id);
     for(const comp of S.competitions){if((comp.clubIds||[]).includes(id)){comp.clubIds=comp.clubIds.filter(cid=>cid!==id);await dbPut('competitions',comp);}}
-    renderClubsTable();renderCompetitionsNav();
-  }else if(type==='stadion'){await dbDel('stadiums',id);S.stadiums=S.stadiums.filter(s=>s.id!==id);renderStadiumsTable();}
+  }else if(type==='stadion'){await dbDel('stadiums',id);S.stadiums=S.stadiums.filter(s=>s.id!==id);}
   else if(type==='competition'){
     await dbDel('competitions',id);S.competitions=S.competitions.filter(c=>c.id!==id);
     const compMatches=(S.matches||[]).filter(m=>m.competitionId===id);
     for(const m of compMatches)await dbDel('matches',m.id);
     S.matches=(S.matches||[]).filter(m=>m.competitionId!==id);
-    renderCompetitionsNav();renderCompetitionsPage();
   }
   else if(type==='season'){
     await dbDel('seasons',id);S.seasons=S.seasons.filter(s=>s.id!==id);
@@ -122,8 +120,8 @@ document.getElementById('confirm-ok-btn').addEventListener('click',async()=>{
     for(const m of seasonMatches)await dbDel('matches',m.id);
     S.matches=(S.matches||[]).filter(m=>m.seasonId!==id&&!linkedCompIds.has(m.competitionId));
     if(S.currentSeason===id){S.currentSeason=S.seasons[0]?.id||null;await saveSetting('currentSeason',S.currentSeason);}
-    renderSeasonSelect();renderCompetitionsNav();renderSeasonsManage();renderDashboard();
   }
+  refreshAll();
   closeModal('modal-confirm');showToast('Verwijderd','success');pendingDel=null;
 });
 

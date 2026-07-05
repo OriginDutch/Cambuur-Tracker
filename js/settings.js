@@ -92,7 +92,7 @@ async function saveInlineSeason(){
   await dbPut('seasons',season);
   S.seasons.push(season);
   if(!S.currentSeason){S.currentSeason=id;await saveSetting('currentSeason',id);}
-  S.seasons.sort((a,b)=>{ if(a.sortOrder!=null&&b.sortOrder!=null)return a.sortOrder-b.sortOrder; if(a.sortOrder!=null)return -1; if(b.sortOrder!=null)return 1; const ay=parseInt(a.name?.match(/^(\d{4})/)?.[1]||a.year||0); const by=parseInt(b.name?.match(/^(\d{4})/)?.[1]||b.year||0); return by-ay; });
+  sortSeasons(S.seasons);
   document.getElementById('inline-season-name').value='';
   document.getElementById('inline-season-year').value='';
   document.getElementById('inline-season-form').style.display='none';
@@ -111,7 +111,7 @@ async function saveSeason(){
   await dbPut('seasons',season);
   if(existing){const i=S.seasons.findIndex(s=>s.id===existing);if(i>=0)S.seasons[i]=season;}
   else{S.seasons.push(season);if(!S.currentSeason){S.currentSeason=id;await saveSetting('currentSeason',id);}}
-  S.seasons.sort((a,b)=>{ if(a.sortOrder!=null&&b.sortOrder!=null)return a.sortOrder-b.sortOrder; if(a.sortOrder!=null)return -1; if(b.sortOrder!=null)return 1; const ay=parseInt(a.name?.match(/^(\d{4})/)?.[1]||a.year||0); const by=parseInt(b.name?.match(/^(\d{4})/)?.[1]||b.year||0); return by-ay; });
+  sortSeasons(S.seasons);
   renderSeasonSelect();renderSeasonsManage();renderCompetitionsNav();renderDashboard();
   closeModal('modal-season');showToast('Seizoen opgeslagen: '+name,'success');
 }
@@ -556,7 +556,8 @@ async function saveCompetition(){
   const linkedDivisions=[...document.querySelectorAll('.comp-division-cb:checked')].map(cb=>cb.value);
   const rounds=(type==='beker'||type==='playoffs')?document.getElementById('comp-rounds').value.split(',').map(r=>r.trim()).filter(Boolean):[];
   const periods = type==='competitie' ? (window._compPeriods||[]) : [];
-  const comp={id,name,type,seasonId,clubIds,linkedDivisions,rounds,periods,created:Date.now()};
+  const existingComp = existing ? S.competitions.find(c=>c.id===existing) : null;
+  const comp={id,name,type,seasonId,clubIds,linkedDivisions,rounds,periods,created:existingComp?.created||Date.now()};
   await dbPut('competitions',comp);
   if(existing){const i=S.competitions.findIndex(c=>c.id===existing);if(i>=0)S.competitions[i]=comp;}else S.competitions.push(comp);
   refreshAll();closeModal('modal-competition');showToast('Competitie opgeslagen: '+name,'success');
