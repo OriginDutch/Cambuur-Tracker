@@ -342,9 +342,9 @@ function autoOpenCurrentRound(compId, today) {
 // ══════════════════════════════
 // STANDINGS — met live berekening
 // ══════════════════════════════
-function calcStandings(clubs, compMatches) {
+function calcStandings(clubs, compMatches, deductions) {
   const table = {};
-  clubs.forEach(c => { table[c.id] = {id:c.id,name:c.name,isOwn:c.isOwnClub,highlight:c.highlight,g:0,w:0,d:0,l:0,gf:0,ga:0,pts:0}; });
+  clubs.forEach(c => { table[c.id] = {id:c.id,name:c.name,isOwn:c.isOwnClub,highlight:c.highlight,g:0,w:0,d:0,l:0,gf:0,ga:0,pts:0,ded:0}; });
   compMatches.filter(m=>m.played&&m.homeScore!==null).forEach(m => {
     let h = table[m.homeClubId];
     let a = table[m.awayClubId];
@@ -355,6 +355,12 @@ function calcStandings(clubs, compMatches) {
     if (m.homeScore>m.awayScore) { h.w++;h.pts+=3;a.l++; }
     else if (m.homeScore<m.awayScore) { a.w++;a.pts+=3;h.l++; }
     else { h.d++;a.d++;h.pts++;a.pts++; }
+  });
+  // Puntenaftrek — puur handmatig ingevoerd (licentie-overtredingen e.d.),
+  // telt op in de eindstand maar NIET mee in de periodestanden (dat is een
+  // aparte, op zichzelf staande vorm-momentopname).
+  (deductions||[]).forEach(d => {
+    if (table[d.clubId]) { table[d.clubId].pts -= d.points; table[d.clubId].ded += d.points; }
   });
   return Object.values(table).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.name.localeCompare(b.name));
 }
@@ -376,7 +382,7 @@ function getCupWinner(seasonId) {
 }
 
 function renderLeagueTable(comp, clubs, compMatches) {
-  const sorted = calcStandings(clubs, compMatches);
+  const sorted = calcStandings(clubs, compMatches, comp.pointDeductions);
   const zones = comp.rankZones || [];
   const { winners: periodWinners } = getPeriodWinners(comp, clubs, compMatches);
   const cupWinnerId = getCupWinner(comp.seasonId);
@@ -411,7 +417,7 @@ function renderLeagueTable(comp, clubs, compMatches) {
         <td>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}${cupBadge}</td>
         <td class="num">${c.g}</td><td class="num">${c.w}</td><td class="num">${c.d}</td><td class="num">${c.l}</td>
         <td class="num">${c.gf}</td><td class="num">${c.ga}</td><td class="num">${c.gf-c.ga>0?'+':''}${c.gf-c.ga}</td>
-        <td class="num" style="font-weight:700">${c.pts}</td>
+        <td class="num" style="font-weight:700">${c.pts}${c.ded>0?` <span style="font-size:9px;color:var(--loss);font-weight:400" title="${c.ded} punt(en) in mindering gebracht">(-${c.ded})</span>`:''}</td>
       </tr>`;
     }).join('')}</tbody></table>
     ${zones.length ? `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">

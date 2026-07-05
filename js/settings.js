@@ -457,15 +457,18 @@ function openCompModal(editId){
     document.getElementById('modal-competition-title').textContent='Competitie bewerken';
     window._compPeriods = JSON.parse(JSON.stringify(c.periods||[]));
     window._compRankZones = JSON.parse(JSON.stringify(c.rankZones||[]));
+    window._compDeductions = JSON.parse(JSON.stringify(c.pointDeductions||[]));
   }else{
     document.getElementById('comp-name').value='';document.getElementById('comp-type').value='competitie';
     document.getElementById('comp-rounds').value='Eerste Ronde, Tweede Ronde, Kwartfinale, Halve Finale, Finale';
     document.getElementById('modal-competition-title').textContent='Competitie toevoegen';
     window._compPeriods = [];
     window._compRankZones = [];
+    window._compDeductions = [];
   }
   renderPeriodRows(window._compPeriods);
   renderRankZoneRows(window._compRankZones);
+  renderDeductionRows(window._compDeductions);
   updateCompTypeUI();document.getElementById('modal-competition').classList.add('open');
 }
 
@@ -484,11 +487,13 @@ function fillClubsFromDivisions() {
     const club = S.clubs.find(c=>c.id===cb.value);
     if (club && chosen.includes(effectiveDivision(club, refDate))) { cb.checked = true; added++; }
   });
+  renderDeductionRows(window._compDeductions);
   showToast(added ? `${added} club${added!==1?'s':''} toegevoegd` : 'Geen nieuwe clubs gevonden in deze divisie(s) voor het gekozen seizoen', added?'success':'error');
 }
 
 function unselectAllCompClubs() {
   document.querySelectorAll('#comp-clubs-checkboxes input[type=checkbox]').forEach(cb => cb.checked = false);
+  renderDeductionRows(window._compDeductions);
 }
 function updateCompTypeUI(){
   const t=document.getElementById('comp-type').value;
@@ -653,6 +658,53 @@ function copyRankZonesFromPreviousSeason() {
   showToast(`${window._compRankZones.length} zone(s) gekopieerd`, 'success');
 }
 
+// ── Puntenaftrek (bv. licentie-overtredingen) ──
+// Puur handmatig, meerdere aftrekken per club mogelijk (net als bij Vitesse
+// 2024/25, die meerdere keren binnen één seizoen punten inleverde).
+function renderDeductionRows(deductions) {
+  const wrap = document.getElementById('comp-deductions-rows');
+  const clubIds = [...document.querySelectorAll('#comp-clubs-checkboxes input:checked')].map(cb=>cb.value);
+  const clubOpts = clubIds.map(id => S.clubs.find(c=>c.id===id)).filter(Boolean);
+  wrap.innerHTML = (deductions||[]).map((d, i) => `
+    <div style="display:grid;grid-template-columns:1fr 70px 1fr 110px 28px;gap:6px;align-items:end">
+      <div>
+        <label class="form-label" style="font-size:10px">Club</label>
+        <select class="form-select" style="height:28px;font-size:12px" onchange="window._compDeductions[${i}].clubId=this.value">
+          ${clubOpts.map(c=>`<option value="${c.id}" ${d.clubId===c.id?'selected':''}>${c.name}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="form-label" style="font-size:10px">Punten</label>
+        <input class="form-input" type="number" min="0" style="height:28px;font-size:12px" value="${d.points??''}"
+          oninput="window._compDeductions[${i}].points=parseInt(this.value)||0">
+      </div>
+      <div>
+        <label class="form-label" style="font-size:10px">Reden</label>
+        <input class="form-input" style="height:28px;font-size:12px" value="${d.reason||''}" placeholder="Licentie-overtreding"
+          oninput="window._compDeductions[${i}].reason=this.value">
+      </div>
+      <div>
+        <label class="form-label" style="font-size:10px">Datum (opt.)</label>
+        <input class="form-input" type="date" style="height:28px;font-size:12px" value="${d.date||''}"
+          onchange="window._compDeductions[${i}].date=this.value">
+      </div>
+      <button class="icon-btn danger" style="height:28px" onclick="removeDeductionRow(${i})">✕</button>
+    </div>`).join('') || '<p class="text-muted" style="font-size:11px">Vink eerst clubs aan hierboven om een aftrek te kunnen koppelen.</p>';
+}
+
+function addDeductionRow() {
+  const clubIds = [...document.querySelectorAll('#comp-clubs-checkboxes input:checked')].map(cb=>cb.value);
+  if (!clubIds.length) { showToast('Vink eerst clubs aan voordat je een aftrek toevoegt', 'error'); return; }
+  if (!window._compDeductions) window._compDeductions = [];
+  window._compDeductions.push({clubId: clubIds[0], points: 0, reason: '', date: ''});
+  renderDeductionRows(window._compDeductions);
+}
+
+function removeDeductionRow(idx) {
+  window._compDeductions.splice(idx, 1);
+  renderDeductionRows(window._compDeductions);
+}
+
 function addRankZoneRow() {
   if (!window._compRankZones) window._compRankZones = [];
   const color = RANKZONE_PRESET_COLORS[window._compRankZones.length % RANKZONE_PRESET_COLORS.length];
@@ -676,8 +728,9 @@ async function saveCompetition(){
   const rounds=(type==='beker'||type==='playoffs')?document.getElementById('comp-rounds').value.split(',').map(r=>r.trim()).filter(Boolean):[];
   const periods = type==='competitie' ? (window._compPeriods||[]) : [];
   const rankZones = type==='competitie' ? (window._compRankZones||[]) : [];
+  const pointDeductions = type==='competitie' ? (window._compDeductions||[]).filter(d=>d.clubId) : [];
   const existingComp = existing ? S.competitions.find(c=>c.id===existing) : null;
-  const comp={id,name,type,seasonId,clubIds,linkedDivisions,rounds,periods,rankZones,created:existingComp?.created||Date.now()};
+  const comp={id,name,type,seasonId,clubIds,linkedDivisions,rounds,periods,rankZones,pointDeductions,created:existingComp?.created||Date.now()};
   await dbPut('competitions',comp);
   if(existing){const i=S.competitions.findIndex(c=>c.id===existing);if(i>=0)S.competitions[i]=comp;}else S.competitions.push(comp);
   refreshAll();closeModal('modal-competition');showToast('Competitie opgeslagen: '+name,'success');

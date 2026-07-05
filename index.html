@@ -657,7 +657,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">Clubs in deze competitie</label>
-        <div id="comp-clubs-checkboxes" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:6px"></div>
+        <div id="comp-clubs-checkboxes" onchange="renderDeductionRows(window._compDeductions)" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:6px"></div>
       </div>
       <div id="comp-cup-options" style="display:none">
         <div class="form-group">
@@ -681,6 +681,11 @@
             <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="addRankZoneRow()">+ Zone toevoegen</button>
             <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="copyRankZonesFromPreviousSeason()">📋 Kopieer zones van vorig seizoen</button>
           </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Puntenaftrek (bv. licentie-overtredingen — puur handmatig, telt mee in de eindstand, niet in periodestanden)</label>
+          <div id="comp-deductions-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
+          <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="addDeductionRow()">+ Aftrek toevoegen</button>
         </div>
       </div>
       <div class="form-group">
