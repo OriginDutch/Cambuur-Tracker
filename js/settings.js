@@ -556,10 +556,48 @@ function autoGeneratePeriods() {
 // weer aangepast moet worden. Puur visueel, telt nergens in mee.
 const RANKZONE_PRESET_COLORS = ['#22c55e','#3b82f6','#f59e0b','#ef4444','#a855f7'];
 
+let _rankZoneDragIdx = null;
+function rankZoneDragStart(idx) { _rankZoneDragIdx = idx; }
+function rankZoneDragOver(ev) { ev.preventDefault(); }
+function rankZoneDrop(idx) {
+  if (_rankZoneDragIdx === null || _rankZoneDragIdx === idx) return;
+  const arr = window._compRankZones || [];
+  const [moved] = arr.splice(_rankZoneDragIdx, 1);
+  arr.splice(idx, 0, moved);
+  _rankZoneDragIdx = null;
+  renderRankZoneRows(arr);
+}
+
+// Overlappende positiebereiken opsporen — bij overlap wint de eerst-
+// gedefinieerde zone stilzwijgend, dus we waarschuwen zodat dat niet
+// per ongeluk onopgemerkt blijft.
+function findRankZoneOverlaps(zones) {
+  const warnings = [];
+  for (let i = 0; i < zones.length; i++) {
+    for (let j = i+1; j < zones.length; j++) {
+      const a = zones[i], b = zones[j];
+      const overlaps = a.fromPos <= b.toPos && b.fromPos <= a.toPos;
+      if (overlaps) {
+        warnings.push(`Positie ${Math.max(a.fromPos,b.fromPos)}-${Math.min(a.toPos,b.toPos)} valt in zowel "${a.label||('zone '+(i+1))}" als "${b.label||('zone '+(j+1))}" — "${a.label||('zone '+(i+1))}" krijgt voorrang (staat hoger).`);
+      }
+    }
+  }
+  return warnings;
+}
+
 function renderRankZoneRows(zones) {
   const wrap = document.getElementById('comp-rankzones-rows');
-  wrap.innerHTML = (zones||[]).map((z, i) => `
-    <div style="display:grid;grid-template-columns:70px 70px 1fr 40px 28px;gap:6px;align-items:end">
+  const overlaps = findRankZoneOverlaps(zones||[]);
+  const overlapHtml = overlaps.length
+    ? `<div style="background:rgba(245,158,11,0.1);border:1px solid var(--draw);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--draw)">
+        ${overlaps.map(w=>`⚠ ${w}`).join('<br>')}
+      </div>`
+    : '';
+  wrap.innerHTML = overlapHtml + (zones||[]).map((z, i) => `
+    <div draggable="true" ondragstart="rankZoneDragStart(${i})" ondragover="rankZoneDragOver(event)" ondrop="rankZoneDrop(${i})"
+      style="display:grid;grid-template-columns:20px 22px 64px 64px 1fr 40px 28px;gap:6px;align-items:end;margin-bottom:2px;cursor:grab">
+      <div style="color:var(--text-muted);padding-bottom:6px;user-select:none" title="Sleep om voorrang te wijzigen">⠿</div>
+      <div style="font-size:10px;color:var(--text-muted);padding-bottom:8px;white-space:nowrap" title="Voorrang: eerste wint bij overlap">${i+1}e</div>
       <div>
         <label class="form-label" style="font-size:10px">Positie van</label>
         <input class="form-input" type="number" min="1" style="height:28px;font-size:12px" value="${z.fromPos??''}"
@@ -581,13 +619,44 @@ function renderRankZoneRows(zones) {
           onchange="window._compRankZones[${i}].color=this.value">
       </div>
       <button class="icon-btn danger" style="height:28px" onclick="removeRankZoneRow(${i})">✕</button>
-    </div>`).join('');
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-bottom:8px;margin-left:42px;cursor:pointer">
+      <input type="checkbox" ${z.linkPeriodWinners?'checked':''} onchange="window._compRankZones[${i}].linkPeriodWinners=this.checked" style="accent-color:var(--cambuur-geel)">
+      Geldt ook voor periodetitel-winnaars, ongeacht positie
+    </label>`).join('');
+}
+
+// Kopieert de ranglijst-zones van dezelfde competitie (op naam) uit het meest
+// recente eerdere seizoen — promotie/degradatieregels veranderen zelden per
+// jaar, dus dit scheelt steeds opnieuw hetzelfde intypen.
+function copyRankZonesFromPreviousSeason() {
+  const name = document.getElementById('comp-name').value.trim();
+  if (!name) { showToast('Vul eerst een competitienaam in', 'error'); return; }
+  const currentSeasonId = document.getElementById('comp-season').value;
+  const currentSeason = S.seasons.find(s=>s.id===currentSeasonId);
+  const currentYear = currentSeason?.year ?? Infinity;
+
+  const candidates = S.competitions.filter(c => {
+    if (c.name.trim().toLowerCase() !== name.toLowerCase()) return false;
+    if (!(c.rankZones||[]).length) return false;
+    const s = S.seasons.find(x=>x.id===c.seasonId);
+    return s && (s.year ?? -Infinity) < currentYear;
+  }).sort((a,b) => {
+    const ya = S.seasons.find(s=>s.id===a.seasonId)?.year ?? -Infinity;
+    const yb = S.seasons.find(s=>s.id===b.seasonId)?.year ?? -Infinity;
+    return yb - ya;
+  });
+
+  if (!candidates.length) { showToast('Geen eerder seizoen met zones gevonden voor deze competitienaam', 'error'); return; }
+  window._compRankZones = JSON.parse(JSON.stringify(candidates[0].rankZones));
+  renderRankZoneRows(window._compRankZones);
+  showToast(`${window._compRankZones.length} zone(s) gekopieerd`, 'success');
 }
 
 function addRankZoneRow() {
   if (!window._compRankZones) window._compRankZones = [];
   const color = RANKZONE_PRESET_COLORS[window._compRankZones.length % RANKZONE_PRESET_COLORS.length];
-  window._compRankZones.push({fromPos: 1, toPos: 1, label: '', color});
+  window._compRankZones.push({fromPos: 1, toPos: 1, label: '', color, linkPeriodWinners: false});
   renderRankZoneRows(window._compRankZones);
 }
 

@@ -359,11 +359,35 @@ function calcStandings(clubs, compMatches) {
   return Object.values(table).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.name.localeCompare(b.name));
 }
 
+// Bepaalt de winnaar van een bekertoernooi (type 'beker') binnen hetzelfde
+// seizoen als de meegegeven competitie — voor het bekerwinnaar-icoon in de
+// ranglijst van een gewone competitie (ED+KKD gecombineerd bijgehouden).
+function getCupWinner(seasonId) {
+  const cupComp = (S.competitions||[]).find(c => c.seasonId === seasonId && c.type === 'beker');
+  if (!cupComp) return null;
+  const cupMatches = (S.matches||[]).filter(m => m.competitionId === cupComp.id);
+  const roundOrder = getKnockoutRoundOrder(cupComp, cupMatches);
+  if (!roundOrder.length) return null;
+  const finalRound = roundOrder[roundOrder.length-1];
+  const finalMatches = cupMatches.filter(m => m.round === finalRound);
+  const ties = getKnockoutTies(finalMatches);
+  if (ties.length !== 1) return null; // finale zou precies één duel moeten zijn
+  return getTieWinner(ties[0]);
+}
+
 function renderLeagueTable(comp, clubs, compMatches) {
   const sorted = calcStandings(clubs, compMatches);
   const zones = comp.rankZones || [];
-  const zoneForPos = pos => zones.find(z => pos >= z.fromPos && pos <= z.toPos);
   const { winners: periodWinners } = getPeriodWinners(comp, clubs, compMatches);
+  const cupWinnerId = getCupWinner(comp.seasonId);
+
+  // Zone-bepaling: eerst-gedefinieerde zone wint (volgorde = prioriteit).
+  // Een zone geldt voor een club als de positie binnen het bereik valt, ÓF
+  // als de zone gekoppeld is aan periodetitel-winnaars en deze club een
+  // periodetitel heeft gewonnen — ongeacht positie.
+  const zoneForClub = (pos, wonPeriod) => zones.find(z =>
+    (pos >= z.fromPos && pos <= z.toPos) || (z.linkPeriodWinners && wonPeriod)
+  );
 
   return `<div class="card mb-12">
     <div class="card-title">Ranglijst</div>
@@ -373,15 +397,18 @@ function renderLeagueTable(comp, clubs, compMatches) {
       <th class="num">+</th><th class="num">-</th><th class="num">V.S.</th><th class="num">Pnt</th>
     </tr></thead><tbody>${sorted.map((c,i)=>{
       const pos = i+1;
-      const zone = zoneForPos(pos);
       const wonPeriods = periodWinners[c.id] || [];
+      const zone = zoneForClub(pos, wonPeriods.length > 0);
       const periodBadge = wonPeriods.length
         ? ` <span style="font-size:10px;color:var(--cambuur-geel)" title="Periodetitel: ${wonPeriods.join(', ')}">🏆${wonPeriods.length>1?'×'+wonPeriods.length:''}</span>`
+        : '';
+      const cupBadge = c.id === cupWinnerId
+        ? ` <span style="font-size:10px" title="Bekerwinnaar dit seizoen">🛡️</span>`
         : '';
       return `<tr style="${c.isOwn?'background:rgba(245,197,0,0.07);font-weight:600':''}${c.highlight==='rivaal'?';border-left:2px solid var(--heerenveen-rood)':''}">
         <td style="width:6px;padding:0;${zone?'background:'+zone.color:''}" title="${zone?.label||''}"></td>
         <td class="num text-muted">${pos}</td>
-        <td>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}</td>
+        <td>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}${cupBadge}</td>
         <td class="num">${c.g}</td><td class="num">${c.w}</td><td class="num">${c.d}</td><td class="num">${c.l}</td>
         <td class="num">${c.gf}</td><td class="num">${c.ga}</td><td class="num">${c.gf-c.ga>0?'+':''}${c.gf-c.ga}</td>
         <td class="num" style="font-weight:700">${c.pts}</td>
@@ -389,7 +416,7 @@ function renderLeagueTable(comp, clubs, compMatches) {
     }).join('')}</tbody></table>
     ${zones.length ? `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
       ${zones.map(z=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted)">
-        <span style="width:10px;height:10px;border-radius:2px;background:${z.color};display:inline-block"></span>${z.label||('pos. '+z.fromPos+'-'+z.toPos)}
+        <span style="width:10px;height:10px;border-radius:2px;background:${z.color};display:inline-block"></span>${z.label||('pos. '+z.fromPos+'-'+z.toPos)}${z.linkPeriodWinners?' <span style="opacity:0.7">(+ periodetitel)</span>':''}
       </div>`).join('')}
     </div>` : ''}
   </div>`;

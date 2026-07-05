@@ -677,7 +677,10 @@
         <div class="form-group">
           <label class="form-label">Ranglijst-markeringen (promotie/play-offs/degradatie — puur visueel, telt nergens in mee)</label>
           <div id="comp-rankzones-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
-          <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="addRankZoneRow()">+ Zone toevoegen</button>
+          <div style="display:flex;gap:6px">
+            <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="addRankZoneRow()">+ Zone toevoegen</button>
+            <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="copyRankZonesFromPreviousSeason()">📋 Kopieer zones van vorig seizoen</button>
+          </div>
         </div>
       </div>
       <div class="form-group">
