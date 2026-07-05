@@ -7,11 +7,13 @@
 let parsedPdfMatches = [];
 let manualMatchQueue = [];
 let parsedCsvMatches = [];
+let parsedRsssfMatches = [];
 
 function openMatchImport(compId, defaultTab) {
   parsedPdfMatches = [];
   manualMatchQueue = [];
   parsedCsvMatches = [];
+  parsedRsssfMatches = [];
   document.getElementById('pdf-preview').style.display = 'none';
   document.getElementById('pdf-parse-status').textContent = '';
   document.getElementById('pdf-matches-list').innerHTML = '';
@@ -24,6 +26,13 @@ function openMatchImport(compId, defaultTab) {
   document.getElementById('csv-matches-list').innerHTML = '';
   document.getElementById('csv-paste-area').value = '';
   document.getElementById('csv-confirm-btn').style.display = 'none';
+  document.getElementById('rsssf-preview').style.display = 'none';
+  document.getElementById('rsssf-parse-status').textContent = '';
+  document.getElementById('rsssf-matches-list').innerHTML = '';
+  document.getElementById('rsssf-paste-area').value = '';
+  document.getElementById('rsssf-known-clubs').value = '';
+  document.getElementById('rsssf-start-year').value = '';
+  document.getElementById('rsssf-confirm-btn').style.display = 'none';
 
   // Populate comp selects
   const compOpts = S.competitions.filter(c=>c.seasonId===S.currentSeason).map(c=>
@@ -72,18 +81,24 @@ function switchImportTab(tab, el) {
   document.getElementById('import-tab-pdf').style.display = tab==='pdf'?'block':'none';
   document.getElementById('import-tab-manual').style.display = tab==='manual'?'block':'none';
   document.getElementById('import-tab-csv').style.display = tab==='csv'?'block':'none';
+  document.getElementById('import-tab-rsssf').style.display = tab==='rsssf'?'block':'none';
   document.querySelectorAll('#import-tabs .tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
   document.getElementById('import-confirm-btn').style.display = tab==='pdf'&&parsedPdfMatches.length?'block':'none';
   document.getElementById('manual-add-btn').style.display = tab==='manual'?'block':'none';
   document.getElementById('manual-save-btn').style.display = tab==='manual'&&manualMatchQueue.length?'block':'none';
   document.getElementById('csv-confirm-btn').style.display = tab==='csv'&&parsedCsvMatches.length?'block':'none';
-  if (tab==='csv') {
-    const sel = document.getElementById('csv-comp-select');
+  document.getElementById('rsssf-confirm-btn').style.display = tab==='rsssf'&&parsedRsssfMatches.length?'block':'none';
+  if (tab==='csv' || tab==='rsssf') {
+    const sel = document.getElementById(tab==='csv'?'csv-comp-select':'rsssf-comp-select');
     if (sel) {
       const comps = (S.competitions||[]).filter(c=>c.seasonId===S.currentSeason);
       sel.innerHTML = comps.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
     }
+  }
+  if (tab==='rsssf' && !document.getElementById('rsssf-start-year').value) {
+    const season = (S.seasons||[]).find(s=>s.id===S.currentSeason);
+    document.getElementById('rsssf-start-year').value = season?.year || new Date().getFullYear();
   }
 }
 
@@ -846,6 +861,173 @@ async function confirmCsvImport() {
       homeClubId: homeId,
       awayClubId: awayId,
       played: m.homeScore !== null && m.awayScore !== null,
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+      events: existing?.events || [],
+      lineup: existing?.lineup || [],
+    };
+    await dbPut('matches', match);
+    if (existing) S.matches = S.matches.map(x=>x.id===match.id?match:x);
+    else S.matches.push(match);
+    imported++;
+  }
+
+  showToast(`${imported} wedstrijden geïmporteerd${skipped?`, ${skipped} overgeslagen`:''}`, 'success');
+  closeModal('modal-match-import');
+  renderCompDetail(compId);
+  navigateToComp(compId);
+}
+
+// ══════════════════════════════
+// RSSSF IMPORT — "Round N [Mon Day] Club score-score Club ..." tekst plakken
+// ══════════════════════════════
+// RSSSF's formaat is opvallend regelmatig (bevestigd over meerdere landen/
+// seizoenen): expliciete rondenummers, datum-markers zonder jaar, en per
+// datum een reeks "Club score-score Club" zonder scheidingsteken tussen
+// matches. Dat laatste maakt een lijst van bekende clubnamen nodig om te
+// bepalen waar de ene naam eindigt en de volgende begint (greedy longest-
+// match, net als bij de KNVB-PDF-parser).
+const RSSSF_MONTHS = {Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+
+function parseRsssfSchedule() {
+  const text = document.getElementById('rsssf-paste-area').value.trim();
+  const status = document.getElementById('rsssf-parse-status');
+  if (!text) { status.textContent = '⚠ Plak eerst tekst in het veld.'; status.style.color = 'var(--draw)'; return; }
+
+  const startYear = parseInt(document.getElementById('rsssf-start-year').value) || new Date().getFullYear();
+  const knownClubsRaw = document.getElementById('rsssf-known-clubs').value.trim();
+  const knownClubNames = knownClubsRaw
+    ? knownClubsRaw.split(',').map(s=>s.trim()).filter(Boolean)
+    : (S.clubs||[]).map(c=>c.name);
+  const sortedNames = [...new Set(knownClubNames)].sort((a,b)=>b.length-a.length);
+
+  const findClubObj = (name) => (S.clubs||[]).find(c=>c.name===name) || (S.clubs||[]).find(c=>c.name.toLowerCase()===name.toLowerCase()) || null;
+
+  const flat = text.replace(/\s+/g, ' ').trim();
+  const roundParts = flat.split(/\bRound\s+(\d+)\b/);
+
+  const matches = [];
+  const unrecognized = [];
+
+  for (let i = 1; i < roundParts.length; i += 2) {
+    const roundNum = parseInt(roundParts[i]);
+    const roundText = roundParts[i+1] || '';
+
+    const dateParts = roundText.split(/\[([A-Za-z]{3})\s+(\d{1,2})\]/);
+    for (let j = 1; j < dateParts.length; j += 3) {
+      const monAbbr = dateParts[j];
+      const day = parseInt(dateParts[j+1]);
+      const matchText = (dateParts[j+2] || '').trim();
+      const monthNum = RSSSF_MONTHS[monAbbr];
+      if (!monthNum) { if (matchText) unrecognized.push(matchText); continue; }
+      const year = monthNum >= 8 ? startYear : startYear + 1;
+      const dateStr = `${year}-${String(monthNum).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+
+      let remaining = matchText;
+      while (remaining.length) {
+        const scoreMatch = remaining.match(/^(.*?)(\d+)-(\d+)\s*/);
+        if (!scoreMatch || !scoreMatch[1].trim()) { if (remaining.trim()) unrecognized.push(`[${dateStr}] ${remaining.trim()}`); break; }
+        const homeName = scoreMatch[1].trim();
+        const homeScore = parseInt(scoreMatch[2]);
+        const awayScore = parseInt(scoreMatch[3]);
+        remaining = remaining.slice(scoreMatch[0].length);
+
+        let awayName = sortedNames.find(cand => remaining.toLowerCase().startsWith(cand.toLowerCase())) || null;
+        if (!awayName) {
+          unrecognized.push(`[${dateStr}] ${homeName} ${homeScore}-${awayScore} <onbekende club in: "${remaining.slice(0,40)}...">`);
+          break; // stop deze datum-groep, verdere splitsing zou cascaderen
+        }
+        remaining = remaining.slice(awayName.length).trim();
+
+        const homeClub = findClubObj(homeName);
+        const awayClub = findClubObj(awayName);
+        matches.push({
+          date: dateStr, round: roundNum,
+          homeName: homeClub?.name || homeName, awayName: awayClub?.name || awayName,
+          homeId: homeClub?.id || null, awayId: awayClub?.id || null,
+          homeScore, awayScore, time: '', selected: true,
+        });
+      }
+    }
+  }
+
+  parsedRsssfMatches = matches;
+  if (!matches.length) {
+    status.textContent = '❌ Geen wedstrijden herkend — check of de tekst "Round X [Mnd Dag] Club score-score Club" bevat, en of de clublijst compleet is.';
+    status.style.color = 'var(--loss)';
+    document.getElementById('rsssf-preview').style.display = 'none';
+    document.getElementById('rsssf-confirm-btn').style.display = 'none';
+    return;
+  }
+  status.textContent = `✓ ${matches.length} wedstrijden herkend${unrecognized.length?`, ${unrecognized.length} stuk(ken) tekst niet herkend`:''}`;
+  status.style.color = 'var(--win)';
+  renderRsssfPreview(unrecognized);
+}
+
+function renderRsssfPreview(unrecognized) {
+  document.getElementById('rsssf-match-count').textContent = `${parsedRsssfMatches.length} wedstrijden`;
+  const list = document.getElementById('rsssf-matches-list');
+  list.innerHTML = parsedRsssfMatches.map((m,i) => {
+    const homeWarn = !m.homeId ? ' <span style="color:var(--draw)" title="Onbekende club — wordt evt. aangemaakt">⚠️</span>' : '';
+    const awayWarn = !m.awayId ? ' <span style="color:var(--draw)" title="Onbekende club — wordt evt. aangemaakt">⚠️</span>' : '';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border-light);font-size:12px">
+      <input type="checkbox" ${m.selected?'checked':''} onchange="parsedRsssfMatches[${i}].selected=this.checked">
+      <span style="width:76px;color:var(--text-muted)">${m.date}</span>
+      <span style="width:30px;color:var(--text-muted)">R${m.round}</span>
+      <span style="flex:1">${m.homeName}${homeWarn}</span>
+      <span style="width:56px;text-align:center;font-weight:700">${m.homeScore}-${m.awayScore}</span>
+      <span style="flex:1">${m.awayName}${awayWarn}</span>
+      <input type="time" value="${m.time||''}" onchange="parsedRsssfMatches[${i}].time=this.value"
+        style="width:90px;height:24px;font-size:11px;padding:1px 4px;border:1px solid var(--border);border-radius:3px;background:var(--bg-tertiary);color:var(--text-primary)">
+    </div>`;
+  }).join('');
+
+  const unrecEl = document.getElementById('rsssf-unrecognized');
+  unrecEl.style.display = unrecognized.length ? 'block' : 'none';
+  document.getElementById('rsssf-unrecognized-list').innerHTML = unrecognized.map(l=>`<div>${l}</div>`).join('');
+
+  document.getElementById('rsssf-preview').style.display = 'block';
+  document.getElementById('rsssf-confirm-btn').style.display = 'block';
+}
+
+async function confirmRsssfImport() {
+  const compId = document.getElementById('rsssf-comp-select').value;
+  if (!compId) { showToast('Selecteer een competitie', 'error'); return; }
+  const overwrite = document.getElementById('rsssf-overwrite').checked;
+  const createClubs = document.getElementById('rsssf-create-clubs').checked;
+  const selected = parsedRsssfMatches.filter(m=>m.selected);
+  if (!selected.length) { showToast('Selecteer minstens één wedstrijd', 'error'); return; }
+
+  async function getOrCreateClub(name, existingId) {
+    if (existingId) return existingId;
+    if (!createClubs) return null;
+    const newClub = {id: genId('club'), name, abbr: name.slice(0,3).toUpperCase(), created: Date.now()};
+    await dbPut('clubs', newClub);
+    S.clubs.push(newClub);
+    return newClub.id;
+  }
+
+  let imported = 0, skipped = 0;
+  for (const m of selected) {
+    const homeId = await getOrCreateClub(m.homeName, m.homeId);
+    const awayId = await getOrCreateClub(m.awayName, m.awayId);
+    if (!homeId || !awayId) { skipped++; continue; }
+
+    const existing = (S.matches||[]).find(x=>
+      x.competitionId===compId && x.homeClubId===homeId && x.awayClubId===awayId && x.date===m.date
+    );
+    if (existing && !overwrite) { skipped++; continue; }
+
+    const match = {
+      id: existing?.id || genId('match'),
+      competitionId: compId,
+      seasonId: S.currentSeason,
+      round: m.round,
+      date: m.date,
+      time: m.time || existing?.time || null,
+      homeClubId: homeId,
+      awayClubId: awayId,
+      played: true,
       homeScore: m.homeScore,
       awayScore: m.awayScore,
       events: existing?.events || [],

@@ -924,6 +924,7 @@
         <div class="tab active" onclick="switchImportTab('pdf',this)">📄 PDF importeren</div>
         <div class="tab" onclick="switchImportTab('manual',this)">✏️ Handmatig invoeren</div>
         <div class="tab" onclick="switchImportTab('csv',this)">📊 CSV importeren</div>
+        <div class="tab" onclick="switchImportTab('rsssf',this)">📚 RSSSF importeren</div>
       </div>
 
       <!-- PDF TAB -->
@@ -1038,6 +1039,57 @@
         </div>
       </div>
 
+      <!-- RSSSF TAB -->
+      <div id="import-tab-rsssf" style="display:none">
+        <p class="text-secondary mb-8" style="font-size:12px;line-height:1.6">
+          Plak de ruwe resultatentekst van een RSSSF-seizoenspagina (rsssf.org) — inclusief het
+          <strong style="color:var(--text-primary)">"Round X [Maand Dag] Club score-score Club ..."</strong>-patroon.
+          RSSSF geeft geen tijdstippen — die kun je hieronder per wedstrijd optioneel invullen, of later alsnog toevoegen via de wedstrijdpagina zelf.
+        </p>
+        <div class="form-row cols-2 mb-8">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Seizoen startjaar</label>
+            <input class="form-input" id="rsssf-start-year" type="number" placeholder="2024">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Clublijst dit seizoen (optioneel, kommagescheiden — helpt bij herkenning)</label>
+            <input class="form-input" id="rsssf-known-clubs" placeholder="Cambuur, Den Bosch, TOP Oss, ...">
+          </div>
+        </div>
+        <textarea id="rsssf-paste-area" class="form-textarea" rows="8"
+          placeholder="Round 1 [Aug 9] Eindhoven 2-0 Den Bosch Emmen 1-2 Dordrecht Helmond 1-1 Jong Utrecht ..."
+          style="font-size:11px;font-family:monospace;resize:vertical;height:160px"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <button class="btn btn-secondary" onclick="parseRsssfSchedule()">🔍 RSSSF-tekst herkennen</button>
+        </div>
+        <div id="rsssf-parse-status" style="font-size:12px;color:var(--text-muted);margin-top:8px"></div>
+        <div id="rsssf-preview" style="display:none;margin-top:12px">
+          <div class="section-header mb-8">
+            <div style="font-size:12px;font-weight:700;color:var(--text-secondary)">Herkende wedstrijden <span style="font-weight:400;color:var(--text-muted)">(tijdveld optioneel)</span></div>
+            <div id="rsssf-match-count" class="text-muted" style="font-size:11px"></div>
+          </div>
+          <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <div id="rsssf-matches-list"></div>
+          </div>
+          <div id="rsssf-unrecognized" style="display:none;margin-top:10px">
+            <div style="font-size:11px;font-weight:600;color:var(--draw);margin-bottom:4px">⚠ Niet herkende stukken tekst (controleer/vul handmatig aan):</div>
+            <div id="rsssf-unrecognized-list" style="font-size:11px;color:var(--text-muted);max-height:80px;overflow-y:auto;background:var(--bg-tertiary);padding:8px;border-radius:var(--radius-sm)"></div>
+          </div>
+          <div class="form-group mt-12">
+            <label class="form-label">Koppelen aan competitie</label>
+            <select class="form-select" id="rsssf-comp-select"></select>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <input type="checkbox" id="rsssf-overwrite" style="accent-color:var(--cambuur-geel)">
+            <label for="rsssf-overwrite" style="font-size:12px;cursor:pointer">Bestaande wedstrijden overschrijven (voorzichtig!)</label>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <input type="checkbox" id="rsssf-create-clubs" checked style="accent-color:var(--cambuur-geel)">
+            <label for="rsssf-create-clubs" style="font-size:12px;cursor:pointer">Onbekende clubs automatisch aanmaken</label>
+          </div>
+        </div>
+      </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-match-import')">Annuleren</button>
@@ -1045,6 +1097,7 @@
       <button class="btn btn-primary" id="manual-add-btn" onclick="addManualMatch()" style="display:none">+ Wedstrijd toevoegen</button>
       <button class="btn btn-primary" id="manual-save-btn" onclick="saveManualMatches()" style="display:none">✓ Opslaan</button>
       <button class="btn btn-primary" id="csv-confirm-btn" onclick="confirmCsvImport()" style="display:none">✓ Importeren</button>
+      <button class="btn btn-primary" id="rsssf-confirm-btn" onclick="confirmRsssfImport()" style="display:none">✓ Importeren</button>
     </div>
   </div>
 </div>
