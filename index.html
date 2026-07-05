@@ -516,7 +516,8 @@
       <!-- Table list -->
       <div style="border-right:1px solid var(--border);padding-right:12px;overflow-y:auto">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px">Tabellen</div>
-        <div id="db-table-list"></div>
+        <div id="db-table-tabs"></div>
+        <div id="db-status" style="font-size:11px;color:var(--text-muted);margin-top:12px;padding-top:12px;border-top:1px solid var(--border-light)"></div>
       </div>
       <!-- SQL editor + results -->
       <div style="display:flex;flex-direction:column;gap:8px;overflow:hidden">
@@ -535,7 +536,9 @@
         <textarea class="form-input" id="db-sql-input" rows="6"
           style="font-family:monospace;font-size:12px;resize:vertical"
           placeholder="SELECT * FROM players LIMIT 20"></textarea>
-        <div id="db-result" style="flex:1;overflow:auto;font-size:12px;font-family:monospace;background:var(--bg-tertiary);border-radius:var(--radius-sm);padding:8px;min-height:100px"></div>
+        <div id="db-error" style="display:none;background:rgba(200,16,46,0.1);color:var(--loss);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;font-family:monospace"></div>
+        <div id="db-result-info" style="font-size:11px;color:var(--text-muted)"></div>
+        <div id="db-result-table" style="flex:1;overflow:auto;font-size:12px;font-family:monospace;background:var(--bg-tertiary);border-radius:var(--radius-sm);padding:8px;min-height:100px"></div>
       </div>
     </div>
   </div>
@@ -920,7 +923,7 @@
       <div class="tabs" id="import-tabs">
         <div class="tab active" onclick="switchImportTab('pdf',this)">📄 PDF importeren</div>
         <div class="tab" onclick="switchImportTab('manual',this)">✏️ Handmatig invoeren</div>
-        <div class="tab" onclick="switchImportTab('soccer365',this)">🌐 Soccer365 importeren</div>
+        <div class="tab" onclick="switchImportTab('csv',this)">📊 CSV importeren</div>
       </div>
 
       <!-- PDF TAB -->
@@ -995,61 +998,43 @@
         <div id="manual-matches-queue" style="margin-top:8px"></div>
       </div>
 
-      <!-- SOCCER365 TAB -->
-      <div id="import-tab-soccer365" style="display:none">
-        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6">
-          Importeer het volledige KKD-schema automatisch van Soccer365. Kies het seizoen en klik op ophalen.
-          Clubs worden automatisch aangemaakt als ze nog niet bestaan.
+      <!-- CSV TAB -->
+      <div id="import-tab-csv" style="display:none">
+        <p class="text-secondary mb-8" style="font-size:12px;line-height:1.6">
+          Plak wedstrijdresultaten uit een spreadsheet (Excel/Google Sheets) — kopieer de kolommen
+          <strong style="color:var(--text-primary)">datum, ronde, thuisclub, uitclub, thuisscore, uitscore</strong> en plak ze hieronder.
+          Werkt met tab- of komma-gescheiden waarden. Scores mogen leeg zijn voor nog te spelen wedstrijden.
         </p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <div class="form-group" style="margin:0">
-            <label class="form-label">Seizoen</label>
-            <select class="form-select" id="s365-season-sel">
-              <option value="2025-2026">2025/2026</option>
-              <option value="2024-2025">2024/2025</option>
-              <option value="2023-2024">2023/2024</option>
-              <option value="2022-2023">2022/2023</option>
-              <option value="2021-2022">2021/2022</option>
-              <option value="2020-2021">2020/2021</option>
-              <option value="2019-2020">2019/2020</option>
-              <option value="2018-2019">2018/2019</option>
-              <option value="2017-2018">2017/2018</option>
-              <option value="2016-2017">2016/2017</option>
-              <option value="2015-2016">2015/2016</option>
-            </select>
+        <textarea id="csv-paste-area" class="form-textarea" rows="8" placeholder="Voorbeeld:&#10;2025-08-08,1,SC Cambuur,Excelsior,2,1&#10;2025-08-09,1,NEC,Telstar,0,0&#10;2025-08-15,2,Telstar,SC Cambuur,,"
+          style="font-size:11px;font-family:monospace;resize:vertical;height:160px"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <button class="btn btn-secondary" onclick="parseCsvSchedule()">🔍 CSV herkennen</button>
+        </div>
+        <div id="csv-parse-status" style="font-size:12px;color:var(--text-muted);margin-top:8px"></div>
+        <div id="csv-preview" style="display:none;margin-top:12px">
+          <div class="section-header mb-8">
+            <div style="font-size:12px;font-weight:700;color:var(--text-secondary)">Herkende wedstrijden</div>
+            <div id="csv-match-count" class="text-muted" style="font-size:11px"></div>
           </div>
-          <div class="form-group" style="margin:0">
+          <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <div id="csv-matches-list"></div>
+          </div>
+          <div id="csv-unrecognized" style="display:none;margin-top:10px">
+            <div style="font-size:11px;font-weight:600;color:var(--draw);margin-bottom:4px">⚠ Niet herkende regels (controleer handmatig):</div>
+            <div id="csv-unrecognized-list" style="font-size:11px;color:var(--text-muted);max-height:80px;overflow-y:auto;background:var(--bg-tertiary);padding:8px;border-radius:var(--radius-sm)"></div>
+          </div>
+          <div class="form-group mt-12">
             <label class="form-label">Koppelen aan competitie</label>
-            <select class="form-select" id="s365-comp-sel"></select>
+            <select class="form-select" id="csv-comp-select"></select>
           </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <input type="checkbox" id="s365-overwrite" style="accent-color:var(--cambuur-geel)">
-          <label for="s365-overwrite" style="font-size:12px;cursor:pointer">Bestaande wedstrijden overschrijven</label>
-          <input type="checkbox" id="s365-create-clubs" checked style="accent-color:var(--cambuur-geel);margin-left:12px">
-          <label for="s365-create-clubs" style="font-size:12px;cursor:pointer">Clubs automatisch aanmaken</label>
-        </div>
-        <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;font-size:12px;color:var(--text-muted)">
-          📥 Download het seizoensbestand van <a href="https://github.com" style="color:var(--cambuur-geel)" target="_blank">de meegeleverde JSON bestanden</a>, of upload een eerder gedownload bestand.
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn btn-primary" onclick="document.getElementById('s365-file-input').click()">📂 JSON bestand laden</button>
-          <input type="file" id="s365-file-input" accept=".json" style="display:none" onchange="s365LoadFile(this)">
-          <span style="font-size:11px;color:var(--text-muted)">of plak JSON:</span>
-        </div>
-        <textarea id="s365-json-paste" class="form-input" rows="4" style="font-family:monospace;font-size:11px;margin-top:8px;resize:vertical"
-          placeholder='{"competition":"Keuken Kampioen Divisie","season":"2025/2026","matches":[...]}'></textarea>
-        <button class="btn btn-secondary" style="margin-top:6px" onclick="s365ParseJson()">🔍 Verwerk JSON</button>
-        <div id="s365-status" style="font-size:12px;margin-top:10px;color:var(--text-muted)"></div>
-        <div id="s365-preview" style="display:none;margin-top:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="font-size:12px;font-weight:700;color:var(--text-secondary)" id="s365-count"></div>
-            <button class="btn btn-ghost" style="font-size:11px" onclick="s365ToggleAll()">Alles aan/uit</button>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <input type="checkbox" id="csv-overwrite" style="accent-color:var(--cambuur-geel)">
+            <label for="csv-overwrite" style="font-size:12px;cursor:pointer">Bestaande wedstrijden overschrijven (voorzichtig!)</label>
           </div>
-          <div style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm)">
-            <div id="s365-matches-list"></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <input type="checkbox" id="csv-create-clubs" checked style="accent-color:var(--cambuur-geel)">
+            <label for="csv-create-clubs" style="font-size:12px;cursor:pointer">Onbekende clubs automatisch aanmaken</label>
           </div>
-          <button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="s365Import()">✓ Geselecteerde wedstrijden importeren</button>
         </div>
       </div>
 
@@ -1059,12 +1044,28 @@
       <button class="btn btn-primary" id="import-confirm-btn" onclick="confirmMatchImport()" style="display:none">✓ Importeren</button>
       <button class="btn btn-primary" id="manual-add-btn" onclick="addManualMatch()" style="display:none">+ Wedstrijd toevoegen</button>
       <button class="btn btn-primary" id="manual-save-btn" onclick="saveManualMatches()" style="display:none">✓ Opslaan</button>
+      <button class="btn btn-primary" id="csv-confirm-btn" onclick="confirmCsvImport()" style="display:none">✓ Importeren</button>
     </div>
   </div>
 </div>
 
 <!-- MODAL: WEDSTRIJD INVOEREN -->
 <!-- MODAL: BEVESTIG -->
+<div class="modal-overlay" id="modal-pin-match">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <div class="modal-title">📌 Volgende wedstrijd aanwijzen</div>
+      <button class="modal-close" onclick="closeModal('modal-pin-match')">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:400px;overflow-y:auto">
+      <div id="pin-match-list" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-pin-match')">Sluiten</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-confirm">
   <div class="modal" style="width:380px">
     <div class="modal-header"><div class="modal-title" id="confirm-title">Bevestigen</div><button class="modal-close" onclick="closeModal('modal-confirm')">✕</button></div>
@@ -1098,7 +1099,6 @@
 <script src="js/coaches.js"></script>
 <script src="js/db-viewer.js"></script>
 <script src="js/data-integrity.js"></script>
-<script src="js/soccer365.js"></script>
 <script src="js/speler.js"></script>
 <script src="js/hover.js"></script>
 <script src="js/gist.js"></script>

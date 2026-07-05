@@ -6,10 +6,12 @@
 // ══════════════════════════════
 let parsedPdfMatches = [];
 let manualMatchQueue = [];
+let parsedCsvMatches = [];
 
 function openMatchImport(compId, defaultTab) {
   parsedPdfMatches = [];
   manualMatchQueue = [];
+  parsedCsvMatches = [];
   document.getElementById('pdf-preview').style.display = 'none';
   document.getElementById('pdf-parse-status').textContent = '';
   document.getElementById('pdf-matches-list').innerHTML = '';
@@ -17,6 +19,11 @@ function openMatchImport(compId, defaultTab) {
   document.getElementById('manual-add-btn').style.display = 'none';
   document.getElementById('manual-save-btn').style.display = 'none';
   document.getElementById('manual-matches-queue').innerHTML = '';
+  document.getElementById('csv-preview').style.display = 'none';
+  document.getElementById('csv-parse-status').textContent = '';
+  document.getElementById('csv-matches-list').innerHTML = '';
+  document.getElementById('csv-paste-area').value = '';
+  document.getElementById('csv-confirm-btn').style.display = 'none';
 
   // Populate comp selects
   const compOpts = S.competitions.filter(c=>c.seasonId===S.currentSeason).map(c=>
@@ -64,19 +71,18 @@ function openMatchImport(compId, defaultTab) {
 function switchImportTab(tab, el) {
   document.getElementById('import-tab-pdf').style.display = tab==='pdf'?'block':'none';
   document.getElementById('import-tab-manual').style.display = tab==='manual'?'block':'none';
-  document.getElementById('import-tab-soccer365').style.display = tab==='soccer365'?'block':'none';
+  document.getElementById('import-tab-csv').style.display = tab==='csv'?'block':'none';
   document.querySelectorAll('#import-tabs .tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
   document.getElementById('import-confirm-btn').style.display = tab==='pdf'&&parsedPdfMatches.length?'block':'none';
   document.getElementById('manual-add-btn').style.display = tab==='manual'?'block':'none';
   document.getElementById('manual-save-btn').style.display = tab==='manual'&&manualMatchQueue.length?'block':'none';
-  if (tab==='soccer365') {
-    // Populate competition dropdown
-    const sel = document.getElementById('s365-comp-sel');
+  document.getElementById('csv-confirm-btn').style.display = tab==='csv'&&parsedCsvMatches.length?'block':'none';
+  if (tab==='csv') {
+    const sel = document.getElementById('csv-comp-select');
     if (sel) {
       const comps = (S.competitions||[]).filter(c=>c.seasonId===S.currentSeason);
-      sel.innerHTML = '<option value="">— Nieuwe competitie aanmaken —</option>' +
-        comps.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+      sel.innerHTML = comps.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
     }
   }
 }
@@ -709,3 +715,150 @@ async function saveManualMatches() {
   showToast(`${count} wedstrijden toegevoegd`, 'success');
 }
 
+
+// ══════════════════════════════
+// CSV IMPORT — spreadsheet-resultaten plakken (bron-onafhankelijk)
+// ══════════════════════════════
+// Werkt met tab- of komma-gescheiden regels: datum, ronde, thuisclub, uitclub,
+// thuisscore, uitscore. Bewust simpel en voorspelbaar — geen site-specifieke
+// scraper, dus bruikbaar met resultaten uit welke bron dan ook (gekopieerd
+// via een tussenstap in Excel/Google Sheets).
+function parseCsvDate(raw) {
+  raw = (raw||'').trim();
+  let m = raw.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m = raw.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return null;
+}
+
+function parseCsvSchedule() {
+  const text = document.getElementById('csv-paste-area').value.trim();
+  const status = document.getElementById('csv-parse-status');
+  if (!text) { status.textContent = '⚠ Plak eerst tekst in het veld.'; status.style.color = 'var(--draw)'; return; }
+
+  const findClub = (name) => {
+    if (!name) return null;
+    name = name.trim();
+    return S.clubs.find(c=>c.name===name) || S.clubs.find(c=>c.name.toLowerCase()===name.toLowerCase()) || null;
+  };
+
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const matches = [];
+  const unrecognized = [];
+
+  lines.forEach(line => {
+    const cols = (line.includes('\t') ? line.split('\t') : line.split(',')).map(c=>c.trim());
+    if (cols.length < 4) { unrecognized.push(line); return; }
+    const [rawDate, rawRound, rawHome, rawAway, rawHomeScore, rawAwayScore] = cols;
+    const date = parseCsvDate(rawDate);
+    if (!date || !rawHome || !rawAway) { unrecognized.push(line); return; }
+
+    const homeClub = findClub(rawHome);
+    const awayClub = findClub(rawAway);
+    const round = parseInt(rawRound);
+    const hs = (rawHomeScore!==undefined && rawHomeScore!=='') ? parseInt(rawHomeScore) : null;
+    const as = (rawAwayScore!==undefined && rawAwayScore!=='') ? parseInt(rawAwayScore) : null;
+
+    matches.push({
+      date, round: isNaN(round) ? null : round,
+      homeName: homeClub?.name || rawHome, awayName: awayClub?.name || rawAway,
+      homeId: homeClub?.id || null, awayId: awayClub?.id || null,
+      homeScore: (hs!==null && !isNaN(hs)) ? hs : null,
+      awayScore: (as!==null && !isNaN(as)) ? as : null,
+      selected: true,
+    });
+  });
+
+  parsedCsvMatches = matches;
+  if (!matches.length) {
+    status.textContent = '❌ Geen geldige regels herkend — check of elke regel minimaal datum, thuisclub en uitclub bevat.';
+    status.style.color = 'var(--loss)';
+    document.getElementById('csv-preview').style.display = 'none';
+    document.getElementById('csv-confirm-btn').style.display = 'none';
+    return;
+  }
+  status.textContent = `✓ ${matches.length} wedstrijden herkend${unrecognized.length?`, ${unrecognized.length} regel(s) niet herkend`:''}`;
+  status.style.color = 'var(--win)';
+  renderCsvPreview(unrecognized);
+}
+
+function renderCsvPreview(unrecognized) {
+  document.getElementById('csv-match-count').textContent = `${parsedCsvMatches.length} wedstrijden`;
+  const list = document.getElementById('csv-matches-list');
+  list.innerHTML = parsedCsvMatches.map((m,i) => {
+    const homeWarn = !m.homeId ? ' <span style="color:var(--draw)" title="Onbekende club — wordt evt. aangemaakt">⚠️</span>' : '';
+    const awayWarn = !m.awayId ? ' <span style="color:var(--draw)" title="Onbekende club — wordt evt. aangemaakt">⚠️</span>' : '';
+    const scoreStr = (m.homeScore!==null && m.awayScore!==null) ? `${m.homeScore}-${m.awayScore}` : '— (nog te spelen)';
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border-light);cursor:pointer;font-size:12px">
+      <input type="checkbox" ${m.selected?'checked':''} onchange="parsedCsvMatches[${i}].selected=this.checked">
+      <span style="width:80px;color:var(--text-muted)">${m.date}</span>
+      <span style="width:32px;color:var(--text-muted)">R${m.round??'?'}</span>
+      <span style="flex:1">${m.homeName}${homeWarn}</span>
+      <span style="width:90px;text-align:center;font-weight:700">${scoreStr}</span>
+      <span style="flex:1">${m.awayName}${awayWarn}</span>
+    </label>`;
+  }).join('');
+
+  const unrecEl = document.getElementById('csv-unrecognized');
+  unrecEl.style.display = unrecognized.length ? 'block' : 'none';
+  document.getElementById('csv-unrecognized-list').innerHTML = unrecognized.map(l=>`<div>${l}</div>`).join('');
+
+  document.getElementById('csv-preview').style.display = 'block';
+  document.getElementById('csv-confirm-btn').style.display = 'block';
+}
+
+async function confirmCsvImport() {
+  const compId = document.getElementById('csv-comp-select').value;
+  if (!compId) { showToast('Selecteer een competitie', 'error'); return; }
+  const overwrite = document.getElementById('csv-overwrite').checked;
+  const createClubs = document.getElementById('csv-create-clubs').checked;
+  const selected = parsedCsvMatches.filter(m=>m.selected);
+  if (!selected.length) { showToast('Selecteer minstens één wedstrijd', 'error'); return; }
+
+  async function getOrCreateClub(name, existingId) {
+    if (existingId) return existingId;
+    if (!createClubs) return null;
+    const newClub = {id: genId('club'), name, abbr: name.slice(0,3).toUpperCase(), created: Date.now()};
+    await dbPut('clubs', newClub);
+    S.clubs.push(newClub);
+    return newClub.id;
+  }
+
+  let imported = 0, skipped = 0;
+  for (const m of selected) {
+    const homeId = await getOrCreateClub(m.homeName, m.homeId);
+    const awayId = await getOrCreateClub(m.awayName, m.awayId);
+    if (!homeId || !awayId) { skipped++; continue; }
+
+    const existing = (S.matches||[]).find(x=>
+      x.competitionId===compId && x.homeClubId===homeId && x.awayClubId===awayId && x.date===m.date
+    );
+    if (existing && !overwrite) { skipped++; continue; }
+
+    const match = {
+      id: existing?.id || genId('match'),
+      competitionId: compId,
+      seasonId: S.currentSeason,
+      round: m.round,
+      date: m.date,
+      time: existing?.time || null,
+      homeClubId: homeId,
+      awayClubId: awayId,
+      played: m.homeScore !== null && m.awayScore !== null,
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+      events: existing?.events || [],
+      lineup: existing?.lineup || [],
+    };
+    await dbPut('matches', match);
+    if (existing) S.matches = S.matches.map(x=>x.id===match.id?match:x);
+    else S.matches.push(match);
+    imported++;
+  }
+
+  showToast(`${imported} wedstrijden geïmporteerd${skipped?`, ${skipped} overgeslagen`:''}`, 'success');
+  closeModal('modal-match-import');
+  renderCompDetail(compId);
+  navigateToComp(compId);
+}

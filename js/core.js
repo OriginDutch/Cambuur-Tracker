@@ -27,7 +27,7 @@ let S={lang:'nl',theme:'dark',currentSeason:null,seasons:[],clubs:[],stadiums:[]
 //
 // Er staan nog bestaande losse globals verspreid door de app heen
 // (o.a. window._playerTransfers, window._vergTab, window._vergP1/P2,
-// window._openRounds, swStep/swStadCount/swClubCount, s365Matches/s365Selected).
+// window._openRounds, swStep/swStadCount/swClubCount).
 // Die hoeven niet in één keer gemigreerd te worden — verplaats ze
 // gewoon naar UI zodra je toch al in dat bestand aan het werk bent
 // voor iets anders. Zo groeit de opruiming organisch mee zonder een
