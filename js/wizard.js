@@ -75,10 +75,9 @@ function swUpdateCompType(){
 async function swFinish(){
   const compName=document.getElementById('sw-comp-name').value.trim();
   if(!compName){showToast('Voer een competitienaam in','error');return;}
-  const ts=()=>Date.now()+'_'+Math.random().toString(36).slice(2,6);
 
   // Own stadium
-  const ownStadId='stadium_own_'+ts();
+  const ownStadId=genId('stadium_own');
   const ownStad={id:ownStadId,name:document.getElementById('sw-own-stad-name').value.trim(),city:document.getElementById('sw-own-stad-city').value.trim(),capacity:parseInt(document.getElementById('sw-own-stad-cap').value)||null};
   await dbPut('stadiums',ownStad);S.stadiums.push(ownStad);
 
@@ -86,7 +85,7 @@ async function swFinish(){
   const stadMap={'__own__':ownStadId};
   for(const row of document.querySelectorAll('#sw-stad-rows .stad-row')){
     const name=row.querySelector('[data-role="sname"]')?.value.trim();if(!name)continue;
-    const sid='stadium_'+ts();
+    const sid=genId('stadium');
     const stad={id:sid,name,city:row.querySelector('[data-role="scity"]')?.value.trim()||'',capacity:parseInt(row.querySelector('[data-role="scap"]')?.value)||null};
     await dbPut('stadiums',stad);S.stadiums.push(stad);stadMap[name]=sid;
   }
@@ -101,20 +100,20 @@ async function swFinish(){
   for(const row of document.querySelectorAll('#sw-club-rows .club-row')){
     const name=row.querySelector('[data-role="cname"]').value.trim();if(!name)continue;
     const stadVal=row.querySelector('[data-role="cstad"]').value;
-    const cid='club_'+ts();
+    const cid=genId('club');
     const club={id:cid,name,abbr:row.querySelector('[data-role="cabbr"]').value.trim().toUpperCase(),city:row.querySelector('[data-role="ccity"]').value.trim(),stadiumId:stadMap[stadVal]||null,highlight:'',note:'',isOwnClub:false};
     await dbPut('clubs',club);S.clubs.push(club);savedIds.push(cid);
   }
 
   // Season
-  const seasonId='season_'+ts();
+  const seasonId=genId('season');
   const season={id:seasonId,name:document.getElementById('sw-season-name').value.trim(),year:parseInt(document.getElementById('sw-season-year').value)||2026,created:Date.now()};
   await dbPut('seasons',season);S.seasons.push(season);
   S.currentSeason=seasonId;await saveSetting('currentSeason',seasonId);
 
   // Competition
   const compType=document.getElementById('sw-comp-type').value;
-  const compId='comp_'+ts();
+  const compId=genId('comp');
   const isKnockoutType = compType==='beker'||compType==='playoffs';
   let clubIds=savedIds;
   if(!isKnockoutType){

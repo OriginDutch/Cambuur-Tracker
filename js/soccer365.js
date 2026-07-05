@@ -117,7 +117,7 @@ async function s365Import() {
       targetCompId = existing.id;
     } else {
       const newComp = {
-        id: 'comp_'+Date.now(),
+        id: genId('comp'),
         name: compName,
         type: 'competitie',
         seasonId: S.currentSeason,
@@ -160,7 +160,7 @@ async function s365Import() {
     if (clubCache[resolvedName.toLowerCase()]) return clubCache[resolvedName.toLowerCase()];
     // Create new club
     if (!createClubs) return null;
-    const newClub = {id:'club_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), name:resolvedName, abbr:resolvedName.slice(0,3).toUpperCase(), created:Date.now()};
+    const newClub = {id:genId('club'), name:resolvedName, abbr:resolvedName.slice(0,3).toUpperCase(), created:Date.now()};
     await dbPut('clubs', newClub);
     S.clubs.push(newClub);
     clubCache[resolvedName.toLowerCase()] = newClub.id;
@@ -186,7 +186,7 @@ async function s365Import() {
     if (existing && !overwrite) { skipped++; continue; }
 
     const match = {
-      id: existing?.id || 'match_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      id: existing?.id || genId('match'),
       competitionId: targetCompId,
       seasonId: S.currentSeason,
       homeClubId: homeId,

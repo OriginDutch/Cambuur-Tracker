@@ -628,7 +628,7 @@ async function confirmMatchImport() {
       (x.homeName===m.homeName||x.homeClubId===m.homeClubId)&&
       (x.awayName===m.awayName||x.awayClubId===m.awayClubId));
     if (exists && !overwrite) { skipped++; continue; }
-    const id = exists?.id || 'match_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    const id = exists?.id || genId('match');
     const obj = {
       id, competitionId: compId, seasonId: S.currentSeason,
       round: m.round, date: m.date, time: m.time||null,
@@ -696,7 +696,7 @@ async function saveManualMatches() {
   if (!manualMatchQueue.length) return;
   let count = 0;
   for (const m of manualMatchQueue) {
-    const id = 'match_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    const id = genId('match');
     const obj = { id, competitionId: m.compId, seasonId: S.currentSeason, round: m.round, date: m.date||null, time: m.time||null, homeClubId: m.homeId, awayClubId: m.awayId, homeName: m.homeName, awayName: m.awayName, homeScore: null, awayScore: null, played: false, events: [], motm: null, notes: '' };
     await dbPut('matches', obj);
     S.matches.push(obj);

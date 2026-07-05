@@ -224,7 +224,7 @@ async function savePlayer() {
   if (!pos) { showToast('Selecteer een positie', 'error'); return; }
 
   const existing = document.getElementById('edit-player-id').value;
-  const id = existing || 'player_' + Date.now();
+  const id = existing || genId('player');
   const status = document.getElementById('player-status').value;
   const existingPlayerForFlags = existing ? (S.players||[]).find(p=>p.id===existing) : null;
 

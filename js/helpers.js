@@ -199,6 +199,15 @@ function getTieWinner(tie) {
 // Geeft de divisie waarin een club op de gegeven datum (of nu) uitkomt,
 // gebaseerd op de meest recente divisionHistory-ingang vóór die datum.
 // Geeft null als er geen (relevante) historie is.
+// Genereert een uniek ID met een gegeven prefix (bv. genId('player') -> 'player_1234567890_ab12').
+// Vervangt de losse Date.now()+Math.random()-varianten die eerder verspreid
+// door de codebase stonden — één plek, altijd met de willekeurige toevoeging
+// voor het geval er meerdere records binnen dezelfde milliseconde ontstaan
+// (bijv. bij bulk-imports).
+function genId(prefix) {
+  return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+}
+
 function effectiveDivision(club, refDate) {
   const hist = club.divisionHistory;
   if (!hist || !hist.length) return null;

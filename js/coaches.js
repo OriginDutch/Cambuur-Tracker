@@ -485,7 +485,7 @@ async function saveCoach() {
   const ln = document.getElementById('coach-lastname').value.trim();
   if (!ln) { showToast('Vul minimaal een achternaam in','error'); return; }
   const editId = document.getElementById('coach-edit-id').value;
-  const id = editId || 'coach_'+Date.now();
+  const id = editId || genId('coach');
   const coach = {
     id, firstname:fn, lastname:ln,
     dob: document.getElementById('coach-dob').value||null,

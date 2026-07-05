@@ -87,7 +87,7 @@ async function saveInlineSeason(){
   const name=document.getElementById('inline-season-name').value.trim();
   const year=parseInt(document.getElementById('inline-season-year').value)||new Date().getFullYear();
   if(!name){showToast('Voer een seizoensnaam in','error');return;}
-  const id='season_'+Date.now();
+  const id=genId('season');
   const season={id,name,year,created:Date.now()};
   await dbPut('seasons',season);
   S.seasons.push(season);
@@ -101,10 +101,10 @@ async function saveInlineSeason(){
 }
 async function saveSeason(){
   const name=document.getElementById('season-name').value.trim();
-  const year=parseInt(document.getElementById('season-year').value)||new Date().getFullYear();
   if(!name){showToast('Voer een seizoensnaam in','error');return;}
+  const year=parseInt(name.match(/^(\d{4})/)?.[1])||new Date().getFullYear();
   const existing=document.getElementById('edit-season-id').value;
-  const id=existing||'season_'+Date.now();
+  const id=existing||genId('season');
   const startDate = document.getElementById('season-start').value||null;
   const endDate = document.getElementById('season-end').value||null;
   const season={id,name,year,startDate,endDate,created:existing?(S.seasons.find(s=>s.id===existing)?.created||Date.now()):Date.now()};
@@ -331,7 +331,7 @@ async function saveClub(){
   if(!name){showToast('Clubnaam is verplicht','error');return;}
   const existing=document.getElementById('edit-club-id').value;
   if(S.clubs.find(c=>c.name.toLowerCase()===name.toLowerCase()&&c.id!==existing)){showToast('Er bestaat al een club met deze naam','error');return;}
-  const id=existing||'club_'+Date.now();
+  const id=existing||genId('club');
   const existingClub=existing?S.clubs.find(c=>c.id===existing):null;
   const club={id,name,abbr:document.getElementById('club-abbr').value.trim().toUpperCase(),stadiumId:document.getElementById('club-stadium').value||null,city:document.getElementById('club-city').value.trim(),highlight:document.getElementById('club-highlight').value,note:document.getElementById('club-note').value.trim(),isOwnClub:existingClub?.isOwnClub||false,divisionHistory:window._clubDivisions||[],sortOrder:existingClub?.sortOrder};
   await dbPut('clubs',club);
@@ -347,7 +347,7 @@ function toggleEl(id){document.getElementById(id).classList.toggle('open');}
 async function saveInlineStad(){
   const name=document.getElementById('istad-name').value.trim();
   if(!name){showToast('Stadiumnaam is verplicht','error');return;}
-  const id='stadium_'+Date.now();
+  const id=genId('stadium');
   const stad={id,name,city:document.getElementById('istad-city').value.trim(),capacity:parseInt(document.getElementById('istad-cap').value)||null};
   await dbPut('stadiums',stad);S.stadiums.push(stad);
   populateStadSel('club-stadium');document.getElementById('club-stadium').value=id;
@@ -390,7 +390,7 @@ async function saveStadion(){
   if(!name){showToast('Stadiumnaam is verplicht','error');return;}
   const existing=document.getElementById('edit-stadion-id').value;
   if(S.stadiums.find(s=>s.name.toLowerCase()===name.toLowerCase()&&s.id!==existing)){showToast('Er bestaat al een stadion met deze naam','error');return;}
-  const id=existing||'stadium_'+Date.now();
+  const id=existing||genId('stadium');
   const stad={id,name,city:document.getElementById('stadion-city').value.trim(),capacity:parseInt(document.getElementById('stadion-capacity').value)||null,note:document.getElementById('stadion-note').value.trim()};
   await dbPut('stadiums',stad);
   if(existing){const i=S.stadiums.findIndex(s=>s.id===existing);if(i>=0)S.stadiums[i]=stad;}else S.stadiums.push(stad);
@@ -551,7 +551,7 @@ async function saveCompetition(){
   const seasonId=document.getElementById('comp-season').value;if(!seasonId){showToast('Selecteer een seizoen','error');return;}
   const type=document.getElementById('comp-type').value;
   const existing=document.getElementById('edit-comp-id').value;
-  const id=existing||'comp_'+Date.now();
+  const id=existing||genId('comp');
   const clubIds=[...document.querySelectorAll('#comp-clubs-checkboxes input:checked')].map(cb=>cb.value);
   const linkedDivisions=[...document.querySelectorAll('.comp-division-cb:checked')].map(cb=>cb.value);
   const rounds=(type==='beker'||type==='playoffs')?document.getElementById('comp-rounds').value.split(',').map(r=>r.trim()).filter(Boolean):[];
