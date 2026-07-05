@@ -315,11 +315,13 @@ function openClubModal(editId){
     document.getElementById('club-name').value=c.name;document.getElementById('club-abbr').value=c.abbr||'';
     document.getElementById('club-city').value=c.city||'';document.getElementById('club-stadium').value=c.stadiumId||'';
     document.getElementById('club-highlight').value=c.highlight||'';document.getElementById('club-note').value=c.note||'';
+    document.getElementById('club-promotion-excluded').checked=c.promotionExcluded||false;
     document.getElementById('modal-club-title').textContent='Club bewerken';
     window._clubDivisions = JSON.parse(JSON.stringify(c.divisionHistory||[]));
   }else{
     ['club-name','club-abbr','club-city','club-note'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('club-stadium').value='';document.getElementById('club-highlight').value='';
+    document.getElementById('club-promotion-excluded').checked=false;
     document.getElementById('modal-club-title').textContent='Club toevoegen';
     window._clubDivisions = [];
   }
@@ -333,7 +335,7 @@ async function saveClub(){
   if(S.clubs.find(c=>c.name.toLowerCase()===name.toLowerCase()&&c.id!==existing)){showToast('Er bestaat al een club met deze naam','error');return;}
   const id=existing||genId('club');
   const existingClub=existing?S.clubs.find(c=>c.id===existing):null;
-  const club={id,name,abbr:document.getElementById('club-abbr').value.trim().toUpperCase(),stadiumId:document.getElementById('club-stadium').value||null,city:document.getElementById('club-city').value.trim(),highlight:document.getElementById('club-highlight').value,note:document.getElementById('club-note').value.trim(),isOwnClub:existingClub?.isOwnClub||false,divisionHistory:window._clubDivisions||[],sortOrder:existingClub?.sortOrder};
+  const club={id,name,abbr:document.getElementById('club-abbr').value.trim().toUpperCase(),stadiumId:document.getElementById('club-stadium').value||null,city:document.getElementById('club-city').value.trim(),highlight:document.getElementById('club-highlight').value,note:document.getElementById('club-note').value.trim(),isOwnClub:existingClub?.isOwnClub||false,promotionExcluded:document.getElementById('club-promotion-excluded').checked,divisionHistory:window._clubDivisions||[],sortOrder:existingClub?.sortOrder};
   await dbPut('clubs',club);
   if(existing){const i=S.clubs.findIndex(c=>c.id===existing);if(i>=0)S.clubs[i]=club;}else S.clubs.push(club);
   renderClubsTable();renderCompetitionsNav();renderCompetitionsPage();renderDivisionsSettings();closeModal('modal-club');showToast('Club opgeslagen: '+name,'success');
@@ -469,6 +471,7 @@ function openCompModal(editId){
   renderPeriodRows(window._compPeriods);
   renderRankZoneRows(window._compRankZones);
   renderDeductionRows(window._compDeductions);
+  switchCompModalTab('clubs', document.querySelector('#comp-modal-tabs .tab[data-tab="clubs"]'));
   updateCompTypeUI();document.getElementById('modal-competition').classList.add('open');
 }
 
@@ -495,11 +498,26 @@ function unselectAllCompClubs() {
   document.querySelectorAll('#comp-clubs-checkboxes input[type=checkbox]').forEach(cb => cb.checked = false);
   renderDeductionRows(window._compDeductions);
 }
+function switchCompModalTab(tab, el) {
+  ['clubs','rounds','periods','deductions'].forEach(t => {
+    document.getElementById('comp-modal-tab-'+t).style.display = t===tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('#comp-modal-tabs .tab').forEach(t=>t.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
 function updateCompTypeUI(){
   const t=document.getElementById('comp-type').value;
   const isKnockout = t==='beker'||t==='playoffs';
-  document.getElementById('comp-cup-options').style.display=isKnockout?'block':'none';
-  document.getElementById('comp-periods-options').style.display=(t==='competitie')?'block':'none';
+  const isLeague = t==='competitie';
+  document.getElementById('comp-tab-btn-rounds').style.display = isKnockout ? '' : 'none';
+  document.getElementById('comp-tab-btn-periods').style.display = isLeague ? '' : 'none';
+  document.getElementById('comp-tab-btn-deductions').style.display = isLeague ? '' : 'none';
+  // Als het actieve tabblad door de typewissel verdwenen is, terug naar Clubs
+  const activeBtn = document.querySelector('#comp-modal-tabs .tab.active');
+  if (activeBtn && activeBtn.style.display === 'none') {
+    switchCompModalTab('clubs', document.querySelector('#comp-modal-tabs .tab[data-tab="clubs"]'));
+  }
 }
 
 // ── Periodes (periodetitel-berekening) ──
@@ -625,9 +643,13 @@ function renderRankZoneRows(zones) {
       </div>
       <button class="icon-btn danger" style="height:28px" onclick="removeRankZoneRow(${i})">✕</button>
     </div>
-    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-bottom:8px;margin-left:42px;cursor:pointer">
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-bottom:2px;margin-left:42px;cursor:pointer">
       <input type="checkbox" ${z.linkPeriodWinners?'checked':''} onchange="window._compRankZones[${i}].linkPeriodWinners=this.checked" style="accent-color:var(--cambuur-geel)">
       Geldt ook voor periodetitel-winnaars, ongeacht positie
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-bottom:8px;margin-left:42px;cursor:pointer">
+      <input type="checkbox" ${z.excludeIneligible?'checked':''} onchange="window._compRankZones[${i}].excludeIneligible=this.checked" style="accent-color:var(--cambuur-geel)">
+      Uitgesloten clubs overslaan voor deze zone
     </label>`).join('');
 }
 
@@ -708,7 +730,7 @@ function removeDeductionRow(idx) {
 function addRankZoneRow() {
   if (!window._compRankZones) window._compRankZones = [];
   const color = RANKZONE_PRESET_COLORS[window._compRankZones.length % RANKZONE_PRESET_COLORS.length];
-  window._compRankZones.push({fromPos: 1, toPos: 1, label: '', color, linkPeriodWinners: false});
+  window._compRankZones.push({fromPos: 1, toPos: 1, label: '', color, linkPeriodWinners: false, excludeIneligible: false});
   renderRankZoneRows(window._compRankZones);
 }
 

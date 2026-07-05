@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<!-- SETUP WIZARDD -->
+<!-- SETUP WIZARD -->
 <div id="setup-overlay">
   <div class="setup-container">
     <div class="setup-logo">
@@ -591,6 +591,12 @@
           <option value="interessant">⭐ Interessant</option>
         </select>
       </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="club-promotion-excluded" style="accent-color:var(--cambuur-geel)">
+          <span>Uitgesloten van promotie/degradatie (bijv. Jong-team) — telt niet mee bij ranglijst-markeringen</span>
+        </label>
+      </div>
       <div class="form-group"><label class="form-label">Notitie (optioneel)</label><input class="form-input" id="club-note" placeholder=""></div>
 
       <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:12px">
@@ -633,39 +639,57 @@
 
 <!-- MODAL: COMPETITIE -->
 <div class="modal-overlay" id="modal-competition">
-  <div class="modal">
+  <div class="modal" style="width:640px;max-width:96vw">
     <div class="modal-header"><div class="modal-title" id="modal-competition-title">Competitie toevoegen</div><button class="modal-close" onclick="closeModal('modal-competition')">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="edit-comp-id">
-      <div class="form-group"><label class="form-label">Naam</label><input class="form-input" id="comp-name" placeholder=""></div>
-      <div class="form-group">
-        <label class="form-label">Type</label>
-        <select class="form-select" id="comp-type" onchange="updateCompTypeUI()">
-          <option value="competitie">Competitie (ranglijst)</option>
-          <option value="beker">Bekertoernooi (rondes)</option>
-          <option value="playoffs">Play-offs (rondes)</option>
-          <option value="voorbereiding">Voorbereiding (vriendschappelijk)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Gekoppelde divisies (optioneel)</label>
-        <div id="comp-divisions-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:6px 0"></div>
-        <div style="display:flex;gap:6px;margin-top:6px">
-          <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="fillClubsFromDivisions()">✓ Vul clubs uit gekoppelde divisies aan</button>
-          <button type="button" class="btn btn-ghost" style="font-size:11px;color:var(--loss)" onclick="unselectAllCompClubs()">Alles uitvinken</button>
+      <div class="form-row cols-2 mb-8">
+        <div class="form-group" style="margin:0"><label class="form-label">Naam</label><input class="form-input" id="comp-name" placeholder=""></div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Type</label>
+          <select class="form-select" id="comp-type" onchange="updateCompTypeUI()">
+            <option value="competitie">Competitie (ranglijst)</option>
+            <option value="beker">Bekertoernooi (rondes)</option>
+            <option value="playoffs">Play-offs (rondes)</option>
+            <option value="voorbereiding">Voorbereiding (vriendschappelijk)</option>
+          </select>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Clubs in deze competitie</label>
-        <div id="comp-clubs-checkboxes" onchange="renderDeductionRows(window._compDeductions)" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:6px"></div>
+      <div class="form-group mb-8">
+        <label class="form-label">Seizoen</label>
+        <select class="form-select" id="comp-season"></select>
       </div>
-      <div id="comp-cup-options" style="display:none">
+
+      <div class="tabs" id="comp-modal-tabs" style="margin-bottom:12px">
+        <div class="tab active" data-tab="clubs" onclick="switchCompModalTab('clubs',this)">Clubs</div>
+        <div class="tab" data-tab="rounds" id="comp-tab-btn-rounds" onclick="switchCompModalTab('rounds',this)" style="display:none">Rondes</div>
+        <div class="tab" data-tab="periods" id="comp-tab-btn-periods" onclick="switchCompModalTab('periods',this)" style="display:none">Periodes &amp; Zones</div>
+        <div class="tab" data-tab="deductions" id="comp-tab-btn-deductions" onclick="switchCompModalTab('deductions',this)" style="display:none">Puntenaftrek</div>
+      </div>
+
+      <div id="comp-modal-tab-clubs" style="max-height:360px;overflow-y:auto">
+        <div class="form-group">
+          <label class="form-label">Gekoppelde divisies (optioneel)</label>
+          <div id="comp-divisions-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;padding:6px 0"></div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="fillClubsFromDivisions()">✓ Vul clubs uit gekoppelde divisies aan</button>
+            <button type="button" class="btn btn-ghost" style="font-size:11px;color:var(--loss)" onclick="unselectAllCompClubs()">Alles uitvinken</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Clubs in deze competitie</label>
+          <div id="comp-clubs-checkboxes" onchange="renderDeductionRows(window._compDeductions)" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:6px"></div>
+        </div>
+      </div>
+
+      <div id="comp-modal-tab-rounds" style="display:none;max-height:360px;overflow-y:auto">
         <div class="form-group">
           <label class="form-label">Rondes (kommagescheiden)</label>
           <input class="form-input" id="comp-rounds" placeholder="Eerste Ronde, Tweede Ronde, ...">
         </div>
       </div>
-      <div id="comp-periods-options" style="display:none">
+
+      <div id="comp-modal-tab-periods" style="display:none;max-height:360px;overflow-y:auto">
         <div class="form-group">
           <label class="form-label">Periodes (voor periodetitel-berekening — puur informatief)</label>
           <div id="comp-periods-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
@@ -682,15 +706,14 @@
             <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="copyRankZonesFromPreviousSeason()">📋 Kopieer zones van vorig seizoen</button>
           </div>
         </div>
+      </div>
+
+      <div id="comp-modal-tab-deductions" style="display:none;max-height:360px;overflow-y:auto">
         <div class="form-group">
           <label class="form-label">Puntenaftrek (bv. licentie-overtredingen — puur handmatig, telt mee in de eindstand, niet in periodestanden)</label>
           <div id="comp-deductions-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
           <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="addDeductionRow()">+ Aftrek toevoegen</button>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Seizoen</label>
-        <select class="form-select" id="comp-season"></select>
       </div>
     </div>
     <div class="modal-footer">

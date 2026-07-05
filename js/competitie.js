@@ -387,13 +387,27 @@ function renderLeagueTable(comp, clubs, compMatches) {
   const { winners: periodWinners } = getPeriodWinners(comp, clubs, compMatches);
   const cupWinnerId = getCupWinner(comp.seasonId);
 
+  const isExcluded = clubId => !!S.clubs.find(c=>c.id===clubId)?.promotionExcluded;
+  // Positie "als je uitgesloten clubs niet meetelt" — voor zones die dat vinkje aan hebben
+  const eligibleOnly = sorted.filter(c => !isExcluded(c.id));
+  const eligiblePosById = {};
+  eligibleOnly.forEach((c, idx) => { eligiblePosById[c.id] = idx + 1; });
+
   // Zone-bepaling: eerst-gedefinieerde zone wint (volgorde = prioriteit).
   // Een zone geldt voor een club als de positie binnen het bereik valt, ÓF
   // als de zone gekoppeld is aan periodetitel-winnaars en deze club een
-  // periodetitel heeft gewonnen — ongeacht positie.
-  const zoneForClub = (pos, wonPeriod) => zones.find(z =>
-    (pos >= z.fromPos && pos <= z.toPos) || (z.linkPeriodWinners && wonPeriod)
-  );
+  // periodetitel heeft gewonnen — ongeacht positie. Staat "uitgesloten clubs
+  // overslaan" aan voor die zone, dan telt een uitgesloten club (bijv. een
+  // Jong-team) via GEEN van beide routes mee — noch op positie, noch via een
+  // periodetitel — en wordt voor de positie-telling de eerstvolgende
+  // niet-uitgesloten club gebruikt.
+  const zoneForClub = (clubId, rawPos, wonPeriod) => zones.find(z => {
+    if (z.excludeIneligible && isExcluded(clubId)) return false;
+    const posToCheck = z.excludeIneligible ? eligiblePosById[clubId] : rawPos;
+    const posMatches = posToCheck != null && posToCheck >= z.fromPos && posToCheck <= z.toPos;
+    const periodMatches = z.linkPeriodWinners && wonPeriod;
+    return posMatches || periodMatches;
+  });
 
   return `<div class="card mb-12">
     <div class="card-title">Ranglijst</div>
@@ -404,17 +418,20 @@ function renderLeagueTable(comp, clubs, compMatches) {
     </tr></thead><tbody>${sorted.map((c,i)=>{
       const pos = i+1;
       const wonPeriods = periodWinners[c.id] || [];
-      const zone = zoneForClub(pos, wonPeriods.length > 0);
+      const zone = zoneForClub(c.id, pos, wonPeriods.length > 0);
       const periodBadge = wonPeriods.length
         ? ` <span style="font-size:10px;color:var(--cambuur-geel)" title="Periodetitel: ${wonPeriods.join(', ')}">🏆${wonPeriods.length>1?'×'+wonPeriods.length:''}</span>`
         : '';
       const cupBadge = c.id === cupWinnerId
         ? ` <span style="font-size:10px" title="Bekerwinnaar dit seizoen">🛡️</span>`
         : '';
+      const excludedBadge = isExcluded(c.id)
+        ? ` <span style="font-size:10px;color:var(--text-muted)" title="Uitgesloten van promotie/degradatie">🚫</span>`
+        : '';
       return `<tr style="${c.isOwn?'background:rgba(245,197,0,0.07);font-weight:600':''}${c.highlight==='rivaal'?';border-left:2px solid var(--heerenveen-rood)':''}">
         <td style="width:6px;padding:0;${zone?'background:'+zone.color:''}" title="${zone?.label||''}"></td>
         <td class="num text-muted">${pos}</td>
-        <td>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}${cupBadge}</td>
+        <td>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}${cupBadge}${excludedBadge}</td>
         <td class="num">${c.g}</td><td class="num">${c.w}</td><td class="num">${c.d}</td><td class="num">${c.l}</td>
         <td class="num">${c.gf}</td><td class="num">${c.ga}</td><td class="num">${c.gf-c.ga>0?'+':''}${c.gf-c.ga}</td>
         <td class="num" style="font-weight:700">${c.pts}${c.ded>0?` <span style="font-size:9px;color:var(--loss);font-weight:400" title="${c.ded} punt(en) in mindering gebracht">(-${c.ded})</span>`:''}</td>
