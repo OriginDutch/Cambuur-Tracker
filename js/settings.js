@@ -456,13 +456,16 @@ function openCompModal(editId){
     document.getElementById('comp-season').value=c.seasonId;document.getElementById('comp-rounds').value=(c.rounds||[]).join(', ');
     document.getElementById('modal-competition-title').textContent='Competitie bewerken';
     window._compPeriods = JSON.parse(JSON.stringify(c.periods||[]));
+    window._compRankZones = JSON.parse(JSON.stringify(c.rankZones||[]));
   }else{
     document.getElementById('comp-name').value='';document.getElementById('comp-type').value='competitie';
     document.getElementById('comp-rounds').value='Eerste Ronde, Tweede Ronde, Kwartfinale, Halve Finale, Finale';
     document.getElementById('modal-competition-title').textContent='Competitie toevoegen';
     window._compPeriods = [];
+    window._compRankZones = [];
   }
   renderPeriodRows(window._compPeriods);
+  renderRankZoneRows(window._compRankZones);
   updateCompTypeUI();document.getElementById('modal-competition').classList.add('open');
 }
 
@@ -546,6 +549,53 @@ function autoGeneratePeriods() {
   }));
   renderPeriodRows(window._compPeriods);
 }
+
+// ── Ranglijst-zones (promotie/play-offs/degradatie) ──
+// Bewust handmatig i.p.v. berekend: regels wijzigen per seizoen/competitie,
+// dus geen hardgecodeerde "top 2 = promotie"-logica die bij een regelwijziging
+// weer aangepast moet worden. Puur visueel, telt nergens in mee.
+const RANKZONE_PRESET_COLORS = ['#22c55e','#3b82f6','#f59e0b','#ef4444','#a855f7'];
+
+function renderRankZoneRows(zones) {
+  const wrap = document.getElementById('comp-rankzones-rows');
+  wrap.innerHTML = (zones||[]).map((z, i) => `
+    <div style="display:grid;grid-template-columns:70px 70px 1fr 40px 28px;gap:6px;align-items:end">
+      <div>
+        <label class="form-label" style="font-size:10px">Positie van</label>
+        <input class="form-input" type="number" min="1" style="height:28px;font-size:12px" value="${z.fromPos??''}"
+          oninput="window._compRankZones[${i}].fromPos=parseInt(this.value)||1">
+      </div>
+      <div>
+        <label class="form-label" style="font-size:10px">tot</label>
+        <input class="form-input" type="number" min="1" style="height:28px;font-size:12px" value="${z.toPos??''}"
+          oninput="window._compRankZones[${i}].toPos=parseInt(this.value)||1">
+      </div>
+      <div>
+        <label class="form-label" style="font-size:10px">Label</label>
+        <input class="form-input" style="height:28px;font-size:12px" value="${z.label||''}" placeholder="Directe promotie"
+          oninput="window._compRankZones[${i}].label=this.value">
+      </div>
+      <div>
+        <label class="form-label" style="font-size:10px">Kleur</label>
+        <input type="color" value="${z.color||'#22c55e'}" style="height:28px;width:100%;padding:0;border:1px solid var(--border);border-radius:4px;background:none"
+          onchange="window._compRankZones[${i}].color=this.value">
+      </div>
+      <button class="icon-btn danger" style="height:28px" onclick="removeRankZoneRow(${i})">✕</button>
+    </div>`).join('');
+}
+
+function addRankZoneRow() {
+  if (!window._compRankZones) window._compRankZones = [];
+  const color = RANKZONE_PRESET_COLORS[window._compRankZones.length % RANKZONE_PRESET_COLORS.length];
+  window._compRankZones.push({fromPos: 1, toPos: 1, label: '', color});
+  renderRankZoneRows(window._compRankZones);
+}
+
+function removeRankZoneRow(idx) {
+  window._compRankZones.splice(idx, 1);
+  renderRankZoneRows(window._compRankZones);
+}
+
 async function saveCompetition(){
   const name=document.getElementById('comp-name').value.trim();if(!name){showToast('Naam is verplicht','error');return;}
   const seasonId=document.getElementById('comp-season').value;if(!seasonId){showToast('Selecteer een seizoen','error');return;}
@@ -556,8 +606,9 @@ async function saveCompetition(){
   const linkedDivisions=[...document.querySelectorAll('.comp-division-cb:checked')].map(cb=>cb.value);
   const rounds=(type==='beker'||type==='playoffs')?document.getElementById('comp-rounds').value.split(',').map(r=>r.trim()).filter(Boolean):[];
   const periods = type==='competitie' ? (window._compPeriods||[]) : [];
+  const rankZones = type==='competitie' ? (window._compRankZones||[]) : [];
   const existingComp = existing ? S.competitions.find(c=>c.id===existing) : null;
-  const comp={id,name,type,seasonId,clubIds,linkedDivisions,rounds,periods,created:existingComp?.created||Date.now()};
+  const comp={id,name,type,seasonId,clubIds,linkedDivisions,rounds,periods,rankZones,created:existingComp?.created||Date.now()};
   await dbPut('competitions',comp);
   if(existing){const i=S.competitions.findIndex(c=>c.id===existing);if(i>=0)S.competitions[i]=comp;}else S.competitions.push(comp);
   refreshAll();closeModal('modal-competition');showToast('Competitie opgeslagen: '+name,'success');

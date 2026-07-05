@@ -361,43 +361,77 @@ function calcStandings(clubs, compMatches) {
 
 function renderLeagueTable(comp, clubs, compMatches) {
   const sorted = calcStandings(clubs, compMatches);
+  const zones = comp.rankZones || [];
+  const zoneForPos = pos => zones.find(z => pos >= z.fromPos && pos <= z.toPos);
+  const { winners: periodWinners } = getPeriodWinners(comp, clubs, compMatches);
 
   return `<div class="card mb-12">
     <div class="card-title">Ranglijst</div>
     <table class="data-table"><thead><tr>
-      <th class="num">#</th><th>Club</th>
+      <th style="width:6px;padding:0"></th><th class="num">#</th><th>Club</th>
       <th class="num">G</th><th class="num">W</th><th class="num">G</th><th class="num">V</th>
       <th class="num">+</th><th class="num">-</th><th class="num">V.S.</th><th class="num">Pnt</th>
-    </tr></thead><tbody>${sorted.map((c,i)=>`
-      <tr style="${c.isOwn?'background:rgba(245,197,0,0.07);font-weight:600':''}${c.highlight==='rivaal'?';border-left:2px solid var(--heerenveen-rood)':''}">
-        <td class="num text-muted">${i+1}</td>
-        <td>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}</td>
+    </tr></thead><tbody>${sorted.map((c,i)=>{
+      const pos = i+1;
+      const zone = zoneForPos(pos);
+      const wonPeriods = periodWinners[c.id] || [];
+      const periodBadge = wonPeriods.length
+        ? ` <span style="font-size:10px;color:var(--cambuur-geel)" title="Periodetitel: ${wonPeriods.join(', ')}">🏆${wonPeriods.length>1?'×'+wonPeriods.length:''}</span>`
+        : '';
+      return `<tr style="${c.isOwn?'background:rgba(245,197,0,0.07);font-weight:600':''}${c.highlight==='rivaal'?';border-left:2px solid var(--heerenveen-rood)':''}">
+        <td style="width:6px;padding:0;${zone?'background:'+zone.color:''}" title="${zone?.label||''}"></td>
+        <td class="num text-muted">${pos}</td>
+        <td>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}</td>
         <td class="num">${c.g}</td><td class="num">${c.w}</td><td class="num">${c.d}</td><td class="num">${c.l}</td>
         <td class="num">${c.gf}</td><td class="num">${c.ga}</td><td class="num">${c.gf-c.ga>0?'+':''}${c.gf-c.ga}</td>
         <td class="num" style="font-weight:700">${c.pts}</td>
-      </tr>`).join('')}</tbody></table>
+      </tr>`;
+    }).join('')}</tbody></table>
+    ${zones.length ? `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
+      ${zones.map(z=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted)">
+        <span style="width:10px;height:10px;border-radius:2px;background:${z.color};display:inline-block"></span>${z.label||('pos. '+z.fromPos+'-'+z.toPos)}
+      </div>`).join('')}
+    </div>` : ''}
   </div>`;
 }
 
 // Periodestanden — puur informatief, geen automatische play-off-toewijzing.
 // Elke periode is een rondebereik (bv. ronde 1 t/m 9); de "winnaar" hier is
 // gewoon wie de meeste punten had binnen dat bereik, niets meer.
+// Bepaalt per periode of die compleet is en wie 'm gewonnen heeft. Gedeeld
+// tussen de periodestanden-kaart en de badges in de hoofdranglijst, zodat
+// beide altijd exact hetzelfde tonen.
+function getPeriodWinners(comp, clubs, compMatches) {
+  const periods = comp.periods || [];
+  // clubId -> [periodenaam, ...]
+  const winners = {};
+  const details = periods.map(period => {
+    const periodMatches = compMatches.filter(m => {
+      const rn = parseInt(m.round);
+      return !isNaN(rn) && rn >= period.fromRound && rn <= period.toRound;
+    });
+    const played = periodMatches.filter(m=>m.played).length;
+    const total = periodMatches.length;
+    const complete = total>0 && played===total;
+    const standings = calcStandings(clubs, periodMatches);
+    const leader = standings[0];
+    if (complete && leader && leader.g > 0) {
+      if (!winners[leader.id]) winners[leader.id] = [];
+      winners[leader.id].push(period.name);
+    }
+    return { period, periodMatches, played, total, complete, standings, leader };
+  });
+  return { winners, details };
+}
+
 function renderPeriodStandings(comp, clubs, compMatches) {
   const periods = comp.periods || [];
   if (!periods.length) return '';
+  const { details } = getPeriodWinners(comp, clubs, compMatches);
   return `<div class="card mb-12">
     <div class="card-title">Periodestanden</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-      ${periods.map(period => {
-        const periodMatches = compMatches.filter(m => {
-          const rn = parseInt(m.round);
-          return !isNaN(rn) && rn >= period.fromRound && rn <= period.toRound;
-        });
-        const played = periodMatches.filter(m=>m.played).length;
-        const total = periodMatches.length;
-        const complete = total>0 && played===total;
-        const standings = calcStandings(clubs, periodMatches);
-        const leader = standings[0];
+      ${details.map(({period, played, total, complete, standings, leader}) => {
         return `<div style="background:var(--bg-tertiary);border-radius:var(--radius-sm);padding:10px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
             <span style="font-weight:700;font-size:12px">${period.name}</span>
