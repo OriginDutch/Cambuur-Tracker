@@ -18,7 +18,6 @@ function renderPlayerPage(id) {
   const el = document.getElementById('speler-content');
   if (!el) return;
 
-  const today = new Date().toISOString().split('T')[0];
   const age = p.dob ? Math.floor((Date.now()-new Date(p.dob))/31557600000) : null;
   const allStats = calcAllPlayerStats(S.currentSeason);
   const st = allStats[id] || {};

@@ -6,7 +6,20 @@
 const COACH_ROLES = ['Hoofdtrainer','Assistent-trainer','Keeperstrainer','Fysiektrainer','Analist','Overig'];
 
 // ── COACHES OVERZICHT PAGINA ──
+let _coachArchiefPrefApplied = false;
+function applyCoachArchiefPrefOnce() {
+  if (_coachArchiefPrefApplied) return;
+  _coachArchiefPrefApplied = true;
+  window._coachArchiefOpen = getPrefs().coachArchiefOpen;
+}
+function toggleCoachArchief() {
+  window._coachArchiefOpen = !window._coachArchiefOpen;
+  savePref('coachArchiefOpen', window._coachArchiefOpen);
+  renderCoachesPage();
+}
+
 function renderCoachesPage() {
+  applyCoachArchiefPrefOnce();
   const el = document.getElementById('coaches-content');
   if (!el) return;
   const coaches = S.coaches || [];
@@ -23,16 +36,17 @@ function renderCoachesPage() {
   const byRole = {};
   COACH_ROLES.forEach(r => byRole[r] = []);
   const inactive = [];
+  const _currentSeasonObj = (S.seasons||[]).find(s=>s.id===S.currentSeason);
+  const refDate = getSeasonRefDate(_currentSeasonObj);
   coaches.forEach(c => {
-    // Vind de aanstelling die vandaag actief is (from <= vandaag <= to, of geen to).
+    // Vind de aanstelling die actief was in het geselecteerde seizoen (from <= peildatum <= to, of geen to).
     // Val terug op de meest recente aanstelling (op startdatum) als er geen actieve is.
-    const today = new Date();
     const appts = (c.appointments||[]).slice().sort((a,b)=>new Date(b.from)-new Date(a.from));
     const currentAppt = appts.find(a => {
       const from = a.from ? new Date(a.from) : null;
       const to = a.to ? new Date(a.to) : null;
       if (!from) return false;
-      return from <= today && (!to || to >= today);
+      return from <= refDate && (!to || to >= refDate);
     });
     const appt = currentAppt || appts[0];
     const role = appt?.role || 'Overig';
@@ -94,7 +108,7 @@ function renderCoachesPage() {
     inactive.sort((a,b) => (a.coach.lastname||'').localeCompare(b.coach.lastname||''));
     const isOpen = window._coachArchiefOpen;
     html += `<div style="margin-top:8px">
-      <div style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:8px" onclick="window._coachArchiefOpen=!window._coachArchiefOpen;renderCoachesPage()">
+      <div style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:8px" onclick="toggleCoachArchief()">
         <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary)">📁 Archief — niet meer actief (${inactive.length})</span>
         <span style="font-size:12px;color:var(--text-muted)">${isOpen?'▲':'▼'}</span>
       </div>

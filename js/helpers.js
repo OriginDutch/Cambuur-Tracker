@@ -204,6 +204,20 @@ function getTieWinner(tie) {
 // door de codebase stonden — één plek, altijd met de willekeurige toevoeging
 // voor het geval er meerdere records binnen dezelfde milliseconde ontstaan
 // (bijv. bij bulk-imports).
+// Geeft een geschikte peildatum voor "wat was actueel tijdens dit seizoen" —
+// bij een reeds afgelopen seizoen het einde ervan, bij het lopende (of nog
+// niet begonnen) seizoen gewoon vandaag. Gebruikt bij coach-rollen en het
+// dashboard, zodat een oud seizoen bekijken niet per ongeluk de HUIDIGE
+// (niet die-van-toen) rol/status laat zien.
+function getSeasonRefDate(season) {
+  const today = new Date();
+  if (!season) return today;
+  const range = getSeasonDateRange(season);
+  if (!range) return today;
+  const end = new Date(range.end);
+  return end < today ? end : today;
+}
+
 function genId(prefix) {
   return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
 }

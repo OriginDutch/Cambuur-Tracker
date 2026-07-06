@@ -31,13 +31,8 @@ function renderSeasonsManage(){
   const el=document.getElementById('seasons-manage-list');if(!el)return;
   if(S.seasons.length===0){el.innerHTML='<p class="text-muted" style="font-size:12px;padding:8px 0">Nog geen seizoenen.</p>';return;}
   el.innerHTML=S.seasons.map((s,i)=>`
-    <div class="settings-row" style="gap:6px;padding:8px 0">
-      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
-        <button class="icon-btn" style="height:22px;padding:0 5px" onclick="moveSeasonTop('${s.id}')" ${i===0?'disabled':''} title="Helemaal omhoog"><span style="display:flex;flex-direction:column;align-items:center;line-height:0.55;font-size:11px">▲▲</span></button>
-        <button class="icon-btn" style="height:22px;padding:0 5px;font-size:11px" onclick="moveSeasonUp('${s.id}')" ${i===0?'disabled':''} title="Omhoog">▲</button>
-        <button class="icon-btn" style="height:22px;padding:0 5px;font-size:11px" onclick="moveSeasonDown('${s.id}')" ${i===S.seasons.length-1?'disabled':''} title="Omlaag">▼</button>
-        <button class="icon-btn" style="height:22px;padding:0 5px" onclick="moveSeasonBottom('${s.id}')" ${i===S.seasons.length-1?'disabled':''} title="Helemaal omlaag"><span style="display:flex;flex-direction:column;align-items:center;line-height:0.55;font-size:11px">▼▼</span></button>
-      </div>
+    <div class="settings-row" draggable="true" ondragstart="seasonDragStart(${i})" ondragover="seasonDragOver(event)" ondrop="seasonDrop(${i})" style="gap:6px;padding:8px 0;cursor:grab">
+      <span style="color:var(--text-muted);user-select:none;flex-shrink:0" title="Sleep om te herordenen">⠿</span>
       <div style="flex:1;min-width:0">
         <div class="settings-row-label" style="${s.hidden?'opacity:0.45':''}">${s.name}</div>
         <div class="settings-row-desc">${s.year}${s.hidden?' · verborgen in zijbalk':''}</div>
@@ -120,7 +115,26 @@ async function saveSeason(){
 // CLUBS
 // ══════════════════════════════
 function renderClubsPage(){renderClubsTable();renderStadiumsTable();renderDivisionsSettings();}
-if (!window._clubSort) window._clubSort = {key:'name', dir:1};
+let _clubSortPrefApplied = false;
+function applyClubSortPrefOnce() {
+  if (_clubSortPrefApplied) return;
+  _clubSortPrefApplied = true;
+  window._clubSort = getPrefs().clubSortState;
+}
+let _divisionSettingsDragIdx = null;
+function divisionSettingsDragStart(idx) { _divisionSettingsDragIdx = idx; }
+function divisionSettingsDragOver(ev) { ev.preventDefault(); }
+async function divisionSettingsDrop(idx) {
+  if (_divisionSettingsDragIdx === null || _divisionSettingsDragIdx === idx) return;
+  const divisions = [...(getPrefs().divisions||[])];
+  const [moved] = divisions.splice(_divisionSettingsDragIdx, 1);
+  divisions.splice(idx, 0, moved);
+  await savePref('divisions', divisions);
+  _divisionSettingsDragIdx = null;
+  renderDivisionsSettings();
+  renderClubsTable();
+}
+
 function renderDivisionsSettings() {
   const el = document.getElementById('divisions-settings-list');
   if (!el) return;
@@ -134,11 +148,11 @@ function renderDivisionsSettings() {
     else unknownCount++;
   });
   el.innerHTML = divisions.map((d,i) => `
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg-tertiary);border-radius:var(--radius-sm);margin-bottom:4px">
+    <div draggable="true" ondragstart="divisionSettingsDragStart(${i})" ondragover="divisionSettingsDragOver(event)" ondrop="divisionSettingsDrop(${i})"
+      style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg-tertiary);border-radius:var(--radius-sm);margin-bottom:4px;cursor:grab">
+      <span style="color:var(--text-muted);user-select:none" title="Sleep om te herordenen">⠿</span>
       <span style="flex:1;font-size:13px">${d}</span>
       <span style="font-size:11px;color:var(--text-muted)">${counts[d]} club${counts[d]!==1?'s':''}</span>
-      <button class="icon-btn" style="height:24px" onclick="moveDivision(${i},-1)" ${i===0?'disabled':''}>▲</button>
-      <button class="icon-btn" style="height:24px" onclick="moveDivision(${i},1)" ${i===divisions.length-1?'disabled':''}>▼</button>
       <button class="icon-btn danger" style="height:24px" onclick="removeDivision(${i})">✕</button>
     </div>`).join('') + `
     <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin-top:2px;font-size:11px;color:var(--text-muted)">
@@ -173,23 +187,15 @@ async function removeDivision(idx) {
   renderClubsTable();
 }
 
-async function moveDivision(idx, dir) {
-  const divisions = [...(getPrefs().divisions||[])];
-  const newIdx = idx + dir;
-  if (newIdx < 0 || newIdx >= divisions.length) return;
-  [divisions[idx], divisions[newIdx]] = [divisions[newIdx], divisions[idx]];
-  await savePref('divisions', divisions);
-  renderDivisionsSettings();
-  renderClubsTable();
-}
-
 function setClubSort(key){
   if (window._clubSort && window._clubSort.key===key) window._clubSort.dir*=-1;
   else window._clubSort = {key, dir:1};
+  savePref('clubSortState', window._clubSort);
   renderClubsTable();
 }
 function setClubSortManual(){
   window._clubSort = null;
+  savePref('clubSortState', null);
   renderClubsTable();
 }
 
@@ -257,6 +263,7 @@ async function clubDrop(groupKey, idx){
 }
 
 function renderClubsTable(){
+  applyClubSortPrefOnce();
   const wrap=document.getElementById('clubs-table-wrap');
   const q=(document.getElementById('club-search')?.value||'').toLowerCase();
   const list=S.clubs.filter(c=>!q||c.name.toLowerCase().includes(q)||(c.city||'').toLowerCase().includes(q));
@@ -415,6 +422,21 @@ function renderCompetitionsNav(){
     return`<div class="nav-item" data-page="competition-detail" data-comp="${c.id}" onclick="navigateToComp('${c.id}')" style="padding-left:32px;font-size:12px">
       <span class="nav-icon">${icon}</span><span class="nav-label">${c.name}</span></div>`;}).join('');
 }
+let _compDragIdx = null;
+function compDragStart(idx) { _compDragIdx = idx; }
+function compDragOver(ev) { ev.preventDefault(); }
+async function compDrop(idx) {
+  if (_compDragIdx === null || _compDragIdx === idx) return;
+  const comps = S.competitions.filter(c=>c.seasonId===S.currentSeason);
+  const [moved] = comps.splice(_compDragIdx, 1);
+  comps.splice(idx, 0, moved);
+  for (let i=0;i<comps.length;i++) { comps[i].sortOrder = i; await dbPut('competitions', comps[i]); }
+  S.competitions.sort((a,b)=>(a.sortOrder??Infinity)-(b.sortOrder??Infinity));
+  _compDragIdx = null;
+  renderCompetitionsPage();
+  renderCompetitionsNav();
+}
+
 function renderCompetitionsPage(){
   const list=document.getElementById('competitions-list');
   if(!S.currentSeason){list.innerHTML='<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-title">Geen actief seizoen</div><div class="empty-state-desc">Maak eerst een seizoen aan via Instellingen.</div></div>';return;}
@@ -423,11 +445,8 @@ function renderCompetitionsPage(){
   const tl={competitie:'Competitie',beker:'Beker',voorbereiding:'Voorbereiding'};
   const tb={competitie:'badge-competitie',beker:'badge-beker',voorbereiding:'badge-voorbereiding'};
   list.innerHTML=`<table class="data-table"><thead><tr><th>Competitie</th><th>Type</th><th>Clubs</th><th></th></tr></thead><tbody>${
-    comps.map((c,i)=>`<tr><td><div style="display:flex;align-items:center;gap:6px">
-        <div style="display:flex;flex-direction:column;gap:1px">
-          <button class="icon-btn" style="height:18px;padding:0 5px;font-size:9px" onclick="moveComp('${c.id}',-1)" ${i===0?'disabled':''}>▲</button>
-          <button class="icon-btn" style="height:18px;padding:0 5px;font-size:9px" onclick="moveComp('${c.id}',1)" ${i===comps.length-1?'disabled':''}>▼</button>
-        </div>
+    comps.map((c,i)=>`<tr draggable="true" ondragstart="compDragStart(${i})" ondragover="compDragOver(event)" ondrop="compDrop(${i})" style="cursor:grab"><td><div style="display:flex;align-items:center;gap:6px">
+        <span style="color:var(--text-muted);user-select:none" title="Sleep om te herordenen">⠿</span>
         <strong>${c.name}</strong></div></td>
       <td><span class="badge ${tb[c.type]||''}">${tl[c.type]||c.type}</span></td><td>${(c.clubIds||[]).length}</td>
       <td><div class="action-btns"><button class="icon-btn" onclick="navigateToComp('${c.id}')">👁️</button><button class="icon-btn" onclick="openCompModal('${c.id}')">✏️</button><button class="icon-btn danger" onclick="confirmDelete('competition','${c.id}','${c.name}')">🗑️</button></div></td></tr>`).join('')
@@ -521,10 +540,24 @@ function updateCompTypeUI(){
 }
 
 // ── Periodes (periodetitel-berekening) ──
+let _periodRowDragIdx = null;
+function periodRowDragStart(idx) { _periodRowDragIdx = idx; }
+function periodRowDragOver(ev) { ev.preventDefault(); }
+function periodRowDrop(idx) {
+  if (_periodRowDragIdx === null || _periodRowDragIdx === idx) return;
+  const arr = window._compPeriods || [];
+  const [moved] = arr.splice(_periodRowDragIdx, 1);
+  arr.splice(idx, 0, moved);
+  _periodRowDragIdx = null;
+  renderPeriodRows(arr);
+}
+
 function renderPeriodRows(periods) {
   const wrap = document.getElementById('comp-periods-rows');
   wrap.innerHTML = (periods||[]).map((p, i) => `
-    <div style="display:grid;grid-template-columns:1fr 90px 90px 28px;gap:6px;align-items:end">
+    <div draggable="true" ondragstart="periodRowDragStart(${i})" ondragover="periodRowDragOver(event)" ondrop="periodRowDrop(${i})"
+      style="display:grid;grid-template-columns:20px 1fr 90px 90px 28px;gap:6px;align-items:end;cursor:grab">
+      <div style="color:var(--text-muted);padding-bottom:6px;user-select:none" title="Sleep om te herordenen">⠿</div>
       <div>
         <label class="form-label" style="font-size:10px">Naam</label>
         <input class="form-input" style="height:28px;font-size:12px" value="${p.name||''}" placeholder="Periode ${i+1}"
@@ -683,12 +716,26 @@ function copyRankZonesFromPreviousSeason() {
 // ── Puntenaftrek (bv. licentie-overtredingen) ──
 // Puur handmatig, meerdere aftrekken per club mogelijk (net als bij Vitesse
 // 2024/25, die meerdere keren binnen één seizoen punten inleverde).
+let _deductionRowDragIdx = null;
+function deductionRowDragStart(idx) { _deductionRowDragIdx = idx; }
+function deductionRowDragOver(ev) { ev.preventDefault(); }
+function deductionRowDrop(idx) {
+  if (_deductionRowDragIdx === null || _deductionRowDragIdx === idx) return;
+  const arr = window._compDeductions || [];
+  const [moved] = arr.splice(_deductionRowDragIdx, 1);
+  arr.splice(idx, 0, moved);
+  _deductionRowDragIdx = null;
+  renderDeductionRows(arr);
+}
+
 function renderDeductionRows(deductions) {
   const wrap = document.getElementById('comp-deductions-rows');
   const clubIds = [...document.querySelectorAll('#comp-clubs-checkboxes input:checked')].map(cb=>cb.value);
   const clubOpts = clubIds.map(id => S.clubs.find(c=>c.id===id)).filter(Boolean);
   wrap.innerHTML = (deductions||[]).map((d, i) => `
-    <div style="display:grid;grid-template-columns:1fr 70px 1fr 110px 28px;gap:6px;align-items:end">
+    <div draggable="true" ondragstart="deductionRowDragStart(${i})" ondragover="deductionRowDragOver(event)" ondrop="deductionRowDrop(${i})"
+      style="display:grid;grid-template-columns:20px 1fr 70px 1fr 110px 28px;gap:6px;align-items:end;cursor:grab">
+      <div style="color:var(--text-muted);padding-bottom:6px;user-select:none" title="Sleep om te herordenen">⠿</div>
       <div>
         <label class="form-label" style="font-size:10px">Club</label>
         <select class="form-select" style="height:28px;font-size:12px" onchange="window._compDeductions[${i}].clubId=this.value">
@@ -857,6 +904,8 @@ const DEFAULT_PREFS = {
   contractWarnMonths: 6,
   loanWarnMonths: 3,
   divisions: [],
+  clubSortState: {key:'name', dir:1}, // null = handmatige sleepvolgorde, anders {key,dir}
+  coachArchiefOpen: false,
 };
 
 function getPrefs() {
@@ -939,52 +988,16 @@ function toggleInlineSeasonForm() {
 
 // ── Seizoenen herordenen ──
 
-async function moveComp(id, dir) {
-  const comps = S.competitions.filter(c=>c.seasonId===S.currentSeason);
-  const idx = comps.findIndex(c=>c.id===id);
-  const newIdx = idx + dir;
-  if (newIdx < 0 || newIdx >= comps.length) return;
-  // Swap in S.competitions
-  const ai = S.competitions.indexOf(comps[idx]);
-  const bi = S.competitions.indexOf(comps[newIdx]);
-  [S.competitions[ai], S.competitions[bi]] = [S.competitions[bi], S.competitions[ai]];
-  // Save order via sortOrder field
-  S.competitions.forEach((c,i) => c.sortOrder = i);
-  for (const c of S.competitions) await dbPut('competitions', c);
-  renderCompetitionsPage();
-  renderCompetitionsNav();
-}
-
-async function moveSeasonUp(id) {
-  const idx = S.seasons.findIndex(s=>s.id===id);
-  if (idx <= 0) return;
-  [S.seasons[idx-1], S.seasons[idx]] = [S.seasons[idx], S.seasons[idx-1]];
+let _seasonDragIdx = null;
+function seasonDragStart(idx) { _seasonDragIdx = idx; }
+function seasonDragOver(ev) { ev.preventDefault(); }
+async function seasonDrop(idx) {
+  if (_seasonDragIdx === null || _seasonDragIdx === idx) return;
+  const [moved] = S.seasons.splice(_seasonDragIdx, 1);
+  S.seasons.splice(idx, 0, moved);
   S.seasons.forEach((s,i) => s.sortOrder = i);
   for (const s of S.seasons) await dbPut('seasons', s);
-  renderSeasonsManage(); renderSeasonSelect();
-}
-async function moveSeasonDown(id) {
-  const idx = S.seasons.findIndex(s=>s.id===id);
-  if (idx < 0 || idx >= S.seasons.length-1) return;
-  [S.seasons[idx], S.seasons[idx+1]] = [S.seasons[idx+1], S.seasons[idx]];
-  S.seasons.forEach((s,i) => s.sortOrder = i);
-  for (const s of S.seasons) await dbPut('seasons', s);
-  renderSeasonsManage(); renderSeasonSelect();
-}
-async function moveSeasonTop(id) {
-  const idx = S.seasons.findIndex(s=>s.id===id);
-  if (idx <= 0) return;
-  S.seasons.unshift(S.seasons.splice(idx, 1)[0]);
-  S.seasons.forEach((s,i) => s.sortOrder = i);
-  for (const s of S.seasons) await dbPut('seasons', s);
-  renderSeasonsManage(); renderSeasonSelect();
-}
-async function moveSeasonBottom(id) {
-  const idx = S.seasons.findIndex(s=>s.id===id);
-  if (idx < 0 || idx >= S.seasons.length-1) return;
-  S.seasons.push(S.seasons.splice(idx, 1)[0]);
-  S.seasons.forEach((s,i) => s.sortOrder = i);
-  for (const s of S.seasons) await dbPut('seasons', s);
+  _seasonDragIdx = null;
   renderSeasonsManage(); renderSeasonSelect();
 }
 async function toggleSeasonVisible(id) {

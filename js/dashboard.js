@@ -40,12 +40,13 @@ function renderDashboard(){
 
   // Coach samenvatting huidig seizoen
   const currentCoach = (() => {
-    const today = new Date().toISOString().split('T')[0];
+    const seasonObj = S.seasons.find(s=>s.id===S.currentSeason);
+    const refDate = getSeasonRefDate(seasonObj).toISOString().split('T')[0];
     for (const coach of (S.coaches||[])) {
       const active = (coach.appointments||[]).find(a => {
         const from = a.from||'1900-01-01';
         const to = a.to||'2099-01-01';
-        return today >= from && today <= to && a.role === 'Hoofdtrainer';
+        return refDate >= from && refDate <= to && a.role === 'Hoofdtrainer';
       });
       if (active) return coach;
     }
