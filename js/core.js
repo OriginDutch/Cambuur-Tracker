@@ -53,6 +53,7 @@ async function loadAll(){
 async function init(){
   await initDB();await loadAll();
   applyTheme(S.theme);
+  applyClubBranding();
   document.getElementById('dark-mode-toggle').checked=S.theme==='dark';
   document.getElementById('lang-select').value=S.lang;
   if (!S.prefs) S.prefs = {};

@@ -115,7 +115,7 @@ function renderSeizoensverslag(seasonId) {
 
     <div style="margin-bottom:20px">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:28px">📋 Seizoensverslag</div>
-      <div style="font-size:16px;color:var(--cambuur-geel);font-weight:700">${cam.name} — ${season.name}</div>
+      <div style="font-size:16px;color:var(--accent-primary);font-weight:700">${cam.name} — ${season.name}</div>
     </div>
 
     <!-- Eindstand -->
@@ -127,7 +127,7 @@ function renderSeizoensverslag(seasonId) {
         <div><div style="font-size:22px;font-weight:800;color:var(--draw)">${d}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Gelijk</div></div>
         <div><div style="font-size:22px;font-weight:800;color:var(--loss)">${l}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Verlies</div></div>
         <div><div style="font-size:22px;font-weight:800;color:${gf-ga>0?'var(--win)':gf-ga<0?'var(--loss)':'var(--text-primary)'}">${gf}-${ga}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Doelsaldo</div></div>
-        <div><div style="font-size:22px;font-weight:800;color:var(--cambuur-geel)">${ppg}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Punten/wedstrijd</div></div>
+        <div><div style="font-size:22px;font-weight:800;color:var(--accent-primary)">${ppg}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Punten/wedstrijd</div></div>
       </div>
       <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);font-size:12px;color:var(--text-muted)">
         ${pts} punten · ${cs} clean sheets
@@ -182,7 +182,7 @@ function renderSeizoensverslag(seasonId) {
         ].map(x=>`<div style="text-align:center;background:var(--bg-tertiary);border-radius:var(--radius-sm);padding:10px;cursor:${x.p?'pointer':'default'}" ${x.p?`onclick="navigateToPlayer('${x.p.id}')"`:''}>
           <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">${x.label}</div>
           <div style="font-weight:700;font-size:13px">${playerLine(x.p)}</div>
-          <div style="font-size:11px;color:var(--cambuur-geel)">${x.val}</div>
+          <div style="font-size:11px;color:var(--accent-primary)">${x.val}</div>
         </div>`).join('')}
       </div>
       <div style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);font-size:12px;color:var(--text-muted)">

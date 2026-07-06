@@ -128,7 +128,7 @@ function renderKnockoutSummary(comp, compMatches) {
         <span>${row.clubs.map(clubName).join(', ')}</span>
       </div>`).join('')}
     </div>
-    ${winner?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);text-align:center;font-size:14px;font-weight:800;color:var(--cambuur-geel)">🏆 Winnaar: ${clubName(winner)}</div>`:''}
+    ${winner?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);text-align:center;font-size:14px;font-weight:800;color:var(--accent-primary)">🏆 Winnaar: ${clubName(winner)}</div>`:''}
   </div>`;
 }
 
@@ -177,7 +177,7 @@ function renderKnockoutTie(tie, comp) {
     }
   }
 
-  return `<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:8px;${isCamTie?'border-color:var(--cambuur-geel)':''}">
+  return `<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:8px;${isCamTie?'border-color:var(--accent-primary)':''}">
     <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px;padding:0 4px">
       <span style="${winner===clubA?'color:var(--win)':winner?'color:var(--text-muted);font-weight:400':''}">${winner===clubA?'✓ ':''}${clubName(clubA)}</span>
       <span style="color:var(--text-muted);font-weight:400;font-size:10px">${tie.twoLegged?'heen/uit':'vs'}</span>
@@ -270,12 +270,12 @@ function renderMatchRow(m, comp) {
 
   return `<div class="match-row ${isCam?'cambuur-match':''} ${isRival&&isCam?'rival-match':''}"
     data-match-id="${m.id}"
-    style="${isRival&&isCam?'border-left:2px solid var(--heerenveen-rood)':''}"
+    style="${isRival&&isCam?'border-left:2px solid var(--rival-accent)':''}"
     onclick="navigateToMatch('${m.id}')">
     <div class="match-date">${dateStr}${m.time&&!m.played?' '+m.time:''}</div>
-    <div class="match-home" style="${isCam&&m.homeClubId===cam?.id?'color:var(--cambuur-geel)':''}">${homeName}</div>
+    <div class="match-home" style="${isCam&&m.homeClubId===cam?.id?'color:var(--accent-primary)':''}">${homeName}</div>
     ${scoreHtml}
-    <div class="match-away" style="${isCam&&m.awayClubId===cam?.id?'color:var(--cambuur-geel)':''}">${awayName}</div>
+    <div class="match-away" style="${isCam&&m.awayClubId===cam?.id?'color:var(--accent-primary)':''}">${awayName}</div>
     <div class="match-actions" style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
       ${missingDot}
       <button class="icon-btn danger" style="height:26px;padding:2px 6px;font-size:11px"
@@ -420,7 +420,7 @@ function renderLeagueTable(comp, clubs, compMatches) {
       const wonPeriods = periodWinners[c.id] || [];
       const zone = zoneForClub(c.id, pos, wonPeriods.length > 0);
       const periodBadge = wonPeriods.length
-        ? ` <span style="font-size:10px;color:var(--cambuur-geel)" title="Periodetitel: ${wonPeriods.join(', ')}">🏆${wonPeriods.length>1?'×'+wonPeriods.length:''}</span>`
+        ? ` <span style="font-size:10px;color:var(--accent-primary)" title="Periodetitel: ${wonPeriods.join(', ')}">🏆${wonPeriods.length>1?'×'+wonPeriods.length:''}</span>`
         : '';
       const cupBadge = c.id === cupWinnerId
         ? ` <span style="font-size:10px" title="Bekerwinnaar dit seizoen">🛡️</span>`
@@ -428,7 +428,7 @@ function renderLeagueTable(comp, clubs, compMatches) {
       const excludedBadge = isExcluded(c.id)
         ? ` <span style="font-size:10px;color:var(--text-muted)" title="Uitgesloten van promotie/degradatie">🚫</span>`
         : '';
-      return `<tr style="${c.isOwn?'background:rgba(245,197,0,0.07);font-weight:600':''}${c.highlight==='rivaal'?';border-left:2px solid var(--heerenveen-rood)':''}">
+      return `<tr style="${c.isOwn?'background:rgba(245,197,0,0.07);font-weight:600':''}${c.highlight==='rivaal'?';border-left:2px solid var(--rival-accent)':''}">
         <td style="width:6px;padding:0;${zone?'background:'+zone.color:''}" title="${zone?.label||''}"></td>
         <td class="num text-muted">${pos}</td>
         <td>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}${cupBadge}${excludedBadge}</td>
@@ -487,10 +487,10 @@ function renderPeriodStandings(comp, clubs, compMatches) {
             <span style="font-weight:700;font-size:12px">${period.name}</span>
             <span style="font-size:10px;color:var(--text-muted)">${played}/${total}${complete?' ✓':''}</span>
           </div>
-          ${standings.filter(c=>c.g>0).slice(0,5).map((c,i)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;${i===0?'font-weight:700;color:var(--cambuur-geel)':''}">
+          ${standings.filter(c=>c.g>0).slice(0,5).map((c,i)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;${i===0?'font-weight:700;color:var(--accent-primary)':''}">
             <span>${i+1}. ${c.name}</span><span>${c.pts} pt</span>
           </div>`).join('') || '<div style="font-size:11px;color:var(--text-muted)">Nog geen wedstrijden</div>'}
-          ${complete&&leader?`<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border-light);font-size:11px;color:var(--cambuur-geel);font-weight:700">🏆 ${leader.name}</div>`:''}
+          ${complete&&leader?`<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border-light);font-size:11px;color:var(--accent-primary);font-weight:700">🏆 ${leader.name}</div>`:''}
         </div>`;
       }).join('')}
     </div>

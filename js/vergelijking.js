@@ -2,6 +2,15 @@
 // VERGELIJKING — Seizoen, Transfer & Speler
 // ══════════════════════════════════════════════════════
 
+// Navigeert direct naar de Clubs-tab van Vergelijking met een specifieke club
+// al geselecteerd — hergebruikt door het Rivaliteiten-dashboard, zodat er
+// geen tweede versie van dezelfde wedstrijdlijst/tabel nodig is.
+function navigateToClubComparison(clubId) {
+  window._vergTab = 'clubs';
+  window._vergClub = clubId;
+  navigate('vergelijking');
+}
+
 function renderVergelijking() {
   const el = document.getElementById('vergelijking-content');
   if (!el) return;
@@ -206,7 +215,7 @@ function renderVergSpeler(el, players) {
       {label:'Wedstrijden',   k:'appearances'},
       {label:'Starts',        k:'starts'},
       {label:'Minuten',       k:'minutesPlayed'},
-      {label:'Goals',         k:'goals',   color:'var(--cambuur-geel)'},
+      {label:'Goals',         k:'goals',   color:'var(--accent-primary)'},
       {label:'Assists',       k:'assists'},
       {label:'Gele kaarten',  k:'yellowCards', lower:true},
       {label:'Rode kaarten',  k:'redCards',    lower:true, color:'var(--loss)'},
@@ -220,7 +229,7 @@ function renderVergSpeler(el, players) {
         <!-- Player headers -->
         <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
           <div style="text-align:center;cursor:pointer" onclick="navigateToPlayer('${p1.id}')">
-            <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--cambuur-geel);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:var(--cambuur-blauw)">
+            <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--accent-primary);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:var(--accent-secondary)">
               ${p1.photo?`<img src="${p1.photo}" style="width:100%;height:100%;object-fit:cover">`:`${initials(p1.firstname||'',p1.lastname||'')}`}
             </div>
             <div style="font-weight:700;font-size:14px">${p1.firstname?p1.firstname[0]+'. ':''}${p1.lastname}</div>
@@ -228,7 +237,7 @@ function renderVergSpeler(el, players) {
           </div>
           <div style="font-size:18px;font-weight:800;color:var(--text-muted)">VS</div>
           <div style="text-align:center;cursor:pointer" onclick="navigateToPlayer('${p2.id}')">
-            <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--cambuur-geel);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:var(--cambuur-blauw)">
+            <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--accent-primary);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:var(--accent-secondary)">
               ${p2.photo?`<img src="${p2.photo}" style="width:100%;height:100%;object-fit:cover">`:`${initials(p2.firstname||'',p2.lastname||'')}`}
             </div>
             <div style="font-weight:700;font-size:14px">${p2.firstname?p2.firstname[0]+'. ':''}${p2.lastname}</div>
@@ -244,7 +253,7 @@ function renderVergSpeler(el, players) {
           const w2 = Math.round(v2/max*100);
           const better1 = m.lower ? v1<=v2 : v1>=v2;
           const better2 = m.lower ? v2<=v1 : v2>=v1;
-          const barColor = m.color||'var(--cambuur-geel)';
+          const barColor = m.color||'var(--accent-primary)';
           return `<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-light)">
             <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
               <div style="text-align:right">
@@ -313,9 +322,9 @@ function renderVergClubs(el, cam) {
 
       recordHtml = `
         <div class="card" style="margin-top:16px;margin-bottom:16px">
-          <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:16px;padding-bottom:16px;border-top:${club.highlight==='rivaal'?'3px solid var(--heerenveen-rood)':'none'}">
+          <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:16px;padding-bottom:16px;border-top:${club.highlight==='rivaal'?'3px solid var(--rival-accent)':'none'}">
             <div style="text-align:center">
-              <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--cambuur-geel)">SC Cambuur</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--accent-primary)">${cam?.name||'Eigen club'}</div>
             </div>
             <div style="text-align:center;font-size:13px;color:var(--text-muted)">all-time</div>
             <div style="text-align:center">
@@ -329,7 +338,7 @@ function renderVergClubs(el, cam) {
             <div><div style="font-size:20px;font-weight:800;color:var(--draw)">${d}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Gelijk</div></div>
             <div><div style="font-size:20px;font-weight:800;color:var(--loss)">${l}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Verlies</div></div>
             <div><div style="font-size:20px;font-weight:800;color:${gf-ga>0?'var(--win)':gf-ga<0?'var(--loss)':'var(--text-primary)'}">${gf}-${ga}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Doelsaldo</div></div>
-            <div><div style="font-size:20px;font-weight:800;color:var(--cambuur-geel)">${winPct}%</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Winratio</div></div>
+            <div><div style="font-size:20px;font-weight:800;color:var(--accent-primary)">${winPct}%</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Winratio</div></div>
           </div>
         </div>
 
@@ -349,9 +358,9 @@ function renderVergClubs(el, cam) {
               return `<tr style="cursor:pointer" onclick="navigateToMatch('${m.id}')">
                 <td style="font-size:12px;color:var(--text-muted)">${season?.name||'—'}</td>
                 <td style="font-size:12px">${dateStr}</td>
-                <td style="${isCamHome?'font-weight:700;color:var(--cambuur-geel)':''}">${homeClub?.name||m.homeName||'?'}</td>
+                <td style="${isCamHome?'font-weight:700;color:var(--accent-primary)':''}">${homeClub?.name||m.homeName||'?'}</td>
                 <td class="num" style="font-weight:700;color:${resultColor}">${m.homeScore}-${m.awayScore}</td>
-                <td style="${!isCamHome?'font-weight:700;color:var(--cambuur-geel)':''}">${awayClub?.name||m.awayName||'?'}</td>
+                <td style="${!isCamHome?'font-weight:700;color:var(--accent-primary)':''}">${awayClub?.name||m.awayName||'?'}</td>
               </tr>`;
             }).join('')}</tbody>
           </table>

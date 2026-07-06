@@ -288,7 +288,7 @@ function renderClubsTable(){
         ? `draggable="true" ondragstart="clubDragStart('${groupKey}',${myDragIdx})" ondragover="clubDragOver(event)" ondrop="clubDrop('${groupKey}',${myDragIdx})"`
         : '';
       const ownBg = c.isOwnClub ? 'background:rgba(232,124,42,0.12);' : '';
-      const rivalBorder = c.highlight==='rivaal'?'border-left:2px solid var(--heerenveen-rood);':c.highlight==='interessant'?'border-left:2px solid var(--interessant);':'';
+      const rivalBorder = c.highlight==='rivaal'?'border-left:2px solid var(--rival-accent);':c.highlight==='interessant'?'border-left:2px solid var(--interessant);':'';
       return `<tr ${dragAttrs} style="${ownBg}${rivalBorder}${canDrag?'cursor:grab;':''}">
         <td>${canDrag?'<span style="color:var(--text-muted);margin-right:4px" title="Sleep om te herordenen">⠿</span>':''}<strong>${c.name}</strong>${c.isOwnClub?' <span class="badge badge-active" style="font-size:9px">Eigen</span>':''}</td>
         <td><span class="tag">${c.abbr||'—'}</span></td>
@@ -308,7 +308,7 @@ function renderClubsTable(){
   wrap.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
       <div style="font-size:11px;color:var(--text-muted)">${list.length} club${list.length!==1?'s':''}${q?' gevonden':''}</div>
-      <button class="btn btn-ghost" style="font-size:11px;${!cs?'color:var(--cambuur-geel);font-weight:700':''}" onclick="setClubSortManual()" title="Terug naar je eigen sleepvolgorde">🔀 Handmatig${!cs?' ✓':''}</button>
+      <button class="btn btn-ghost" style="font-size:11px;${!cs?'color:var(--accent-primary);font-weight:700':''}" onclick="setClubSortManual()" title="Terug naar je eigen sleepvolgorde">🔀 Handmatig${!cs?' ✓':''}</button>
     </div>
     <table class="data-table"><thead><tr>${th('name','Club')}${th('abbr','Afk.')}${th('city','Stad')}${th('stadium','Stadion')}${th('capacity','Capaciteit','70px')}<th>Divisie</th>${th('highlight','Markering')}<th>Notitie</th><th></th></tr></thead><tbody>
     ${groups.map(g=>groupHeader(g.label+' ('+g.clubs.length+')')+rowsHtml(g.key,g.clubs)).join('')}
@@ -345,7 +345,7 @@ async function saveClub(){
   const club={id,name,abbr:document.getElementById('club-abbr').value.trim().toUpperCase(),stadiumId:document.getElementById('club-stadium').value||null,city:document.getElementById('club-city').value.trim(),highlight:document.getElementById('club-highlight').value,note:document.getElementById('club-note').value.trim(),isOwnClub:existingClub?.isOwnClub||false,promotionExcluded:document.getElementById('club-promotion-excluded').checked,divisionHistory:window._clubDivisions||[],sortOrder:existingClub?.sortOrder};
   await dbPut('clubs',club);
   if(existing){const i=S.clubs.findIndex(c=>c.id===existing);if(i>=0)S.clubs[i]=club;}else S.clubs.push(club);
-  renderClubsTable();renderCompetitionsNav();renderCompetitionsPage();renderDivisionsSettings();closeModal('modal-club');showToast('Club opgeslagen: '+name,'success');
+  renderClubsTable();renderCompetitionsNav();renderCompetitionsPage();renderDivisionsSettings();applyClubBranding();closeModal('modal-club');showToast('Club opgeslagen: '+name,'success');
 }
 function populateStadSel(selId){
   const sel=document.getElementById(selId);const cur=sel.value;
@@ -462,14 +462,14 @@ function openCompModal(editId){
   const cbWrap=document.getElementById('comp-clubs-checkboxes');
   cbWrap.innerHTML=!S.clubs.length?'<p class="text-muted" style="font-size:11px;padding:6px">Nog geen clubs.</p>':
     S.clubs.map(c=>`<label style="display:flex;align-items:center;gap:6px;padding:5px 6px;cursor:pointer;border-radius:3px;font-size:12px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
-      <input type="checkbox" value="${c.id}" ${selIds.includes(c.id)?'checked':''} style="accent-color:var(--cambuur-geel)">
+      <input type="checkbox" value="${c.id}" ${selIds.includes(c.id)?'checked':''} style="accent-color:var(--accent-primary)">
       <span>${c.name}</span>${c.isOwnClub?'<span class="badge badge-active" style="font-size:9px">Eigen</span>':''}${c.highlight==='rivaal'?'<span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}</label>`).join('');
 
   const divisions = getPrefs().divisions || [];
   const divWrap = document.getElementById('comp-divisions-checkboxes');
   divWrap.innerHTML = !divisions.length ? '<p class="text-muted" style="font-size:11px">Nog geen divisies ingesteld (bij Clubs → Divisies).</p>' :
     divisions.map(d=>`<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer">
-      <input type="checkbox" class="comp-division-cb" value="${d}" ${linkedDivisions.includes(d)?'checked':''} style="accent-color:var(--cambuur-geel)">
+      <input type="checkbox" class="comp-division-cb" value="${d}" ${linkedDivisions.includes(d)?'checked':''} style="accent-color:var(--accent-primary)">
       <span>${d}</span></label>`).join('');
 
   if(editId){const c=editComp;if(!c)return;
@@ -677,11 +677,11 @@ function renderRankZoneRows(zones) {
       <button class="icon-btn danger" style="height:28px" onclick="removeRankZoneRow(${i})">✕</button>
     </div>
     <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-bottom:2px;margin-left:42px;cursor:pointer">
-      <input type="checkbox" ${z.linkPeriodWinners?'checked':''} onchange="window._compRankZones[${i}].linkPeriodWinners=this.checked" style="accent-color:var(--cambuur-geel)">
+      <input type="checkbox" ${z.linkPeriodWinners?'checked':''} onchange="window._compRankZones[${i}].linkPeriodWinners=this.checked" style="accent-color:var(--accent-primary)">
       Geldt ook voor periodetitel-winnaars, ongeacht positie
     </label>
     <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-bottom:8px;margin-left:42px;cursor:pointer">
-      <input type="checkbox" ${z.excludeIneligible?'checked':''} onchange="window._compRankZones[${i}].excludeIneligible=this.checked" style="accent-color:var(--cambuur-geel)">
+      <input type="checkbox" ${z.excludeIneligible?'checked':''} onchange="window._compRankZones[${i}].excludeIneligible=this.checked" style="accent-color:var(--accent-primary)">
       Uitgesloten clubs overslaan voor deze zone
     </label>`).join('');
 }

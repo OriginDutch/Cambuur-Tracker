@@ -340,7 +340,7 @@ function openCoachDetail(id) {
           <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:var(--win)">${totalWins}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Gewonnen</div></div>
           <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:var(--draw)">${totalDraws}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Gelijk</div></div>
           <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:var(--loss)">${totalLosses}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Verloren</div></div>
-          <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:var(--cambuur-geel)">${totalPPG}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">PPG</div></div>
+          <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:var(--accent-primary)">${totalPPG}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">PPG</div></div>
           ${overall.cleanSheets>0?`<div style="text-align:center"><div style="font-size:20px;font-weight:800">${overall.cleanSheets}</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Clean sheets</div></div>`:''}
         </div>`:''}
       </div>
@@ -474,7 +474,7 @@ function renderCoachCareer() {
   el.innerHTML = window._coachCareer.map((e,i) => `
     <div style="display:grid;grid-template-columns:1fr 1fr 80px 80px 28px;gap:6px;align-items:end;margin-bottom:5px">
       <div><label class="form-label" style="font-size:10px">Club</label>
-        <input class="form-input" value="${e.club||''}" style="height:28px;font-size:12px" placeholder="FC Groningen"
+        <input class="form-input" value="${e.club||''}" style="height:28px;font-size:12px" placeholder="Clubnaam"
           oninput="window._coachCareer[${i}].club=this.value"></div>
       <div><label class="form-label" style="font-size:10px">Rol</label>
         <input class="form-input" value="${e.role||''}" style="height:28px;font-size:12px" placeholder="Hoofdtrainer"

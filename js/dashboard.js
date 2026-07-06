@@ -1,3 +1,82 @@
+// ── OP DEZE DAG ──
+// Historisch moment van vandaag (zelfde dag/maand, ander jaar). Geen moment
+// gevonden? Dan trivia over de eerstvolgende tegenstander i.p.v. niets tonen.
+function renderOnThisDayCard(cam) {
+  if (!cam) return '';
+  const today = new Date();
+  const mm = today.getMonth(), dd = today.getDate();
+  const historicMatches = (S.matches||[]).filter(m => {
+    if (!m.played || !m.date || m.homeScore==null) return false;
+    if (!(m.homeClubId===cam.id || m.awayClubId===cam.id)) return false;
+    const d = new Date(m.date);
+    return d.getMonth()===mm && d.getDate()===dd && d.getFullYear()!==today.getFullYear();
+  }).sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  if (historicMatches.length) {
+    const m = historicMatches[0];
+    const yearsAgo = today.getFullYear() - new Date(m.date).getFullYear();
+    const isCamHome = m.homeClubId===cam.id;
+    const opp = S.clubs.find(c=>c.id===(isCamHome?m.awayClubId:m.homeClubId));
+    const cs = isCamHome?m.homeScore:m.awayScore, os = isCamHome?m.awayScore:m.homeScore;
+    const resultWord = cs>os?'won van':cs<os?'verloor van':'speelde gelijk tegen';
+    const resultColor = cs>os?'var(--win)':cs<os?'var(--loss)':'var(--draw)';
+    return `<div class="card mb-12">
+      <div class="card-title">📅 Op deze dag</div>
+      <p style="font-size:13px;line-height:1.6">${yearsAgo} jaar geleden <span style="color:${resultColor};font-weight:600">${resultWord}</span> ${cam.name} van ${opp?.name||'?'} met <strong>${cs}-${os}</strong>${m.round?` (ronde ${m.round})`:''}.</p>
+      <button class="btn btn-ghost" style="font-size:11px;margin-top:2px" onclick="navigateToMatch('${m.id}')">Bekijk wedstrijd →</button>
+    </div>`;
+  }
+
+  // Geen historisch moment — trivia over de eerstvolgende tegenstander
+  const nextMatch = getNextMatch();
+  if (!nextMatch) return '';
+  const oppId = nextMatch.homeClubId===cam.id ? nextMatch.awayClubId : nextMatch.homeClubId;
+  const opp = S.clubs.find(c=>c.id===oppId);
+  if (!opp) return '';
+  const h2h = getHeadToHeadStats(cam.id, opp.id);
+  let triviaLine;
+  if (!h2h.played) {
+    triviaLine = `Nog nooit eerder tegen ${opp.name} gespeeld.`;
+  } else {
+    const lastYear = h2h.lastMeeting?.date ? new Date(h2h.lastMeeting.date).getFullYear() : '?';
+    triviaLine = `${h2h.played}x eerder tegen ${opp.name} gespeeld: ${h2h.w}W ${h2h.d}G ${h2h.l}V (${h2h.gf}-${h2h.ga}). Laatste ontmoeting: ${lastYear}.`;
+  }
+  return `<div class="card mb-12">
+    <div class="card-title">📅 Op deze dag</div>
+    <p style="font-size:13px;line-height:1.6;color:var(--text-secondary)">Geen historisch moment gevonden voor vandaag — maar wel alvast wat trivia over de volgende tegenstander, <strong>${opp.name}</strong>:</p>
+    <p style="font-size:13px;line-height:1.6;margin-top:6px">${triviaLine}</p>
+  </div>`;
+}
+
+// ── MIJLPALEN ──
+// Spelers die dicht bij een rond getal zitten (wedstrijden/goals/assists),
+// puur afgeleid uit bestaande statistieken — geen nieuwe data nodig.
+function renderMilestonesCard() {
+  const thresholds = [10,25,50,100,150,200,250,300,350,400];
+  const milestones = [];
+  (S.players||[]).forEach(p => {
+    const stats = calcPlayerStats(p.id, null, null); // all-time
+    [
+      {key:'appearances', label:'wedstrijden', val:stats.appearances},
+      {key:'goals', label:'goals', val:stats.goals},
+      {key:'assists', label:'assists', val:stats.assists},
+    ].forEach(({label, val}) => {
+      if (!val) return;
+      const next = thresholds.find(t => t > val);
+      if (next && (next - val) <= 5) milestones.push({player:p, label, val, next, remaining: next-val});
+    });
+  });
+  if (!milestones.length) return '';
+  milestones.sort((a,b)=>a.remaining-b.remaining);
+  return `<div class="card mb-12">
+    <div class="card-title">🎯 Naderende mijlpalen</div>
+    ${milestones.slice(0,5).map(m=>`<div style="font-size:13px;padding:4px 0;cursor:pointer" onclick="navigateToPlayer('${m.player.id}')">
+      <strong>${m.player.firstname?m.player.firstname[0]+'. ':''}${m.player.lastname}</strong>
+      <span style="color:var(--text-secondary)"> staat op ${m.val} ${m.label} — nog ${m.remaining} tot ${m.next}.</span>
+    </div>`).join('')}
+  </div>`;
+}
+
 // ── DASHBOARD ──
 function renderDashboard(){
   const el=document.getElementById('dashboard-content');
@@ -106,7 +185,7 @@ function renderDashboard(){
     const prevPos = data.length > 1 ? data[data.length-2].pos : lastPos;
     const trend = lastPos < prevPos ? `↑${prevPos-lastPos}` : lastPos > prevPos ? `↓${lastPos-prevPos}` : '=';
     const trendColor = lastPos < prevPos ? 'var(--win)' : lastPos > prevPos ? 'var(--loss)' : 'var(--text-muted)';
-    const color = lastPos<=3?'var(--win)':lastPos<=8?'var(--cambuur-geel)':'var(--loss)';
+    const color = lastPos<=3?'var(--win)':lastPos<=8?'var(--accent-primary)':'var(--loss)';
 
     const yLabels = [1, Math.round(total/2), total].map(pos => {
       const y = PADT+(pos-1)/(total-1)*innerH;
@@ -165,7 +244,7 @@ function renderDashboard(){
     const comp=S.competitions.find(c=>c.id===nextMatch.competitionId);
     const isPinned=S.pinnedNextMatch===nextMatch.id;
     const opp=hc?.isOwnClub?ac:hc;
-    nextMatchHtml=`<div class="card" style="${isRival?'border-left:3px solid var(--heerenveen-rood)':''}" >
+    nextMatchHtml=`<div class="card" style="${isRival?'border-left:3px solid var(--rival-accent)':''}" >
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
         <span>Volgende wedstrijd${isPinned?' <span style="font-size:10px;color:var(--text-muted)">📌 vastgepind</span>':''}</span>
         <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px" onclick="openPinMatchModal()">📌 Aanwijzen</button>
@@ -173,13 +252,13 @@ function renderDashboard(){
       <div style="text-align:center;padding:8px 0 4px">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${fmtMatchDate(nextMatch)}${nextMatch.time?' · <strong style=color:var(--text-primary)>'+nextMatch.time+'</strong>':''}</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:8px">
-          <span style="font-weight:700;font-size:16px;text-align:right;flex:1;${hc?.isOwnClub?'color:var(--cambuur-geel)':''}">${hn}</span>
+          <span style="font-weight:700;font-size:16px;text-align:right;flex:1;${hc?.isOwnClub?'color:var(--accent-primary)':''}">${hn}</span>
           <span style="background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:var(--text-muted);min-width:60px;text-align:center">${nextMatch.time||'vs'}</span>
-          <span style="font-weight:700;font-size:16px;text-align:left;flex:1;${ac?.isOwnClub?'color:var(--cambuur-geel)':''}">${an}</span>
+          <span style="font-weight:700;font-size:16px;text-align:left;flex:1;${ac?.isOwnClub?'color:var(--accent-primary)':''}">${an}</span>
         </div>
         ${stad?`<div style="font-size:11px;color:var(--text-muted)">📍 ${stad.name}${stad.city?' · '+stad.city:''}</div>`:''}
         ${comp?`<div style="margin-top:6px"><span class="badge badge-${comp.type==='beker'?'beker':comp.type==='playoffs'?'playoffs':comp.type==='voorbereiding'?'voorbereiding':'competitie'}" style="font-size:9px">${comp.name}</span></div>`:''}
-        ${isRival?`<div style="margin-top:6px;font-size:11px;font-weight:700;color:var(--heerenveen-rood)">🔴 DE FRIESE DERBY</div>`:''}
+        ${isRival?`<div style="margin-top:6px;font-size:11px;font-weight:700;color:var(--rival-accent)">🔴 DE FRIESE DERBY</div>`:''}
       </div>
     </div>`;
   } else {
@@ -216,9 +295,9 @@ function renderDashboard(){
       <div style="text-align:center;padding:4px 0">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${fmtMatchDate(lastMatch)}</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:12px">
-          <span style="font-weight:700;font-size:14px;flex:1;text-align:right;${hc?.isOwnClub?'color:var(--cambuur-geel)':''}">${hn}</span>
+          <span style="font-weight:700;font-size:14px;flex:1;text-align:right;${hc?.isOwnClub?'color:var(--accent-primary)':''}">${hn}</span>
           <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:26px;color:${rc}">${lastMatch.homeScore} - ${lastMatch.awayScore}</span>
-          <span style="font-weight:700;font-size:14px;flex:1;text-align:left;${ac?.isOwnClub?'color:var(--cambuur-geel)':''}">${an}</span>
+          <span style="font-weight:700;font-size:14px;flex:1;text-align:left;${ac?.isOwnClub?'color:var(--accent-primary)':''}">${an}</span>
         </div>
         ${scorerHtml?`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${scorerHtml}</div>`:''}
       </div>
@@ -242,7 +321,7 @@ function renderDashboard(){
   el.innerHTML=`
     <div style="margin-bottom:14px;display:flex;align-items:baseline;justify-content:space-between">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:0.5px">
-        ${camName} — <span style="color:var(--cambuur-geel)">${season.name}</span>
+        ${camName} — <span style="color:var(--accent-primary)">${season.name}</span>
       </div>
       ${played.length ? `<button class="btn btn-ghost" style="font-size:12px" onclick="navigateToSeizoensverslag('${season.id}')">📋 Seizoensverslag</button>` : ''}
     </div>
@@ -258,7 +337,7 @@ function renderDashboard(){
         <div class="stat-label">${wins}W ${draws}G ${losses}V</div>
       </div>
       <div class="card" style="text-align:center">
-        <div class="stat-big" style="color:${gf>ga?'var(--win)':gf<ga?'var(--loss)':'var(--cambuur-geel)'}">${gf}-${ga}</div>
+        <div class="stat-big" style="color:${gf>ga?'var(--win)':gf<ga?'var(--loss)':'var(--accent-primary)'}">${gf}-${ga}</div>
         <div class="stat-label">Doelen voor-tegen</div>
       </div>
       <div class="card" style="text-align:center">
@@ -269,6 +348,8 @@ function renderDashboard(){
 
     <!-- Next + Last -->
     <div class="grid-2 mb-12">${nextMatchHtml}${lastMatchHtml}</div>
+    ${renderOnThisDayCard(cam)}
+    ${renderMilestonesCard()}
 
     <!-- Stand grafiek + Coach -->
     ${standGrafiekHtml||coachStats?`<div class="grid-2 mb-12">
@@ -290,7 +371,7 @@ function renderDashboard(){
                 {v:coachStats.wins, l:'Gewonnen', c:'var(--win)'},
                 {v:coachStats.draws, l:'Gelijk', c:'var(--draw)'},
                 {v:coachStats.losses, l:'Verloren', c:'var(--loss)'},
-                {v:coachStats.ppg, l:'PPG', c:'var(--cambuur-geel)'},
+                {v:coachStats.ppg, l:'PPG', c:'var(--accent-primary)'},
               ].map((s,i)=>`<div style="flex:1;text-align:center;padding:8px 4px;border-left:${i>0?'1px solid var(--border)':'none'}">
                 <div style="font-size:18px;font-weight:800;color:${s.c}">${s.v}</div>
                 <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;margin-top:1px">${s.l}</div>
@@ -316,12 +397,12 @@ function renderDashboard(){
               </div>`:''}
               ${coachStats.maxUnbeaten>0?`<div style="display:flex;align-items:center;background:var(--bg-tertiary);padding:5px 10px">
                 <span style="font-size:11px;font-weight:600;color:var(--text-primary);width:20%;flex-shrink:0">🛡 Ongeslagen</span>
-                <span style="font-size:13px;font-weight:800;color:var(--cambuur-geel);width:20%;flex-shrink:0">${coachStats.maxUnbeaten}${coachStats.bestUnbeatStart&&coachStats.bestUnbeatEnd?` <span style="font-size:13px;color:var(--text-muted);font-weight:400">R${coachStats.bestUnbeatStart}–R${coachStats.bestUnbeatEnd}</span>`:''}</span>
+                <span style="font-size:13px;font-weight:800;color:var(--accent-primary);width:20%;flex-shrink:0">${coachStats.maxUnbeaten}${coachStats.bestUnbeatStart&&coachStats.bestUnbeatEnd?` <span style="font-size:13px;color:var(--text-muted);font-weight:400">R${coachStats.bestUnbeatStart}–R${coachStats.bestUnbeatEnd}</span>`:''}</span>
               </div>`:''}
             </div>
           </div>
           <!-- Coach foto -->
-          <div style="flex-shrink:0;width:68px;height:68px;border-radius:50%;overflow:hidden;background:var(--cambuur-geel);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;color:var(--cambuur-blauw)">
+          <div style="flex-shrink:0;width:68px;height:68px;border-radius:50%;overflow:hidden;background:var(--accent-primary);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;color:var(--accent-secondary)">
             ${currentCoach.photo?`<img src="${currentCoach.photo}" style="width:100%;height:100%;object-fit:cover">`:`${(currentCoach.firstname?currentCoach.firstname[0]:'')+(currentCoach.lastname?currentCoach.lastname[0]:'')}`}
           </div>
         </div>
@@ -348,7 +429,7 @@ function renderDashboard(){
                   <div style="font-size:10px;color:var(--text-muted)">${stats[p.id].assists>0?stats[p.id].assists+' assist'+(stats[p.id].assists>1?'s':''):''}</div>
                 </div>
               </div>
-              <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:var(--cambuur-geel)">${stats[p.id].goals}</span>
+              <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:var(--accent-primary)">${stats[p.id].goals}</span>
             </div>`).join('')
           : '<p class="text-muted" style="font-size:12px">Nog geen doelpunten geregistreerd.</p>'}
       </div>
@@ -413,7 +494,7 @@ function renderDashboard(){
           ${byField.map(({field,matches})=>`<details>
             <summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);padding:4px 0">${field.icon} ${matches.length}x ${field.label}</summary>
             <div style="padding:2px 0 6px 22px;display:flex;flex-direction:column;gap:3px">
-              ${matches.map(m=>`<div style="font-size:11px;color:var(--text-muted);cursor:pointer" onclick="navigateToMatch('${m.id}')" onmouseover="this.style.color='var(--cambuur-geel)'" onmouseout="this.style.color='var(--text-muted)'">${fmtShortDate(m.date)} — vs ${oppName(m)}</div>`).join('')}
+              ${matches.map(m=>`<div style="font-size:11px;color:var(--text-muted);cursor:pointer" onclick="navigateToMatch('${m.id}')" onmouseover="this.style.color='var(--accent-primary)'" onmouseout="this.style.color='var(--text-muted)'">${fmtShortDate(m.date)} — vs ${oppName(m)}</div>`).join('')}
             </div>
           </details>`).join('')}
         </div>
@@ -481,7 +562,7 @@ function renderDashboard(){
         <div class="card-title">📊 Seizoensgemiddelden</div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
           <div style="text-align:center;padding:8px 16px;background:var(--bg-tertiary);border-radius:6px">
-            <div style="font-size:28px;font-weight:800;color:var(--cambuur-geel)">${avgPoss}%</div>
+            <div style="font-size:28px;font-weight:800;color:var(--accent-primary)">${avgPoss}%</div>
             <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-top:2px">Gem. balbezit</div>
             <div style="font-size:10px;color:var(--text-muted)">${camMatches.length} wedstrijden</div>
           </div>
@@ -524,7 +605,7 @@ function openPinMatchModal() {
       const isPinned = S.pinnedNextMatch===m.id;
       return `<div class="settings-row" style="cursor:pointer" onclick="setPinnedMatch('${m.id}')">
         <div>
-          <div style="font-weight:600;font-size:13px">${m.homeClubId===cam.id?'<span style=color:var(--cambuur-geel)>Thuis</span>':'Uit'} vs ${opp?.name||m.awayName||m.homeName||'?'}</div>
+          <div style="font-weight:600;font-size:13px">${m.homeClubId===cam.id?'<span style=color:var(--accent-primary)>Thuis</span>':'Uit'} vs ${opp?.name||m.awayName||m.homeName||'?'}</div>
           <div style="font-size:11px;color:var(--text-muted)">${fmtMatchDate(m)} · ${comp?.name||''}</div>
         </div>
         ${isPinned?'<span class="badge badge-active">📌 Huidig</span>':'<span style="font-size:11px;color:var(--text-muted)">→ Kiezen</span>'}

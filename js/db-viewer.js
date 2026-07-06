@@ -86,8 +86,8 @@ async function openDbViewer() {
     tabsEl.innerHTML = DB_STORES.map(s => `
       <div onclick="dbSwitchTable('${s}')" id="dbtab-${s}"
         style="padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;
-          border-bottom:2px solid ${s===_dbCurrentTable?'var(--cambuur-geel)':'transparent'};
-          margin-bottom:-1px;color:${s===_dbCurrentTable?'var(--cambuur-geel)':'var(--text-muted)'};
+          border-bottom:2px solid ${s===_dbCurrentTable?'var(--accent-primary)':'transparent'};
+          margin-bottom:-1px;color:${s===_dbCurrentTable?'var(--accent-primary)':'var(--text-muted)'};
           transition:color 0.15s">
         ${s}
       </div>`).join('');
@@ -107,8 +107,8 @@ function dbSwitchTable(table) {
   DB_STORES.forEach(s => {
     const tab = document.getElementById('dbtab-'+s);
     if (!tab) return;
-    tab.style.borderBottomColor = s===table ? 'var(--cambuur-geel)' : 'transparent';
-    tab.style.color = s===table ? 'var(--cambuur-geel)' : 'var(--text-muted)';
+    tab.style.borderBottomColor = s===table ? 'var(--accent-primary)' : 'transparent';
+    tab.style.color = s===table ? 'var(--accent-primary)' : 'var(--text-muted)';
   });
   // Auto run SELECT for this table
   document.getElementById('db-sql-input').value = `SELECT * FROM "${table}" LIMIT 100`;

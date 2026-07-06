@@ -92,7 +92,7 @@ function renderPlayerPage(id) {
         compRows += `<div style="display:flex;gap:6px;padding:3px 0 3px 10px;border-left:2px solid var(--border-light);font-size:11px;color:var(--text-muted);flex-wrap:wrap">
           <span style="flex:1">${comp.name}</span>
           <span>${cs.appearances}W · ${cs.starts}S · ${cs.minutesPlayed}'</span>
-          ${cs.goals?`<span style="color:var(--cambuur-geel)">⚽${cs.goals}</span>`:''}
+          ${cs.goals?`<span style="color:var(--accent-primary)">⚽${cs.goals}</span>`:''}
           ${cs.assists?`<span>🎯${cs.assists}</span>`:''}
           ${cs.yellowCards?`<span>🟨${cs.yellowCards}</span>`:''}
           ${cs.redCards?`<span style="color:var(--loss)">🟥${cs.redCards}</span>`:''}
@@ -104,7 +104,7 @@ function renderPlayerPage(id) {
       <div style="display:flex;gap:8px;font-size:13px;flex-wrap:wrap;padding-bottom:4px${compRows?';border-bottom:1px solid var(--border-light)':''}">
         <span style="font-weight:600">${ss.appearances}W</span>
         <span style="color:var(--text-muted)">${ss.starts}S · ${ss.minutesPlayed}'</span>
-        ${ss.goals?`<span style="color:var(--cambuur-geel);font-weight:700">⚽ ${ss.goals}</span>`:''}
+        ${ss.goals?`<span style="color:var(--accent-primary);font-weight:700">⚽ ${ss.goals}</span>`:''}
         ${ss.assists?`<span>🎯 ${ss.assists}</span>`:''}
         ${ss.yellowCards?`<span>🟨 ${ss.yellowCards}</span>`:''}
         ${ss.redCards?`<span style="color:var(--loss)">🟥 ${ss.redCards}</span>`:''}
@@ -126,15 +126,15 @@ function renderPlayerPage(id) {
     <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,var(--bg-secondary) 0%,var(--bg-tertiary) 100%)">
       <div style="display:flex;gap:24px;align-items:center">
         <!-- Foto -->
-        <div style="width:110px;height:110px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--cambuur-geel);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:40px;color:var(--cambuur-blauw);box-shadow:0 4px 16px rgba(0,0,0,0.3)">
+        <div style="width:110px;height:110px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--accent-primary);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:40px;color:var(--accent-secondary);box-shadow:0 4px 16px rgba(0,0,0,0.3)">
           ${p.photo?`<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">`:`${initials(p.firstname||'',p.lastname||'')}`}
         </div>
         <!-- Naam + info -->
         <div style="flex:1;min-width:0">
-          ${p.number?`<div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;color:var(--cambuur-geel);letter-spacing:1px">#${p.number}</div>`:''}
+          ${p.number?`<div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;color:var(--accent-primary);letter-spacing:1px">#${p.number}</div>`:''}
           <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:40px;line-height:1;letter-spacing:0.5px">${p.firstname||''} ${p.lastname}</div>
           <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-            ${(p.subpos?.length?p.subpos[0]:p.position)?`<span style="background:var(--cambuur-geel);color:var(--cambuur-blauw);font-size:11px;font-weight:800;padding:2px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:0.5px">${p.subpos?.length?p.subpos[0]:p.position}</span>`:''}
+            ${(p.subpos?.length?p.subpos[0]:p.position)?`<span style="background:var(--accent-primary);color:var(--accent-secondary);font-size:11px;font-weight:800;padding:2px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:0.5px">${p.subpos?.length?p.subpos[0]:p.position}</span>`:''}
             ${p.subpos?.length>1?`<span style="font-size:11px;color:var(--text-muted)">${p.subpos.slice(1).join(' · ')}</span>`:''}
           </div>
           ${p.nationality?`<div style="margin-top:6px;display:flex;align-items:center;gap:8px"><span style="font-size:28px;line-height:1">${flag}</span><span style="font-size:15px;font-weight:700">${p.nationality}</span></div>`:''}
@@ -145,7 +145,7 @@ function renderPlayerPage(id) {
             {val: st.appearances||0, lbl:'Wedstr.', color:'var(--text-primary)'},
             {val: st.starts||0, lbl:'Starts', color:'var(--text-primary)'},
             {val: st.minutesPlayed||0, lbl:'Minuten', color:'var(--text-primary)', suffix:"'"},
-            {val: st.goals||0, lbl:'Goals', color:'var(--cambuur-geel)'},
+            {val: st.goals||0, lbl:'Goals', color:'var(--accent-primary)'},
             {val: st.assists||0, lbl:'Assists', color:'var(--text-primary)'},
             ...(p.position==='Keeper'?[{val:st.cleanSheets||0,lbl:'Clean sheets',color:'var(--win)'}]:[]),
             ...(latestVal?[{val:formatEuro(latestVal),lbl:'Marktwaarde',color:'var(--text-primary)'}]:[]),
@@ -173,7 +173,7 @@ function renderPlayerPage(id) {
             ${(()=>{ const info=getIncomingTransferInfo(p); if(!info) return ''; const label=info.note||(info.type==='huur-in'?'Huur':info.amount?formatEuro(info.amount):'Vrije transfer'); return `<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Herkomst</span><span style="font-weight:600">${label}${info.club?' ('+info.club+')':''}</span></div>`; })()}
             ${attendance!==null?`<div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text-muted)">Aanwezigheid</span>
               <div style="display:flex;align-items:center;gap:6px">
-                <div style="width:60px;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${attendance}%;height:100%;background:var(--cambuur-geel);border-radius:3px"></div></div>
+                <div style="width:60px;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${attendance}%;height:100%;background:var(--accent-primary);border-radius:3px"></div></div>
                 <span style="font-weight:600;font-size:12px">${attendance}%</span>
               </div>
             </div>`:''}
@@ -209,7 +209,7 @@ function renderPlayerPage(id) {
         ${bestSeasonGoals>0||bestSeasonApps>0?`<div class="card" style="margin-bottom:12px">
           <div class="card-title">Persoonlijke records</div>
           <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
-            ${bestSeasonGoals>0?`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Meeste goals (seizoen)</span><span style="font-weight:700;color:var(--cambuur-geel)">⚽ ${bestSeasonGoals} <span style="font-size:11px;color:var(--text-muted);font-weight:400">${bestSeasonLabel}</span></span></div>`:''}
+            ${bestSeasonGoals>0?`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Meeste goals (seizoen)</span><span style="font-weight:700;color:var(--accent-primary)">⚽ ${bestSeasonGoals} <span style="font-size:11px;color:var(--text-muted);font-weight:400">${bestSeasonLabel}</span></span></div>`:''}
             ${bestSeasonApps>0?`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Meeste wedstrijden</span><span style="font-weight:700">${bestSeasonApps}</span></div>`:''}
           </div>
         </div>`:''}
@@ -221,7 +221,7 @@ function renderPlayerPage(id) {
         </div>`:
         p.valueHistory?.length===1?`<div class="card">
           <div class="card-title">Marktwaarde</div>
-          <div style="font-size:24px;font-weight:800;color:var(--cambuur-geel)">${formatEuro(p.valueHistory[0].amount)}</div>
+          <div style="font-size:24px;font-weight:800;color:var(--accent-primary)">${formatEuro(p.valueHistory[0].amount)}</div>
           <div style="font-size:11px;color:var(--text-muted)">Peildatum ${fmtDate(p.valueHistory[0].date)}</div>
         </div>`:''}
       </div>
@@ -288,7 +288,7 @@ function renderPlayerPage(id) {
             ${coachRows.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:12px">
               <div style="flex:1;font-weight:600">${r.coach.firstname?r.coach.firstname+' ':''}${r.coach.lastname}</div>
               <span style="color:var(--text-muted)">${r.matches}W</span>
-              ${r.goals?`<span style="color:var(--cambuur-geel)">⚽${r.goals}</span>`:''}
+              ${r.goals?`<span style="color:var(--accent-primary)">⚽${r.goals}</span>`:''}
               ${r.assists?`<span>🎯${r.assists}</span>`:''}
             </div>`).join('')}
           </div>`;

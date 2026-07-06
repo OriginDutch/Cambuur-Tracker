@@ -516,7 +516,7 @@ function playerCard(p, effStatus) {
           ${numBadge}
           <span style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nameLine}</span>
         </div>
-        <div style="font-size:11px;color:var(--cambuur-geel);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px">${subposLine}</div>
+        <div style="font-size:11px;color:var(--accent-primary);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px">${subposLine}</div>
         <div style="font-size:11px;color:var(--text-secondary);display:flex;gap:6px;margin-bottom:3px">
           ${age ? `<span>${age} jr</span>` : ''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nationality||'—'}</span>
         </div>
@@ -969,7 +969,7 @@ function updateSubposOptions(keepSelected) {
     const hdr = document.createElement('div');
     hdr.style.cssText = 'padding:4px 10px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:var(--bg-secondary);margin-top:4px';
     hdr.textContent = group.group;
-    if (group.group === pos) hdr.style.color = 'var(--cambuur-geel)';
+    if (group.group === pos) hdr.style.color = 'var(--accent-primary)';
     dropdown.appendChild(hdr);
     group.opts.forEach(o => {
       const div = document.createElement('div');
@@ -1067,7 +1067,7 @@ async function checkDepartedPlayers() {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center';
     overlay.innerHTML = `<div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;max-width:460px;width:90%">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;margin-bottom:16px;color:var(--cambuur-geel)">⚠ Vertrek verwerkt</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;margin-bottom:16px;color:var(--accent-primary)">⚠ Vertrek verwerkt</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">De volgende speler(s) zijn automatisch naar het archief verplaatst omdat hun vertrekdatum is bereikt:</p>
       <ul style="font-size:13px;line-height:1.8;color:var(--text-primary);padding-left:18px;margin-bottom:20px">${names}</ul>
       <button class="btn btn-primary" onclick="this.closest('div').parentElement.remove();document.body.style.overflow='';" style="width:100%">Begrepen</button>

@@ -7,7 +7,7 @@ function navigate(page,el){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const tgt=document.getElementById('page-'+page);if(tgt)tgt.classList.add('active');
   if(el)el.classList.add('active');
-  const titles={dashboard:'Dashboard',competitions:'Competities beheren',clubs:'Clubs & Stadions',selectie:'Selectie',statistieken:'Statistieken',vergelijking:'Vergelijking',instellingen:'Instellingen',coaches:'Technische Staf'};
+  const titles={dashboard:'Dashboard',competitions:'Competities beheren',clubs:'Clubs & Stadions',selectie:'Selectie',statistieken:'Statistieken',vergelijking:'Vergelijking',instellingen:'Instellingen',coaches:'Technische Staf',records:'Clubrecords',rivaliteiten:'Rivaliteiten',dagboek:'Wedstrijddagboek'};
   document.getElementById('topbar-title').textContent=titles[page]||page;
   if(page==='clubs')renderClubsPage();
   if(page==='selectie'){
@@ -20,6 +20,9 @@ function navigate(page,el){
   if(page==='competitions')renderCompetitionsPage();
   if(page==='instellingen'){renderInstellingen();}
   if(page==='coaches'){renderCoachesPage();}
+  if(page==='records'){renderRecordsPage();}
+  if(page==='rivaliteiten'){renderRivaliteitenPage();}
+  if(page==='dagboek'){renderDagboekPage();}
 }
 function navigateToComp(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));

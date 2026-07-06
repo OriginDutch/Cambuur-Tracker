@@ -23,7 +23,7 @@ function playerHoverShow(event, id) {
     const flag = typeof natFlag === 'function' ? natFlag(p.nationality) : '';
     pop.innerHTML = `
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
-        <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--cambuur-geel);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;color:var(--cambuur-blauw)">
+        <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--accent-primary);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;color:var(--accent-secondary)">
           ${p.photo?`<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">`:`${initials(p.firstname||'',p.lastname||'')}`}
         </div>
         <div>
@@ -34,7 +34,7 @@ function playerHoverShow(event, id) {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center;border-top:1px solid var(--border-light);padding-top:8px">
         <div><div style="font-size:16px;font-weight:800">${st.appearances||0}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Wedstr.</div></div>
-        <div><div style="font-size:16px;font-weight:800;color:var(--cambuur-geel)">${st.goals||0}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Goals</div></div>
+        <div><div style="font-size:16px;font-weight:800;color:var(--accent-primary)">${st.goals||0}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Goals</div></div>
         <div><div style="font-size:16px;font-weight:800">${st.assists||0}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Assists</div></div>
         ${p.position==='Keeper'?`<div style="grid-column:1/-1"><div style="font-size:13px;font-weight:700">${st.cleanSheets||0}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Clean sheets</div></div>`:''}
       </div>

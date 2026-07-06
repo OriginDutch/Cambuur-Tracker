@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SC Cambuur — Seizoenstracker</title>
+<title>Seizoenstracker</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a1628'/><text x='16' y='23' text-anchor='middle' font-size='18' font-family='Arial Black,sans-serif' font-weight='900' fill='%23F5C500'>SC</text></svg>">
 <link rel="stylesheet" href="css/app.css">
 </head>
@@ -13,8 +13,8 @@
 <div id="setup-overlay">
   <div class="setup-container">
     <div class="setup-logo">
-      <div class="setup-badge">SC</div>
-      <div class="setup-title"><span>Cambuur</span> Tracker</div>
+      <div class="setup-badge" id="setup-badge">⚽</div>
+      <div class="setup-title"><span id="setup-title-club">Club</span> Tracker</div>
       <div class="setup-subtitle">Laten we alles in één keer goed instellen — duurt maar 2 minuten</div>
     </div>
 
@@ -69,8 +69,12 @@
     <!-- STAP 2 -->
     <div class="setup-step-content" id="setup-step-2">
       <div class="setup-card">
-        <div class="setup-card-title">Het stadion van SC Cambuur</div>
-        <div class="setup-card-desc">Dit wordt automatisch ingevuld bij thuiswedstrijden. Je kunt dit later altijd aanpassen.</div>
+        <div class="setup-card-title">Jouw club en stadion</div>
+        <div class="setup-card-desc">De naam van jouw eigen club, en het stadion waar die thuis speelt. Kun je later altijd nog aanpassen.</div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label class="form-label">Clubnaam</label><input class="form-input" id="sw-own-club-name" placeholder="" oninput="swUpdateBrandPreview()"></div>
+          <div class="form-group"><label class="form-label">Afkorting (optioneel)</label><input class="form-input" id="sw-own-club-abbr" placeholder="auto — eerste 3 letters" maxlength="4"></div>
+        </div>
         <div class="form-group"><label class="form-label">Stadiumnaam</label><input class="form-input" id="sw-own-stad-name" placeholder=""></div>
         <div class="form-row cols-2">
           <div class="form-group"><label class="form-label">Stad</label><input class="form-input" id="sw-own-stad-city" placeholder=""></div>
@@ -87,7 +91,7 @@
     <div class="setup-step-content" id="setup-step-3">
       <div class="setup-card">
         <div class="setup-card-title">Tegenstanders toevoegen</div>
-        <div class="setup-card-desc">Vul per rij de clubnaam, afkorting, stad en stadion in. Maak stadions aan in het blok hieronder — ze verschijnen direct in de dropdown. <strong style="color:var(--text-primary)">SC Cambuur staat er al in.</strong></div>
+        <div class="setup-card-desc">Vul per rij de clubnaam, afkorting, stad en stadion in. Maak stadions aan in het blok hieronder — ze verschijnen direct in de dropdown. <strong style="color:var(--text-primary)">Je eigen club staat er al in.</strong></div>
 
         <div style="margin-bottom:14px">
           <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Stadions aanmaken</div>
@@ -154,8 +158,8 @@
 <div class="sidebar-wrap">
   <div id="sidebar">
     <div class="sidebar-header">
-      <div class="club-badge">SC</div>
-      <div class="sidebar-title"><span>Cambuur</span> Tracker</div>
+      <div class="club-badge" id="sidebar-badge">SC</div>
+      <div class="sidebar-title"><span id="sidebar-title-club">Cambuur</span> Tracker</div>
     </div>
     <div class="season-selector">
       <select id="season-select" onchange="switchSeason(this.value)"></select>
@@ -170,6 +174,9 @@
       <div class="nav-item" data-page="statistieken" onclick="navigate('statistieken',this)"><span class="nav-icon">📊</span><span class="nav-label">Statistieken</span></div>
       <div class="nav-item" data-page="vergelijking" onclick="navigate('vergelijking',this)"><span class="nav-icon">⚖️</span><span class="nav-label">Vergelijking</span></div>
       <div class="nav-item" data-page="coaches" onclick="navigate('coaches',this)"><span class="nav-icon">🧑‍💼</span><span class="nav-label">Technische staf</span></div>
+      <div class="nav-item" data-page="records" onclick="navigate('records',this)"><span class="nav-icon">🏆</span><span class="nav-label">Records</span></div>
+      <div class="nav-item" data-page="rivaliteiten" onclick="navigate('rivaliteiten',this)"><span class="nav-icon">🔥</span><span class="nav-label">Rivaliteiten</span></div>
+      <div class="nav-item" data-page="dagboek" onclick="navigate('dagboek',this)"><span class="nav-icon">📔</span><span class="nav-label">Wedstrijddagboek</span></div>
       <div class="nav-section-label">Beheer</div>
       <div class="nav-item" data-page="clubs" onclick="navigate('clubs',this)"><span class="nav-icon">🏟️</span><span class="nav-label">Clubs &amp; Stadions</span></div>
     </nav>
@@ -425,7 +432,7 @@
           <div class="settings-row" style="margin-bottom:8px">
             <div><div class="settings-row-label">Cloudflare Worker URL</div><div class="settings-row-desc">Vul in na setup op cloudflare.com — lost CORS probleem op voor GitHub Pages</div></div>
             <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-              <input class="form-input" id="gist-worker-input" placeholder="https://cambuur.jouwnaam.workers.dev" style="width:280px;font-size:12px"
+              <input class="form-input" id="gist-worker-input" placeholder="https://jouwclub.jouwnaam.workers.dev" style="width:280px;font-size:12px"
                 oninput="GIST_WORKER_URL=this.value.trim().replace(/\/+$/,'');localStorage.setItem('gist_worker_url',GIST_WORKER_URL);gistUpdateStatus()">
               <div style="font-size:10px;color:var(--text-muted)" id="gist-worker-status"></div>
             </div>
@@ -550,6 +557,24 @@
       </div>
       <div id="coaches-content"></div>
     </div>
+
+    <div class="page" id="page-records">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;margin-bottom:16px">🏆 Clubrecords</div>
+      <div id="records-content"></div>
+    </div>
+
+    <div class="page" id="page-rivaliteiten">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;margin-bottom:16px">🔥 Rivaliteiten</div>
+      <div id="rivaliteiten-content"></div>
+    </div>
+
+    <div class="page" id="page-dagboek">
+      <div class="section-header mb-12">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px">📔 Wedstrijddagboek</div>
+        <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="dagboek-search" placeholder="Zoeken in notities..." oninput="renderDagboekPage()"></div>
+      </div>
+      <div id="dagboek-content"></div>
+    </div>
   </div>
 </div>
 
@@ -593,7 +618,7 @@
       </div>
       <div class="form-group">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-          <input type="checkbox" id="club-promotion-excluded" style="accent-color:var(--cambuur-geel)">
+          <input type="checkbox" id="club-promotion-excluded" style="accent-color:var(--accent-primary)">
           <span>Uitgesloten van promotie/degradatie (bijv. Jong-team) — telt niet mee bij ranglijst-markeringen</span>
         </label>
       </div>
@@ -810,7 +835,7 @@
         </div>
         <div class="form-group">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-            <input type="checkbox" id="player-is-youth" onchange="confirmYouthToggle(this)" style="accent-color:var(--cambuur-geel)">
+            <input type="checkbox" id="player-is-youth" onchange="confirmYouthToggle(this)" style="accent-color:var(--accent-primary)">
             <span>Jeugdspeler — staat in het tabblad "Jeugd" i.p.v. de hoofdselectie (blijft gewoon selecteerbaar bij wedstrijden)</span>
           </label>
         </div>
@@ -856,7 +881,7 @@
             <div class="form-group"><label class="form-label">Datum</label><input class="form-input" id="ve-date" type="date"></div>
             <div class="form-group"><label class="form-label">Waarde (€)</label><input class="form-input" id="ve-amount" type="number" placeholder="500000"></div>
           </div>
-          <div class="form-group"><label class="form-label">Notitie (optioneel)</label><input class="form-input" id="ve-note" placeholder="Transfermarkt peilmoment..."></div>
+          <div class="form-group"><label class="form-label">Notitie (optioneel)</label><input class="form-input" id="ve-note" placeholder="Peilmoment..."></div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-primary" onclick="saveValueEntry()">Toevoegen</button>
             <button class="btn btn-ghost" onclick="document.getElementById('value-entry-form').style.display='none'">Annuleren</button>
@@ -908,8 +933,8 @@
     <div class="modal-body" style="overflow-y:auto;max-height:calc(94vh - 140px)">
       <input type="hidden" id="coach-edit-id">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-        <div class="form-group" style="margin:0"><label class="form-label">Voornaam</label><input class="form-input" id="coach-firstname" placeholder="Henk"></div>
-        <div class="form-group" style="margin:0"><label class="form-label">Achternaam</label><input class="form-input" id="coach-lastname" placeholder="de Jong"></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Voornaam</label><input class="form-input" id="coach-firstname" placeholder="Voornaam"></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Achternaam</label><input class="form-input" id="coach-lastname" placeholder="Achternaam"></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
         <div class="form-group" style="margin:0"><label class="form-label">Geboortedatum</label><input class="form-input" id="coach-dob" type="date"></div>
@@ -969,7 +994,7 @@
           Kopieer de tekst uit het KNVB PDF-schema en plak het hieronder. De app herkent het patroon automatisch.
           <strong style="color:var(--text-primary)">Hoe:</strong> open de PDF, selecteer alles (Ctrl+A), kopieer (Ctrl+C), plak hieronder.
         </p>
-        <textarea id="pdf-paste-area" class="form-textarea" rows="8" placeholder="Plak hier de tekst van het KNVB competitieprogramma...&#10;&#10;Voorbeeld:&#10;1  vrijdag 7 augustus 2026  SC Cambuur  Excelsior Rotterdam  20:00&#10;1  zaterdag 8 augustus 2026  N.E.C.  Telstar  16:30" style="font-size:11px;font-family:monospace;resize:vertical;height:160px"></textarea>
+        <textarea id="pdf-paste-area" class="form-textarea" rows="8" placeholder="Plak hier de tekst van het KNVB competitieprogramma...&#10;&#10;Voorbeeld:&#10;1  vrijdag 7 augustus 2026  Thuisclub  Uitclub  20:00&#10;2  zaterdag 15 augustus 2026  Thuisclub  Uitclub  16:30" style="font-size:11px;font-family:monospace;resize:vertical;height:160px"></textarea>
         <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
           <button class="btn btn-secondary" onclick="parsePastedText()">🔍 Schema herkennen</button>
           <span style="font-size:11px;color:var(--text-muted)">— of —</span>
@@ -993,7 +1018,7 @@
             <select class="form-select" id="pdf-comp-select"></select>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-            <input type="checkbox" id="pdf-overwrite" style="accent-color:var(--cambuur-geel)">
+            <input type="checkbox" id="pdf-overwrite" style="accent-color:var(--accent-primary)">
             <label for="pdf-overwrite" style="font-size:12px;cursor:pointer">Bestaande wedstrijden overschrijven (voorzichtig!)</label>
           </div>
         </div>
@@ -1042,7 +1067,7 @@
           <strong style="color:var(--text-primary)">datum, ronde, thuisclub, uitclub, thuisscore, uitscore</strong> en plak ze hieronder.
           Werkt met tab- of komma-gescheiden waarden. Scores mogen leeg zijn voor nog te spelen wedstrijden.
         </p>
-        <textarea id="csv-paste-area" class="form-textarea" rows="8" placeholder="Voorbeeld:&#10;2025-08-08,1,SC Cambuur,Excelsior,2,1&#10;2025-08-09,1,NEC,Telstar,0,0&#10;2025-08-15,2,Telstar,SC Cambuur,,"
+        <textarea id="csv-paste-area" class="form-textarea" rows="8" placeholder="Voorbeeld:&#10;2025-08-08,1,Thuisclub,Uitclub,2,1&#10;2025-08-15,2,Thuisclub,Uitclub,,"
           style="font-size:11px;font-family:monospace;resize:vertical;height:160px"></textarea>
         <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
           <button class="btn btn-secondary" onclick="parseCsvSchedule()">🔍 CSV herkennen</button>
@@ -1065,11 +1090,11 @@
             <select class="form-select" id="csv-comp-select"></select>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-            <input type="checkbox" id="csv-overwrite" style="accent-color:var(--cambuur-geel)">
+            <input type="checkbox" id="csv-overwrite" style="accent-color:var(--accent-primary)">
             <label for="csv-overwrite" style="font-size:12px;cursor:pointer">Bestaande wedstrijden overschrijven (voorzichtig!)</label>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-            <input type="checkbox" id="csv-create-clubs" checked style="accent-color:var(--cambuur-geel)">
+            <input type="checkbox" id="csv-create-clubs" checked style="accent-color:var(--accent-primary)">
             <label for="csv-create-clubs" style="font-size:12px;cursor:pointer">Onbekende clubs automatisch aanmaken</label>
           </div>
         </div>
@@ -1089,11 +1114,11 @@
           </div>
           <div class="form-group" style="margin:0">
             <label class="form-label">Clublijst dit seizoen (optioneel, kommagescheiden — helpt bij herkenning)</label>
-            <input class="form-input" id="rsssf-known-clubs" placeholder="Cambuur, Den Bosch, TOP Oss, ...">
+            <input class="form-input" id="rsssf-known-clubs" placeholder="Clubnaam A, Clubnaam B, Clubnaam C, ...">
           </div>
         </div>
         <textarea id="rsssf-paste-area" class="form-textarea" rows="8"
-          placeholder="Round 1 [Aug 9] Eindhoven 2-0 Den Bosch Emmen 1-2 Dordrecht Helmond 1-1 Jong Utrecht ..."
+          placeholder="Round 1 [Aug 9] Club A 2-0 Club B Club C 1-2 Club D ..."
           style="font-size:11px;font-family:monospace;resize:vertical;height:160px"></textarea>
         <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
           <button class="btn btn-secondary" onclick="parseRsssfSchedule()">🔍 RSSSF-tekst herkennen</button>
@@ -1116,11 +1141,11 @@
             <select class="form-select" id="rsssf-comp-select"></select>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-            <input type="checkbox" id="rsssf-overwrite" style="accent-color:var(--cambuur-geel)">
+            <input type="checkbox" id="rsssf-overwrite" style="accent-color:var(--accent-primary)">
             <label for="rsssf-overwrite" style="font-size:12px;cursor:pointer">Bestaande wedstrijden overschrijven (voorzichtig!)</label>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-            <input type="checkbox" id="rsssf-create-clubs" checked style="accent-color:var(--cambuur-geel)">
+            <input type="checkbox" id="rsssf-create-clubs" checked style="accent-color:var(--accent-primary)">
             <label for="rsssf-create-clubs" style="font-size:12px;cursor:pointer">Onbekende clubs automatisch aanmaken</label>
           </div>
         </div>
@@ -1187,6 +1212,9 @@
 <script src="js/match-import.js"></script>
 <script src="js/wedstrijd-page.js"></script>
 <script src="js/coaches.js"></script>
+<script src="js/records.js"></script>
+<script src="js/rivaliteiten.js"></script>
+<script src="js/dagboek.js"></script>
 <script src="js/db-viewer.js"></script>
 <script src="js/data-integrity.js"></script>
 <script src="js/speler.js"></script>

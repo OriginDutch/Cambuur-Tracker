@@ -235,7 +235,7 @@ function renderArchief() {
         <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap">${seasonRangeStr(seasons)}</td>
         <td style="font-size:12px;white-space:nowrap">
           ${stats.appearances?`<span>${stats.appearances}W</span> `:''}
-          ${stats.goals?`<span style="color:var(--cambuur-geel)">⚽${stats.goals}</span> `:''}
+          ${stats.goals?`<span style="color:var(--accent-primary)">⚽${stats.goals}</span> `:''}
           ${stats.assists?`<span>🎯${stats.assists}</span>`:''}
           ${!stats.appearances?'<span class="text-muted">—</span>':''}
         </td>

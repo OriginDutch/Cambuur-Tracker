@@ -6,17 +6,10 @@
 // staan tot er een nieuwe ingang wordt toegevoegd (promotie/degradatie).
 // De divisielijst zelf (namen + volgorde) wordt beheerd in Instellingen.
 
-let _divisionDragIdx = null;
-function divisionDragStart(idx) { _divisionDragIdx = idx; }
-function divisionDragOver(ev) { ev.preventDefault(); }
-function divisionDrop(idx) {
-  if (_divisionDragIdx === null || _divisionDragIdx === idx) return;
-  const arr = window._clubDivisions || [];
-  const [moved] = arr.splice(_divisionDragIdx, 1);
-  arr.splice(idx, 0, moved);
-  _divisionDragIdx = null;
-  renderDivisionHistory();
-}
+const _divisionTimeline = makeTimelineManager(() => (window._clubDivisions ??= []), () => renderDivisionHistory());
+function divisionDragStart(idx) { _divisionTimeline.dragStart(idx); }
+function divisionDragOver(ev) { _divisionTimeline.dragOver(ev); }
+function divisionDrop(idx) { _divisionTimeline.drop(idx); }
 
 function renderDivisionHistory() {
   const el = document.getElementById('division-history-list');
@@ -67,8 +60,5 @@ function addDivisionEntry() {
 }
 
 function clearAllDivisionHistory() {
-  if (!(window._clubDivisions||[]).length) return;
-  if (!confirm('Alle divisiehistorie van deze club wissen? Dit kan niet ongedaan worden gemaakt.')) return;
-  window._clubDivisions = [];
-  renderDivisionHistory();
+  _divisionTimeline.clearAll('Alle divisiehistorie van deze club wissen? Dit kan niet ongedaan worden gemaakt.');
 }

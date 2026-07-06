@@ -119,13 +119,17 @@ function renderWedstrijdPage(matchId) {
           ? `<select class="form-select" id="wp-match-round" style="height:32px;font-size:12px">${comp.rounds.map(r=>`<option value="${r}" ${m.round===r?'selected':''}>${r}</option>`).join('')}</select>`
           : `<input class="form-input" id="wp-match-round" type="number" min="1" value="${m.round||''}" style="height:32px;font-size:12px">`}
       </div>
+      <div class="form-group" style="margin:0;width:120px">
+        <label class="form-label" style="font-size:10px">Toeschouwers</label>
+        <input class="form-input" id="wp-attendance" type="number" min="0" value="${m.attendance??''}" placeholder="—" style="height:32px;font-size:12px">
+      </div>
     </div>
   </div>
 
   <!-- Score -->
   <div class="wp-section" style="text-align:center;margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:8px">
-      <div style="flex:1;text-align:right;font-size:18px;font-weight:700;color:${isCamHome?'var(--cambuur-geel)':'var(--text-primary)'}">${homeName}</div>
+      <div style="flex:1;text-align:right;font-size:18px;font-weight:700;color:${isCamHome?'var(--accent-primary)':'var(--text-primary)'}">${homeName}</div>
       <div style="display:flex;align-items:center;gap:8px">
         <input id="wp-hs" type="number" min="0" placeholder="—" value="${hs}"
           class="form-input" style="width:60px;text-align:center;font-size:26px;font-weight:800;font-family:'Barlow Condensed',sans-serif;height:48px;padding:2px;-moz-appearance:textfield" onwheel="this.blur()">
@@ -133,7 +137,7 @@ function renderWedstrijdPage(matchId) {
         <input id="wp-as" type="number" min="0" placeholder="—" value="${as}"
           class="form-input" style="width:60px;text-align:center;font-size:26px;font-weight:800;font-family:'Barlow Condensed',sans-serif;height:48px;padding:2px;-moz-appearance:textfield" onwheel="this.blur()">
       </div>
-      <div style="flex:1;text-align:left;font-size:18px;font-weight:700;color:${!isCamHome?'var(--cambuur-geel)':'var(--text-primary)'}">${awayName}</div>
+      <div style="flex:1;text-align:left;font-size:18px;font-weight:700;color:${!isCamHome?'var(--accent-primary)':'var(--text-primary)'}">${awayName}</div>
     </div>
     ${result?`<div style="font-size:12px;font-weight:700;color:${resultColor}">${result}</div>`:''}
     <button class="btn btn-ghost" style="font-size:11px;margin-top:6px" onclick="wpRecalcScore()">📊 Herbereken uit doelpunten</button>
@@ -152,7 +156,7 @@ function renderWedstrijdPage(matchId) {
       </div>
       ${(comp?.type==='beker'||comp?.type==='playoffs') ? `
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer">
-        <input type="checkbox" id="wp-went-et" ${m.wentToExtraTime?'checked':''} onchange="wpToggleExtraTimeFields()" style="accent-color:var(--cambuur-geel)">
+        <input type="checkbox" id="wp-went-et" ${m.wentToExtraTime?'checked':''} onchange="wpToggleExtraTimeFields()" style="accent-color:var(--accent-primary)">
         Verlenging
       </label>
       <div id="wp-penalties-wrap" style="display:${m.wentToExtraTime?'flex':'none'};align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
@@ -255,7 +259,7 @@ function renderWedstrijdPage(matchId) {
     </div>
     <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center">
       <!-- Header -->
-      <div style="font-size:11px;font-weight:700;color:var(--cambuur-geel);text-align:center">${isCamHome?homeName:awayName}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--accent-primary);text-align:center">${isCamHome?homeName:awayName}</div>
       <div></div>
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-align:center">${isCamHome?awayName:homeName}</div>
       ${[
@@ -509,9 +513,9 @@ function wpRenderLineup() {
       const isKeeper = p.position === 'Keeper';
       const savesVal = m?.keeperSaves?.[p.id] ?? '';
       html += `<div class="starter-row" style="${isS?'background:rgba(245,197,0,0.05)':''}">
-        <input type="checkbox" ${isS?'checked':''} ${maxed?'disabled':''} style="accent-color:var(--cambuur-geel);width:15px;height:15px"
+        <input type="checkbox" ${isS?'checked':''} ${maxed?'disabled':''} style="accent-color:var(--accent-primary);width:15px;height:15px"
           onchange="wpToggleStarter('${p.id}',this.checked)">
-        <span style="font-weight:700;color:var(--cambuur-geel);min-width:26px;font-size:12px">${p.number?'#'+p.number:''}</span>
+        <span style="font-weight:700;color:var(--accent-primary);min-width:26px;font-size:12px">${p.number?'#'+p.number:''}</span>
         <span style="flex:1;font-size:13px;font-weight:${isS?'600':'400'};color:${isS?'var(--text-primary)':'var(--text-secondary)'}">${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</span>
         <span style="font-size:11px;color:var(--text-muted)">${p.subpos?.[0]||p.position||''}</span>
         ${isKeeper&&isS?`<input type="number" min="0" id="wp-saves-${p.id}" value="${savesVal}"
@@ -878,6 +882,8 @@ async function wpSave() {
     const isKnockoutComp = savComp?.type==='beker'||savComp?.type==='playoffs';
     m.round = isKnockoutComp ? newRound : (parseInt(newRound)||m.round);
   }
+  const attRaw = document.getElementById('wp-attendance')?.value;
+  m.attendance = attRaw ? parseInt(attRaw) : null;
 
   const hs = document.getElementById('wp-hs')?.value?.trim();
   const as = document.getElementById('wp-as')?.value?.trim();

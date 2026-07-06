@@ -43,7 +43,7 @@ function renderStatistieken(){
     ${showApps?`<td class="num" title="Wedstrijden">${st.appearances||0}</td>`:''}
     ${showApps?`<td class="num" title="Starts">${st.starts||0}</td>`:''}
     ${showApps?`<td class="num" title="Speelminuten">${st.minutesPlayed||0}'</td>`:''}
-    <td class="num" style="${st.goals>0?'font-weight:700;color:var(--cambuur-geel)':''}">${st.goals||0}</td>
+    <td class="num" style="${st.goals>0?'font-weight:700;color:var(--accent-primary)':''}">${st.goals||0}</td>
     <td class="num">${st.assists||0}</td>
     <td class="num">${st.yellowCards||0}</td>
     <td class="num" style="${st.redCards>0?'color:var(--loss)':''}">${st.redCards||0}</td>
@@ -56,7 +56,7 @@ function renderStatistieken(){
   el.innerHTML=`
     <div style="margin-bottom:14px;display:flex;align-items:baseline;justify-content:space-between">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px">
-        Statistieken — <span style="color:var(--cambuur-geel)">${season.name}</span>
+        Statistieken — <span style="color:var(--accent-primary)">${season.name}</span>
       </div>
     </div>
 
@@ -67,7 +67,7 @@ function renderStatistieken(){
         {v:wins,l:'Gewonnen',c:'var(--win)'},
         {v:draws,l:'Gelijk',c:'var(--draw)'},
         {v:losses,l:'Verloren',c:'var(--loss)'},
-        {v:gf,l:'Goals voor',c:'var(--cambuur-geel)'},
+        {v:gf,l:'Goals voor',c:'var(--accent-primary)'},
         {v:ga,l:'Goals tegen'},
         {v:(gf-ga>=0?'+':'')+( gf-ga),l:'Doelsaldo',c:gf>ga?'var(--win)':gf<ga?'var(--loss)':''},
         {v:cleanSheets,l:'Clean sheets',c:'var(--win)'},
@@ -181,7 +181,7 @@ function renderStatsGroups(players, allStats) {
         <td class="num">${st.appearances||0}</td>
         <td class="num">${st.starts||0}</td>
         <td class="num">${st.minutesPlayed||0}'</td>
-        <td class="num" style="${(st.goals||0)>0?'font-weight:700;color:var(--cambuur-geel)':''}">${st.goals||0}</td>
+        <td class="num" style="${(st.goals||0)>0?'font-weight:700;color:var(--accent-primary)':''}">${st.goals||0}</td>
         <td class="num">${st.assists||0}</td>
         <td class="num">${st.yellowCards||0}</td>
         <td class="num" style="${(st.redCards||0)>0?'color:var(--loss)':''}">${st.redCards||0}</td>

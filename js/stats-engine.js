@@ -7,6 +7,18 @@
 // ══════════════════════════════
 // SPELERSSTATISTIEKEN
 // ══════════════════════════════
+// Eerste wedstrijd waarin een speler daadwerkelijk in actie kwam (basisself
+// of ingevallen) — gebruikt voor debutant-records.
+function getPlayerFirstAppearance(playerId) {
+  const matches = (S.matches||[]).filter(m => m.played && m.date).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  for (const m of matches) {
+    const lineup = m.lineup || [];
+    const subIn = (m.events||[]).some(e=>e.type==='sub'&&e.playerInId===playerId);
+    if (lineup.includes(playerId) || subIn) return m;
+  }
+  return null;
+}
+
 function calcPlayerStats(playerId, seasonId, competitionId) {
   const stats = { goals: 0, assists: 0, yellowCards: 0, redCards: 0, appearances: 0, starts: 0, minutesPlayed: 0, motm: 0, cleanSheets: 0, saves: 0 };
   const matches = (S.matches||[]).filter(m => {

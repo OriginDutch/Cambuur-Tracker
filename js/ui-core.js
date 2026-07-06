@@ -8,6 +8,20 @@
 // THEME / LANG
 // ══════════════════════════════
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t);}
+
+// Past de paginatitel en het zijbalk-logo aan op de ingestelde eigen club —
+// zodat de clubnaam nergens hardgecodeerd hoeft te blijven staan voor wie de
+// tracker voor een andere club gebruikt.
+function applyClubBranding() {
+  const club = (S.clubs||[]).find(c=>c.isOwnClub);
+  const name = club?.name || 'Club';
+  const abbr = (club?.abbr || name).slice(0,2).toUpperCase();
+  document.title = club ? `${name} — Seizoenstracker` : 'Seizoenstracker';
+  const sidebarBadge = document.getElementById('sidebar-badge');
+  const sidebarTitleClub = document.getElementById('sidebar-title-club');
+  if (sidebarBadge) sidebarBadge.textContent = abbr;
+  if (sidebarTitleClub) sidebarTitleClub.textContent = name;
+}
 async function toggleTheme(){S.theme=S.theme==='dark'?'light':'dark';applyTheme(S.theme);await saveSetting('theme',S.theme);}
 async function setLanguage(lang){S.lang=lang;await saveSetting('lang',lang);}
 

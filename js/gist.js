@@ -100,7 +100,7 @@ async function gistPush(manual = false) {
   try {
     const data = JSON.stringify(buildExportData(), null, 2);
     const body = {
-      description: 'Cambuur Tracker data — automatisch gesynchroniseerd',
+      description: 'Seizoenstracker data — automatisch gesynchroniseerd',
       public: false,
       files: { [GIST_FILENAME]: { content: data } }
     };
@@ -240,7 +240,7 @@ async function setupGistRestore() {
     if (!res.ok) throw new Error('Ongeldige token of Gist ID');
     const json = await res.json();
     const fileContent = json.files?.[GIST_FILENAME]?.content;
-    if (!fileContent) throw new Error('Geen Cambuur Tracker data gevonden in deze Gist');
+    if (!fileContent) throw new Error('Geen seizoenstracker-data gevonden in deze Gist');
     const data = JSON.parse(fileContent);
 
     // Save credentials

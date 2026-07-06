@@ -6,17 +6,10 @@
 // (bv. 'uitgeleend') én geblesseerd zijn. Blessure is dus geen keuze meer
 // in de status-dropdown, maar een eigen tijdlijn zoals transfers.
 
-let _injuryDragIdx = null;
-function injuryDragStart(idx) { _injuryDragIdx = idx; }
-function injuryDragOver(ev) { ev.preventDefault(); }
-function injuryDrop(idx) {
-  if (_injuryDragIdx === null || _injuryDragIdx === idx) return;
-  const arr = window._playerInjuries || [];
-  const [moved] = arr.splice(_injuryDragIdx, 1);
-  arr.splice(idx, 0, moved);
-  _injuryDragIdx = null;
-  renderInjuryHistory();
-}
+const _injuryTimeline = makeTimelineManager(() => (window._playerInjuries ??= []), () => renderInjuryHistory());
+function injuryDragStart(idx) { _injuryTimeline.dragStart(idx); }
+function injuryDragOver(ev) { _injuryTimeline.dragOver(ev); }
+function injuryDrop(idx) { _injuryTimeline.drop(idx); }
 
 function renderInjuryHistory() {
   const el = document.getElementById('injury-history-list');
@@ -75,10 +68,7 @@ function addInjuryEntry() {
 }
 
 function clearAllInjuries() {
-  if (!(window._playerInjuries||[]).length) return;
-  if (!confirm('Alle blessurehistorie van deze speler wissen? Dit kan niet ongedaan worden gemaakt.')) return;
-  window._playerInjuries = [];
-  renderInjuryHistory();
+  _injuryTimeline.clearAll('Alle blessurehistorie van deze speler wissen? Dit kan niet ongedaan worden gemaakt.');
 }
 
 // Geeft de actieve blessure op de opgegeven datum (of nu), of null als er geen is.

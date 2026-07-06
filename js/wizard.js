@@ -58,12 +58,27 @@ function swRefreshStadSelects(){
   });
 }
 function swPopulateCompClubs(){
-  const names=['SC Cambuur',...[...document.querySelectorAll('#sw-club-rows [data-role="cname"]')].map(i=>i.value.trim()).filter(Boolean)];
+  const ownName=document.getElementById('sw-own-club-name').value.trim()||'Eigen club';
+  const names=[ownName,...[...document.querySelectorAll('#sw-club-rows [data-role="cname"]')].map(i=>i.value.trim()).filter(Boolean)];
   document.getElementById('sw-comp-clubs').innerHTML=names.map(n=>`
     <label style="display:flex;align-items:center;gap:6px;padding:5px 6px;cursor:pointer;border-radius:3px;font-size:12px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
-      <input type="checkbox" value="${n}" checked style="accent-color:var(--cambuur-geel)">
-      <span>${n}</span>${n==='SC Cambuur'?'<span class="badge badge-active" style="font-size:9px">Eigen</span>':''}
+      <input type="checkbox" value="${n}" checked style="accent-color:var(--accent-primary)">
+      <span>${n}</span>${n===ownName?'<span class="badge badge-active" style="font-size:9px">Eigen</span>':''}
     </label>`).join('');
+}
+// Wizard-header (badge + titel) live laten meebewegen met de ingevulde clubnaam
+function swUpdateBrandPreview() {
+  const name = document.getElementById('sw-own-club-name')?.value.trim();
+  const badge = document.getElementById('setup-badge');
+  const titleSpan = document.getElementById('setup-title-club');
+  if (!badge || !titleSpan) return;
+  if (name) {
+    badge.textContent = name.slice(0,2).toUpperCase();
+    titleSpan.textContent = name;
+  } else {
+    badge.textContent = '⚽';
+    titleSpan.textContent = 'Club';
+  }
 }
 function swUpdateCompType(){
   const t=document.getElementById('sw-comp-type').value;
@@ -90,11 +105,15 @@ async function swFinish(){
     await dbPut('stadiums',stad);S.stadiums.push(stad);stadMap[name]=sid;
   }
 
-  // Cambuur club
-  const cambuurId='club_cambuur';
-  const cambuurClub={id:cambuurId,name:'SC Cambuur',abbr:'CAM',city:ownStad.city||'',stadiumId:ownStadId,highlight:'',note:'',isOwnClub:true};
-  await dbPut('clubs',cambuurClub);S.clubs=S.clubs.filter(c=>c.id!==cambuurId);S.clubs.push(cambuurClub);
-  const savedIds=[cambuurId];
+  // Eigen club
+  const ownClubName = document.getElementById('sw-own-club-name').value.trim();
+  if (!ownClubName) { showToast('Vul de naam van je eigen club in', 'error'); return; }
+  const ownClubAbbrRaw = document.getElementById('sw-own-club-abbr').value.trim().toUpperCase();
+  const ownClubAbbr = ownClubAbbrRaw || ownClubName.replace(/\s+/g,'').slice(0,3).toUpperCase();
+  const ownClubId=genId('club_own');
+  const ownClub={id:ownClubId,name:ownClubName,abbr:ownClubAbbr,city:ownStad.city||'',stadiumId:ownStadId,highlight:'',note:'',isOwnClub:true};
+  await dbPut('clubs',ownClub);S.clubs=S.clubs.filter(c=>c.id!==ownClubId);S.clubs.push(ownClub);
+  const savedIds=[ownClubId];
 
   // Opponent clubs
   for(const row of document.querySelectorAll('#sw-club-rows .club-row')){
@@ -126,7 +145,8 @@ async function swFinish(){
   S.competitions.push({id:compId,name:compName,type:compType,seasonId,clubIds,rounds,created:Date.now()});
 
   sortSeasons(S.seasons);
+  applyClubBranding();
   renderSeasonSelect();renderCompetitionsNav();renderDashboard();renderSeasonsManage();
   document.getElementById('setup-overlay').classList.remove('open');
-  showToast('Welkom bij Cambuur Tracker! 🎉','success');
+  showToast(`Welkom bij de ${ownClubName} Tracker! 🎉`,'success');
 }

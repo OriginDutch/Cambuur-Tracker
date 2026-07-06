@@ -14,17 +14,10 @@ const TRANSFER_TYPES = [
 
 const ALL_TRANSFER_TYPES = TRANSFER_TYPES;
 
-let _transferDragIdx = null;
-function transferDragStart(idx) { _transferDragIdx = idx; }
-function transferDragOver(ev) { ev.preventDefault(); }
-function transferDrop(idx) {
-  if (_transferDragIdx === null || _transferDragIdx === idx) return;
-  const arr = window._playerTransfers || [];
-  const [moved] = arr.splice(_transferDragIdx, 1);
-  arr.splice(idx, 0, moved);
-  _transferDragIdx = null;
-  renderTransferHistory();
-}
+const _transferTimeline = makeTimelineManager(() => (window._playerTransfers ??= []), () => renderTransferHistory());
+function transferDragStart(idx) { _transferTimeline.dragStart(idx); }
+function transferDragOver(ev) { _transferTimeline.dragOver(ev); }
+function transferDrop(idx) { _transferTimeline.drop(idx); }
 
 function renderTransferHistory() {
   const el = document.getElementById('transfer-history-list');
@@ -93,10 +86,7 @@ function addTransferEntry() {
 }
 
 function clearAllTransfers() {
-  if (!(window._playerTransfers||[]).length) return;
-  if (!confirm('Alle transferhistorie van deze speler wissen? Dit kan niet ongedaan worden gemaakt.')) return;
-  window._playerTransfers = [];
-  renderTransferHistory();
+  _transferTimeline.clearAll('Alle transferhistorie van deze speler wissen? Dit kan niet ongedaan worden gemaakt.');
 }
 
 // ── Derive effective status from transfers ──

@@ -218,6 +218,55 @@ function getSeasonRefDate(season) {
   return end < today ? end : today;
 }
 
+// Head-to-head statistieken tussen twee clubs, all-time. Gedeeld tussen
+// "Op deze dag", het Rivaliteiten-dashboard en (potentieel) Vergelijking.
+function getHeadToHeadStats(clubAId, clubBId) {
+  const matches = (S.matches||[]).filter(m => m.played && !isMatchOrphaned(m) &&
+    ((m.homeClubId===clubAId && m.awayClubId===clubBId) || (m.awayClubId===clubAId && m.homeClubId===clubBId))
+  ).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  let w=0,d=0,l=0,gf=0,ga=0,biggestWin=null,biggestLoss=null;
+  matches.forEach(m => {
+    const aIsHome = m.homeClubId===clubAId;
+    const as = aIsHome?m.homeScore:m.awayScore;
+    const bs = aIsHome?m.awayScore:m.homeScore;
+    gf+=as; ga+=bs;
+    const diff = as-bs;
+    if (as>bs) { w++; if(!biggestWin || diff>biggestWin.diff) biggestWin={match:m, diff, as, bs}; }
+    else if (as===bs) d++;
+    else { l++; if(!biggestLoss || diff<biggestLoss.diff) biggestLoss={match:m, diff, as, bs}; }
+  });
+  return {played: matches.length, w, d, l, gf, ga, matches, biggestWin, biggestLoss, lastMeeting: matches[0]||null};
+}
+
+// Generieke sleep/wis-mechaniek voor de tijdlijn-achtige historielijstjes
+// (transfers, blessures, divisiehistorie). Ieder houdt zijn eigen rij-opmaak
+// (de velden verschillen te veel om ook dát te delen — transfers heeft
+// conditionele velden per type, blessures vaste datumvelden, divisies een
+// dropdown), maar delen wel exact dezelfde drag-and-drop- en wis-logica, die
+// voorheen drie keer apart geïmplementeerd stond.
+function makeTimelineManager(getArray, rerenderFn) {
+  let dragIdx = null;
+  return {
+    dragStart(idx) { dragIdx = idx; },
+    dragOver(ev) { ev.preventDefault(); },
+    drop(idx) {
+      if (dragIdx === null || dragIdx === idx) return;
+      const arr = getArray();
+      const [moved] = arr.splice(dragIdx, 1);
+      arr.splice(idx, 0, moved);
+      dragIdx = null;
+      rerenderFn();
+    },
+    clearAll(confirmMsg) {
+      const arr = getArray();
+      if (!arr.length) return;
+      if (!confirm(confirmMsg)) return;
+      arr.length = 0; // leegmaken in-place — zelfde array-referentie blijft geldig
+      rerenderFn();
+    },
+  };
+}
+
 function genId(prefix) {
   return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
 }

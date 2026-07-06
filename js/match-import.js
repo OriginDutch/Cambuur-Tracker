@@ -834,7 +834,7 @@ async function confirmCsvImport() {
   async function getOrCreateClub(name, existingId) {
     if (existingId) return existingId;
     if (!createClubs) return null;
-    const newClub = {id: genId('club'), name, abbr: name.slice(0,3).toUpperCase(), created: Date.now()};
+    const newClub = {id: genId('club'), name, abbr: name.replace(/\s+/g,'').slice(0,3).toUpperCase(), created: Date.now()};
     await dbPut('clubs', newClub);
     S.clubs.push(newClub);
     return newClub.id;
@@ -1001,7 +1001,7 @@ async function confirmRsssfImport() {
   async function getOrCreateClub(name, existingId) {
     if (existingId) return existingId;
     if (!createClubs) return null;
-    const newClub = {id: genId('club'), name, abbr: name.slice(0,3).toUpperCase(), created: Date.now()};
+    const newClub = {id: genId('club'), name, abbr: name.replace(/\s+/g,'').slice(0,3).toUpperCase(), created: Date.now()};
     await dbPut('clubs', newClub);
     S.clubs.push(newClub);
     return newClub.id;
