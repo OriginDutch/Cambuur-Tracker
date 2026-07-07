@@ -59,7 +59,7 @@
         <div class="setup-card-title">Welk seizoen ga je bijhouden?</div>
         <div class="setup-card-desc">Je kunt later meer seizoenen toevoegen en de selectie meenemen van seizoen tot seizoen.</div>
         <div class="form-row cols-2">
-          <div class="form-group"><label class="form-label">Seizoen</label><input class="form-input" id="sw-season-name" placeholder="2026/27" value="2026/27"></div>
+          <div class="form-group"><label class="form-label">Seizoen</label><input class="form-input" id="sw-season-name" placeholder="2026/2027" value="2026/2027"></div>
           <div class="form-group"><label class="form-label">Startjaar</label><input class="form-input" id="sw-season-year" type="number" value="2026"></div>
         </div>
       </div>
@@ -177,6 +177,7 @@
       <div class="nav-item" data-page="records" onclick="navigate('records',this)"><span class="nav-icon">🏆</span><span class="nav-label">Records</span></div>
       <div class="nav-item" data-page="rivaliteiten" onclick="navigate('rivaliteiten',this)"><span class="nav-icon">🔥</span><span class="nav-label">Rivaliteiten</span></div>
       <div class="nav-item" data-page="dagboek" onclick="navigate('dagboek',this)"><span class="nav-icon">📔</span><span class="nav-label">Wedstrijddagboek</span></div>
+      <div class="nav-item" data-page="kalender" onclick="navigate('kalender',this)"><span class="nav-icon">📆</span><span class="nav-label">Kalender</span></div>
       <div class="nav-section-label">Beheer</div>
       <div class="nav-item" data-page="clubs" onclick="navigate('clubs',this)"><span class="nav-icon">🏟️</span><span class="nav-label">Clubs &amp; Stadions</span></div>
     </nav>
@@ -574,6 +575,11 @@
         <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="dagboek-search" placeholder="Zoeken in notities..." oninput="renderDagboekPage()"></div>
       </div>
       <div id="dagboek-content"></div>
+    </div>
+
+    <div class="page" id="page-kalender">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;margin-bottom:16px">📆 Kalender</div>
+      <div id="kalender-content"></div>
     </div>
   </div>
 </div>
@@ -1214,6 +1220,7 @@
 <script src="js/records.js"></script>
 <script src="js/rivaliteiten.js"></script>
 <script src="js/dagboek.js"></script>
+<script src="js/kalender.js"></script>
 <script src="js/db-viewer.js"></script>
 <script src="js/data-integrity.js"></script>
 <script src="js/speler.js"></script>

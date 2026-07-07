@@ -40,6 +40,7 @@ async function loadAll(){
   S.pinnedNextMatch=null;S.seasons=await dbAll('seasons');S.clubs=await dbAll('clubs');S.stadiums=await dbAll('stadiums');S.competitions=await dbAll('competitions');S.players=await dbAll('players');S.matches=await dbAll('matches');S.coaches=await dbAll('coaches');
   sortSeasons(S.seasons);
   S.competitions.sort((a,b)=>{
+    if(a.seasonId!==b.seasonId) return (a.seasonId||'').localeCompare(b.seasonId||'');
     if(a.sortOrder!=null&&b.sortOrder!=null)return a.sortOrder-b.sortOrder;
     if(a.sortOrder!=null)return -1;if(b.sortOrder!=null)return 1;
     return 0;

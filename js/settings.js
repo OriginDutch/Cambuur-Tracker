@@ -431,7 +431,10 @@ async function compDrop(idx) {
   const [moved] = comps.splice(_compDragIdx, 1);
   comps.splice(idx, 0, moved);
   for (let i=0;i<comps.length;i++) { comps[i].sortOrder = i; await dbPut('competitions', comps[i]); }
-  S.competitions.sort((a,b)=>(a.sortOrder??Infinity)-(b.sortOrder??Infinity));
+  S.competitions.sort((a,b)=>{
+    if(a.seasonId!==b.seasonId) return (a.seasonId||'').localeCompare(b.seasonId||'');
+    return (a.sortOrder??Infinity)-(b.sortOrder??Infinity);
+  });
   _compDragIdx = null;
   renderCompetitionsPage();
   renderCompetitionsNav();
@@ -444,13 +447,33 @@ function renderCompetitionsPage(){
   if(!comps.length){list.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏆</div><div class="empty-state-title">Nog geen competities</div><div class="empty-state-desc">Voeg een competitie toe.</div></div>';return;}
   const tl={competitie:'Competitie',beker:'Beker',voorbereiding:'Voorbereiding'};
   const tb={competitie:'badge-competitie',beker:'badge-beker',voorbereiding:'badge-voorbereiding'};
-  list.innerHTML=`<table class="data-table"><thead><tr><th>Competitie</th><th>Type</th><th>Clubs</th><th></th></tr></thead><tbody>${
-    comps.map((c,i)=>`<tr draggable="true" ondragstart="compDragStart(${i})" ondragover="compDragOver(event)" ondrop="compDrop(${i})" style="cursor:grab"><td><div style="display:flex;align-items:center;gap:6px">
+  const season = S.seasons.find(s=>s.id===S.currentSeason);
+  list.innerHTML=`<div class="settings-row-desc" style="margin-bottom:8px">⭐ Wijs bij meerdere "Competitie"-type competities in hetzelfde seizoen (bijv. Eredivisie + KKD samen bijgehouden) aan welke voor het dashboard leidend is — anders raadt de app het zelf op basis van waar je club in speelt.</div>
+    <table class="data-table"><thead><tr><th style="width:34px"></th><th>Competitie</th><th>Type</th><th>Clubs</th><th></th></tr></thead><tbody>${
+    comps.map((c,i)=>{
+      const isMain = season?.mainCompetitionId===c.id;
+      const starBtn = c.type==='competitie'
+        ? `<button class="icon-btn" style="${isMain?'color:var(--accent-primary)':''}" onclick="setMainCompetition('${c.id}')" title="${isMain?'Hoofdcompetitie voor dit seizoen':'Maak hoofdcompetitie voor dit seizoen'}">${isMain?'⭐':'☆'}</button>`
+        : '';
+      return `<tr draggable="true" ondragstart="compDragStart(${i})" ondragover="compDragOver(event)" ondrop="compDrop(${i})" style="cursor:grab">
+      <td>${starBtn}</td>
+      <td><div style="display:flex;align-items:center;gap:6px">
         <span style="color:var(--text-muted);user-select:none" title="Sleep om te herordenen">⠿</span>
         <strong>${c.name}</strong></div></td>
       <td><span class="badge ${tb[c.type]||''}">${tl[c.type]||c.type}</span></td><td>${(c.clubIds||[]).length}</td>
-      <td><div class="action-btns"><button class="icon-btn" onclick="navigateToComp('${c.id}')">👁️</button><button class="icon-btn" onclick="openCompModal('${c.id}')">✏️</button><button class="icon-btn danger" onclick="confirmDelete('competition','${c.id}','${c.name}')">🗑️</button></div></td></tr>`).join('')
+      <td><div class="action-btns"><button class="icon-btn" onclick="navigateToComp('${c.id}')">👁️</button><button class="icon-btn" onclick="openCompModal('${c.id}')">✏️</button><button class="icon-btn danger" onclick="confirmDelete('competition','${c.id}','${c.name}')">🗑️</button></div></td></tr>`;
+    }).join('')
   }</tbody></table>`;
+}
+
+async function setMainCompetition(compId) {
+  const season = S.seasons.find(s=>s.id===S.currentSeason);
+  if (!season) return;
+  season.mainCompetitionId = (season.mainCompetitionId===compId) ? null : compId; // nogmaals klikken = uitzetten
+  await dbPut('seasons', season);
+  renderCompetitionsPage();
+  renderDashboard();
+  showToast(season.mainCompetitionId ? 'Hoofdcompetitie ingesteld' : 'Hoofdcompetitie-markering verwijderd', 'success');
 }
 function openCompModal(editId){
   document.getElementById('edit-comp-id').value=editId||'';
@@ -862,8 +885,7 @@ function getCambuurForm(n=5) {
 function getCambuurLeaguePos() {
   const cam = S.clubs.find(c=>c.isOwnClub);
   if (!cam) return null;
-  // Find the main league competition
-  const leagueComp = S.competitions.find(c=>c.seasonId===S.currentSeason&&c.type==='competitie');
+  const leagueComp = getMainCompetition(S.currentSeason);
   if (!leagueComp) return null;
   const clubs = (leagueComp.clubIds||[]).map(cid=>S.clubs.find(c=>c.id===cid)).filter(Boolean);
   const compMatches = (S.matches||[]).filter(m=>m.competitionId===leagueComp.id&&m.played);

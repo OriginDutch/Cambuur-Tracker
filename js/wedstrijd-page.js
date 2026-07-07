@@ -141,6 +141,24 @@ function renderWedstrijdPage(matchId) {
     </div>
     ${result?`<div style="font-size:12px;font-weight:700;color:${resultColor}">${result}</div>`:''}
     <button class="btn btn-ghost" style="font-size:11px;margin-top:6px" onclick="wpRecalcScore()">📊 Herbereken uit doelpunten</button>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);font-size:12px;color:var(--text-muted)">
+      <span>🔮 Voorspelling:</span>
+      <input id="wp-pred-hs" type="number" min="0" placeholder="—" value="${m.prediction?.homeScore??''}"
+        class="form-input" style="width:40px;height:26px;text-align:center;font-size:13px;padding:2px;-moz-appearance:textfield" onwheel="this.blur()">
+      <span>-</span>
+      <input id="wp-pred-as" type="number" min="0" placeholder="—" value="${m.prediction?.awayScore??''}"
+        class="form-input" style="width:40px;height:26px;text-align:center;font-size:13px;padding:2px;-moz-appearance:textfield" onwheel="this.blur()">
+      ${(() => {
+        if (!m.played || m.homeScore==null || m.prediction?.homeScore==null || m.prediction?.awayScore==null) return '';
+        const exact = m.prediction.homeScore===m.homeScore && m.prediction.awayScore===m.awayScore;
+        const predDiff = m.prediction.homeScore - m.prediction.awayScore;
+        const actualDiff = m.homeScore - m.awayScore;
+        const sameOutcome = (predDiff>0&&actualDiff>0)||(predDiff<0&&actualDiff<0)||(predDiff===0&&actualDiff===0);
+        if (exact) return '<span style="color:var(--win);font-weight:700">✅ Exact goed!</span>';
+        if (sameOutcome) return '<span style="color:var(--draw);font-weight:700">🟡 Juiste uitslag</span>';
+        return '<span style="color:var(--loss);font-weight:700">❌ Mis</span>';
+      })()}
+    </div>
     <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
         <span>1e helft: 45 +</span>
@@ -884,6 +902,11 @@ async function wpSave() {
   }
   const attRaw = document.getElementById('wp-attendance')?.value;
   m.attendance = attRaw ? parseInt(attRaw) : null;
+  const predHs = document.getElementById('wp-pred-hs')?.value;
+  const predAs = document.getElementById('wp-pred-as')?.value;
+  m.prediction = (predHs!==''&&predHs!=null && predAs!==''&&predAs!=null)
+    ? {homeScore: parseInt(predHs), awayScore: parseInt(predAs)}
+    : null;
 
   const hs = document.getElementById('wp-hs')?.value?.trim();
   const as = document.getElementById('wp-as')?.value?.trim();

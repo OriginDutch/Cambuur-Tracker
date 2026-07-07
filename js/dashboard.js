@@ -55,6 +55,7 @@ function renderMilestonesCard() {
   const thresholds = [10,25,50,100,150,200,250,300,350,400];
   const milestones = [];
   (S.players||[]).forEach(p => {
+    if (effectiveStatus(p) !== 'actief') return; // vertrokken/uitgeleend gaat deze mijlpaal niet meer voor déze club halen
     const stats = calcPlayerStats(p.id, null, null); // all-time
     [
       {key:'appearances', label:'wedstrijden', val:stats.appearances},
@@ -71,13 +72,30 @@ function renderMilestonesCard() {
   return `<div class="card mb-12">
     <div class="card-title">🎯 Naderende mijlpalen</div>
     ${milestones.slice(0,5).map(m=>`<div style="font-size:13px;padding:4px 0;cursor:pointer" onclick="navigateToPlayer('${m.player.id}')">
-      <strong>${m.player.firstname?m.player.firstname[0]+'. ':''}${m.player.lastname}</strong>
+      <strong>${m.player.number?'#'+m.player.number+' ':''}${m.player.firstname?m.player.firstname+' ':''}${m.player.lastname}</strong>
       <span style="color:var(--text-secondary)"> staat op ${m.val} ${m.label} — nog ${m.remaining} tot ${m.next}.</span>
     </div>`).join('')}
   </div>`;
 }
 
 // ── DASHBOARD ──
+// Kleine lijngrafiek van de vorm over de laatste wedstrijden — W boven,
+// G in het midden, V onderaan, verbonden met een lijn zodat de trend in
+// één oogopslag zichtbaar is naast de losse W/G/V-stippen.
+function renderFormGraph(formData) {
+  if (formData.length < 2) return '';
+  const W = 100, H = 36, PAD = 6;
+  const innerW = W - PAD*2, innerH = H - PAD*2;
+  const yFor = r => r==='W' ? PAD : r==='D' ? PAD+innerH/2 : PAD+innerH;
+  const xs = formData.map((_,i) => PAD + (i/(formData.length-1))*innerW);
+  const colorFor = r => r==='W'?'var(--win)':r==='D'?'var(--draw)':'var(--loss)';
+  const points = formData.map((f,i) => `${xs[i]},${yFor(f.r)}`).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;margin-bottom:8px">
+    <polyline points="${points}" fill="none" stroke="var(--text-muted)" stroke-width="1.2" opacity="0.5"/>
+    ${formData.map((f,i)=>`<circle cx="${xs[i]}" cy="${yFor(f.r)}" r="3" fill="${colorFor(f.r)}"/>`).join('')}
+  </svg>`;
+}
+
 function renderDashboard(){
   const el=document.getElementById('dashboard-content');
   const season=S.seasons.find(s=>s.id===S.currentSeason);
@@ -91,6 +109,7 @@ function renderDashboard(){
   const nextMatch=getNextMatch();
   const lastMatch=getLastCambuurMatch();
   const form=getCambuurForm(5);
+  const formLong=getCambuurForm(10); // iets meer geschiedenis, specifiek voor de vormgrafiek
   const leaguePos=getCambuurLeaguePos();
   const camMatches=(S.matches||[]).filter(m=>m.seasonId===S.currentSeason&&(m.homeClubId===cam?.id||m.awayClubId===cam?.id));
   const played=camMatches.filter(m=>m.played);
@@ -135,9 +154,8 @@ function renderDashboard(){
 
   // Stand per speelronde (positie door het seizoen)
   const standPerRonde = (() => {
-    const comps = (S.competitions||[]).filter(c=>c.seasonId===S.currentSeason&&c.type==='competitie');
-    if (!comps.length) return null;
-    const comp = comps[0];
+    const comp = getMainCompetition(S.currentSeason);
+    if (!comp || comp.type !== 'competitie') return null;
     const allClubIds = comp.clubIds||[];
     if (!allClubIds.length || !cam) return null;
     const compMatches = (S.matches||[])
@@ -352,14 +370,14 @@ function renderDashboard(){
     ${renderMilestonesCard()}
 
     <!-- Stand grafiek + Coach -->
-    ${standGrafiekHtml||coachStats?`<div class="grid-2 mb-12">
-      ${standGrafiekHtml?`<div class="card">
+    <div class="grid-2 mb-12">
+      <div class="card">
         <div class="card-title">Positie door het seizoen${standPerRonde?.compName?' · '+standPerRonde.compName:''}</div>
-        <div style="margin-top:4px">${standGrafiekHtml}</div>
+        ${standGrafiekHtml?`<div style="margin-top:4px">${standGrafiekHtml}</div>
         <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px">
           <span>Speelronde 1</span><span>Speelronde ${standPerRonde.data.length}</span>
-        </div>
-      </div>`:'<div></div>'}
+        </div>`:`<p class="text-muted" style="font-size:12px;margin-top:8px">Nog niet genoeg gespeelde wedstrijden dit seizoen om een positieverloop te tonen.</p>`}
+      </div>
       ${coachStats?`<div class="card">
         <div style="display:flex;gap:12px;align-items:flex-start">
           <div style="flex:1;min-width:0">
@@ -406,15 +424,18 @@ function renderDashboard(){
             ${currentCoach.photo?`<img src="${currentCoach.photo}" style="width:100%;height:100%;object-fit:cover">`:`${(currentCoach.firstname?currentCoach.firstname[0]:'')+(currentCoach.lastname?currentCoach.lastname[0]:'')}`}
           </div>
         </div>
-      </div>`:'<div></div>'}
-    </div>`:''}
+      </div>`:`<div class="card">
+        <div class="card-title">Coach</div>
+        <p class="text-muted" style="font-size:12px;margin-top:8px">Nog geen hoofdtrainer-aanstelling of wedstrijddata bekend voor dit seizoen.</p>
+      </div>`}
+    </div>
 
     <!-- Form + Topscorers + Top assisters -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
       <div class="card">
         <div class="card-title">Recente vorm${form.length?' (laatste '+form.length+')':''}</div>
         ${form.length
-          ? `<div style="display:flex;gap:8px;align-items:flex-start;margin-top:6px;flex-wrap:wrap">${formDots}</div>`
+          ? `${renderFormGraph(formLong)}<div style="display:flex;gap:8px;align-items:flex-start;margin-top:6px;flex-wrap:wrap">${formDots}</div>`
           : '<p class="text-muted" style="font-size:12px">Nog geen gespeelde wedstrijden.</p>'}
       </div>
       <div class="card">

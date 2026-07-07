@@ -267,6 +267,37 @@ function makeTimelineManager(getArray, rerenderFn) {
   };
 }
 
+// Bepaalt "de" hoofdcompetitie van een seizoen voor dashboard-doeleinden
+// (positie-stat, positiegrafiek) — eerst de handmatig aangewezen hoofd-
+// competitie (season.mainCompetitionId), anders een heuristiek: de eerste
+// competitie van type 'competitie' waar de eigen club daadwerkelijk lid van
+// is. Nodig zodra een seizoen meerdere competitie-type competities heeft
+// (bijv. Eredivisie + KKD samen bijgehouden, terwijl je maar in één speelt).
+function getMainCompetition(seasonId) {
+  const season = (S.seasons||[]).find(s=>s.id===seasonId);
+  if (season?.mainCompetitionId) {
+    const comp = (S.competitions||[]).find(c=>c.id===season.mainCompetitionId);
+    if (comp) return comp;
+  }
+  const candidates = (S.competitions||[]).filter(c=>c.seasonId===seasonId&&c.type==='competitie');
+  const cam = (S.clubs||[]).find(c=>c.isOwnClub);
+  if (cam) {
+    const withCam = candidates.find(c=>(c.clubIds||[]).includes(cam.id));
+    if (withCam) return withCam;
+  }
+  return candidates[0] || null;
+}
+
+// Leidt een clubafkorting af uit de naam — bij meerdere woorden de eerste
+// letter van elk woord ("Newcastle United" -> "NU"), bij één woord de eerste
+// 3 letters. Gedeeld tussen de opzet-wizard en de auto-clubaanmaak bij CSV/
+// RSSSF-import, zodat dit niet drie keer los hoeft te staan.
+function deriveClubAbbr(name) {
+  const words = (name||'').trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return words.slice(0,3).map(w=>w[0]).join('').toUpperCase();
+  return (words[0]||'').slice(0,3).toUpperCase();
+}
+
 function genId(prefix) {
   return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
 }

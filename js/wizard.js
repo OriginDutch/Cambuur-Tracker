@@ -9,6 +9,13 @@ function initWizard(){
   document.getElementById('sw-club-rows').innerHTML='';
   swAddStadRow();swAddStadRow();
   swAddClubRow();swAddClubRow();swAddClubRow();
+  // Seizoen auto-voorstellen op basis van de huidige datum: een voetbalseizoen
+  // loopt grofweg juli t/m juni, dus vóór juli hoort het lopende seizoen bij
+  // het voorgaande kalenderjaar.
+  const now = new Date();
+  const startYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear()-1;
+  document.getElementById('sw-season-name').value = `${startYear}/${startYear+1}`;
+  document.getElementById('sw-season-year').value = startYear;
   swUpdateTabs();
 }
 function swUpdateTabs(){
@@ -109,7 +116,7 @@ async function swFinish(){
   const ownClubName = document.getElementById('sw-own-club-name').value.trim();
   if (!ownClubName) { showToast('Vul de naam van je eigen club in', 'error'); return; }
   const ownClubAbbrRaw = document.getElementById('sw-own-club-abbr').value.trim().toUpperCase();
-  const ownClubAbbr = ownClubAbbrRaw || ownClubName.replace(/\s+/g,'').slice(0,3).toUpperCase();
+  const ownClubAbbr = ownClubAbbrRaw || deriveClubAbbr(ownClubName);
   const ownClubId=genId('club_own');
   const ownClub={id:ownClubId,name:ownClubName,abbr:ownClubAbbr,city:ownStad.city||'',stadiumId:ownStadId,highlight:'',note:'',isOwnClub:true};
   await dbPut('clubs',ownClub);S.clubs=S.clubs.filter(c=>c.id!==ownClubId);S.clubs.push(ownClub);
