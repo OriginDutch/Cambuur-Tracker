@@ -275,6 +275,8 @@ async function importDataObj(data) {
   if (data.players)      { for (const s of data.players)       await dbPut('players', s); }
   if (data.matches)      { for (const s of data.matches)       await dbPut('matches', s); }
   if (data.coaches)      { for (const s of data.coaches)       await dbPut('coaches', s); }
+  if (data.prefs)        { S.prefs = data.prefs; await dbPut('settings', {key:'prefs', value: JSON.stringify(S.prefs)}); }
+  if (data.pinnedNextMatch !== undefined) { S.pinnedNextMatch = data.pinnedNextMatch; await saveSetting('pinnedNextMatch', S.pinnedNextMatch); }
   await loadAll();
   renderSeasonSelect();
   renderCompetitionsNav();

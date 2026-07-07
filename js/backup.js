@@ -62,7 +62,7 @@ async function fsLoadFile() {
 function buildExportData() {
   return {version:1, exported:new Date().toISOString(), seasons:S.seasons, clubs:S.clubs,
     stadiums:S.stadiums, competitions:S.competitions, players:S.players||[],
-    matches:S.matches||[], coaches:S.coaches||[]};
+    matches:S.matches||[], coaches:S.coaches||[], prefs:S.prefs||{}, pinnedNextMatch:S.pinnedNextMatch||null};
 }
 
 async function exportData(){
@@ -90,6 +90,8 @@ async function importData(e){
     if(data.players){for(const p of data.players)await dbPut('players',p);S.players=data.players;}
     if(data.matches){for(const m of data.matches)await dbPut('matches',m);S.matches=data.matches;}
     if(data.coaches){for(const c of data.coaches)await dbPut('coaches',c);S.coaches=data.coaches||[];}
+    if(data.prefs){S.prefs=data.prefs;await dbPut('settings',{key:'prefs',value:JSON.stringify(S.prefs)});}
+    if(data.pinnedNextMatch){S.pinnedNextMatch=data.pinnedNextMatch;await saveSetting('pinnedNextMatch',S.pinnedNextMatch);}
     sortSeasons(S.seasons);
     // Always activate the first (most recent) imported season
     if(S.seasons.length>0){
