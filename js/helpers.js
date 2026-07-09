@@ -298,6 +298,34 @@ function deriveClubAbbr(name) {
   return (words[0]||'').slice(0,3).toUpperCase();
 }
 
+// Normaliseert een clubnaam voor matchdoeleinden: hoofdletterongevoelig,
+// overtollige spaties genegeerd, accenten losgekoppeld (é -> e). Alleen voor
+// vergelijking — de opgeslagen naam zelf blijft ongewijzigd.
+function normalizeClubName(name) {
+  return (name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+}
+// Zoekt een club op naam, met de normalisatie hierboven. Gedeeld tussen de
+// PDF/CSV/RSSSF-importers, die deze matchlogica eerder allemaal apart en
+// beperkter (geen trimming, geen accenten) implementeerden.
+function findClubFuzzy(name, clubList) {
+  const target = normalizeClubName(name);
+  if (!target) return null;
+  return (clubList||S.clubs||[]).find(c => normalizeClubName(c.name) === target) || null;
+}
+
+// Bepaalt of een wedstrijd uitverkocht was — toeschouwersaantal exact gelijk
+// aan de capaciteit van het stadion van de thuisclub. Geeft null terug als
+// er te weinig gegevens zijn om iets te zeggen (geen toeschouwersaantal of
+// geen bekende capaciteit), zodat dit niet per ongeluk als "niet uitverkocht"
+// wordt geteld.
+function isMatchSoldOut(m) {
+  if (m.attendance == null) return null;
+  const homeClub = (S.clubs||[]).find(c=>c.id===m.homeClubId);
+  const stadium = homeClub ? (S.stadiums||[]).find(s=>s.id===homeClub.stadiumId) : null;
+  if (!stadium?.capacity) return null;
+  return m.attendance >= stadium.capacity;
+}
+
 function genId(prefix) {
   return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
 }

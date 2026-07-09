@@ -96,6 +96,50 @@ function renderFormGraph(formData) {
   </svg>`;
 }
 
+// Kleine lijngrafiek van de bezettingsgraad (%) per wedstrijd — alleen
+// wedstrijden met een ingevuld toeschouwersaantal ÉN een bekende
+// stadioncapaciteit tellen mee, de rest wordt gewoon overgeslagen i.p.v.
+// als 0% meegerekend (zou het gemiddelde anders onterecht verlagen).
+function renderOccupancyGraph(data) {
+  if (data.length < 2) return '';
+  const W = 100, H = 36, PAD = 6;
+  const innerW = W-PAD*2, innerH = H-PAD*2;
+  const xs = data.map((_,i)=>PAD+(i/(data.length-1))*innerW);
+  const yFor = pct => PAD + innerH - (Math.min(pct,100)/100)*innerH;
+  const points = data.map((d,i)=>`${xs[i]},${yFor(d.pct)}`).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block">
+    <polyline points="${points}" fill="none" stroke="var(--accent-primary)" stroke-width="1.5"/>
+    ${data.map((d,i)=>`<circle cx="${xs[i]}" cy="${yFor(d.pct)}" r="2.5" fill="var(--accent-primary)"/>`).join('')}
+  </svg>`;
+}
+
+function renderAttendanceCard(cam) {
+  if (!cam) return '';
+  const matches = (S.matches||[]).filter(m=>m.seasonId===S.currentSeason&&m.played&&m.attendance!=null&&(m.homeClubId===cam.id||m.awayClubId===cam.id))
+    .sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if (!matches.length) return '';
+
+  const occupancyData = matches.map(m => {
+    const homeClub = S.clubs.find(c=>c.id===m.homeClubId);
+    const stadium = homeClub ? S.stadiums.find(s=>s.id===homeClub.stadiumId) : null;
+    if (!stadium?.capacity) return null;
+    return {pct: Math.round(m.attendance/stadium.capacity*100)};
+  }).filter(Boolean);
+  if (!occupancyData.length) return '';
+
+  const soldOutCount = matches.filter(m=>isMatchSoldOut(m)===true).length;
+  const avgPct = Math.round(occupancyData.reduce((s,o)=>s+o.pct,0)/occupancyData.length);
+
+  return `<div class="card mb-12">
+    <div class="card-title">🎟️ Bezettingsgraad</div>
+    ${renderOccupancyGraph(occupancyData)||'<p class="text-muted" style="font-size:12px">Nog te weinig wedstrijden met bekende capaciteit.</p>'}
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);margin-top:6px">
+      <span>Gemiddeld: <strong>${avgPct}%</strong></span>
+      <span>Keren uitverkocht: <strong>${soldOutCount}</strong></span>
+    </div>
+  </div>`;
+}
+
 function renderDashboard(){
   const el=document.getElementById('dashboard-content');
   const season=S.seasons.find(s=>s.id===S.currentSeason);
@@ -368,6 +412,7 @@ function renderDashboard(){
     <div class="grid-2 mb-12">${nextMatchHtml}${lastMatchHtml}</div>
     ${renderOnThisDayCard(cam)}
     ${renderMilestonesCard()}
+    ${renderAttendanceCard(cam)}
 
     <!-- Stand grafiek + Coach -->
     <div class="grid-2 mb-12">

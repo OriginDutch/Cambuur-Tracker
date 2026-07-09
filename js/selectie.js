@@ -21,6 +21,8 @@ function openPlayerModal(editId) {
     populateNatDropdown(p.nationality || '');
     document.getElementById('player-position').value = p.position || '';
     document.getElementById('player-is-youth').checked = p.squadLevel === 'jeugd';
+    document.getElementById('player-captain').checked = !!p.isCaptain;
+    document.getElementById('player-vice-captain').checked = !!p.isViceCaptain;
     window._editingPlayerOrigSquadLevel = p.squadLevel || 'eerste-elftal';
     document.getElementById('player-joined').value = p.joined || '';
     document.getElementById('player-contract').value = p.contract || '';
@@ -50,6 +52,8 @@ function openPlayerModal(editId) {
   } else {
     document.getElementById('modal-player-title').textContent = 'Speler toevoegen';
     document.getElementById('player-is-youth').checked = false;
+    document.getElementById('player-captain').checked = false;
+    document.getElementById('player-vice-captain').checked = false;
     window._editingPlayerOrigSquadLevel = null;
     ['player-photo','player-firstname','player-lastname','player-number','player-dob',
      'player-joined','player-contract','player-available-from','player-note'].forEach(id => {
@@ -228,6 +232,30 @@ async function savePlayer() {
   const status = document.getElementById('player-status').value;
   const existingPlayerForFlags = existing ? (S.players||[]).find(p=>p.id===existing) : null;
 
+  // Aanvoerder/vice-aanvoerder: maximaal één van elk tegelijk. Bij een
+  // wissel eerst bevestigen — bij annuleren wordt de HELE opslag afgebroken,
+  // zodat er niets stilzwijgend verandert.
+  const wantsCaptain = document.getElementById('player-captain')?.checked || false;
+  const wantsVice = document.getElementById('player-vice-captain')?.checked || false;
+  if (wantsCaptain && !existingPlayerForFlags?.isCaptain) {
+    const currentCaptain = (S.players||[]).find(p=>p.isCaptain && p.id!==id);
+    if (currentCaptain) {
+      const name = `${currentCaptain.firstname?currentCaptain.firstname+' ':''}${currentCaptain.lastname}`;
+      if (!confirm(`${name} is op dit moment aanvoerder. Nieuwe aanvoerder aanwijzen?`)) return;
+      currentCaptain.isCaptain = false;
+      await dbPut('players', currentCaptain);
+    }
+  }
+  if (wantsVice && !existingPlayerForFlags?.isViceCaptain) {
+    const currentVice = (S.players||[]).find(p=>p.isViceCaptain && p.id!==id);
+    if (currentVice) {
+      const name = `${currentVice.firstname?currentVice.firstname+' ':''}${currentVice.lastname}`;
+      if (!confirm(`${name} is op dit moment vice-aanvoerder. Nieuwe vice-aanvoerder aanwijzen?`)) return;
+      currentVice.isViceCaptain = false;
+      await dbPut('players', currentVice);
+    }
+  }
+
   const player = {
     id,
     firstname: fn,
@@ -239,6 +267,8 @@ async function savePlayer() {
     position: pos,
     subpos: [...selectedSubpos],
     squadLevel: document.getElementById('player-is-youth').checked ? 'jeugd' : 'eerste-elftal',
+    isCaptain: wantsCaptain,
+    isViceCaptain: wantsVice,
     joined: document.getElementById('player-joined').value,
     contract: document.getElementById('player-contract').value,
     availableFrom: document.getElementById('player-available-from').value || null,

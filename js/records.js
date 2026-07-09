@@ -20,6 +20,52 @@ function renderRecordsPage() {
     if (m.attendance && (!bestAttended || m.attendance > bestAttended.attendance)) bestAttended = m;
   });
 
+  // Meeste doelpunten door één speler in één wedstrijd (eigen doelpunten tellen niet mee)
+  let bestSingleMatchGoals = null;
+  (S.matches||[]).forEach(m => {
+    const goalCounts = {};
+    (m.events||[]).forEach(e => {
+      if (e.type!=='goal' || !e.playerId) return;
+      if (e.playerId==='__opp__'||e.playerId==='__opp_own__') return;
+      if (e.goalType==='eigen doelpunt') return;
+      goalCounts[e.playerId] = (goalCounts[e.playerId]||0)+1;
+    });
+    Object.entries(goalCounts).forEach(([pid,count]) => {
+      if (!bestSingleMatchGoals || count > bestSingleMatchGoals.count) {
+        const p = players.find(x=>x.id===pid);
+        if (p) bestSingleMatchGoals = {player:p, count, match:m};
+      }
+    });
+  });
+
+  // Grootste comeback — grootste achterstand die alsnog eindigde in winst/gelijkspel.
+  // Vereist minuten bij alle doelpunten in die wedstrijd om de volgorde
+  // betrouwbaar te reconstrueren; zonder minuten wordt de wedstrijd overgeslagen.
+  let biggestComeback = null;
+  if (cam) {
+    (S.matches||[]).forEach(m => {
+      if (!m.played || m.homeScore==null) return;
+      if (!(m.homeClubId===cam.id || m.awayClubId===cam.id)) return;
+      const isCamHome = m.homeClubId===cam.id;
+      const finalCam = isCamHome?m.homeScore:m.awayScore;
+      const finalOpp = isCamHome?m.awayScore:m.homeScore;
+      if (finalCam < finalOpp) return; // verloren, dus geen comeback
+      const goals = (m.events||[]).filter(e=>e.type==='goal').sort((a,b)=>(a.minute??999)-(b.minute??999));
+      if (!goals.length || goals.some(g=>g.minute==null)) return;
+      let camG=0, oppG=0, maxDeficit=0;
+      goals.forEach(g => {
+        const isOppGoal = g.playerId==='__opp__';
+        const isOppOwn = g.playerId==='__opp_own__';
+        const isCamOwnGoal = g.goalType==='eigen doelpunt' && !isOppGoal && !isOppOwn;
+        if (isOppGoal || isCamOwnGoal) oppG++; else camG++;
+        maxDeficit = Math.max(maxDeficit, oppG-camG);
+      });
+      if (maxDeficit>0 && (!biggestComeback || maxDeficit>biggestComeback.deficit)) {
+        biggestComeback = {deficit: maxDeficit, match: m, finalCam, finalOpp};
+      }
+    });
+  }
+
   let biggestBuy=null, biggestSell=null;
   players.forEach(p => {
     const incoming = getIncomingTransferInfo(p);
@@ -90,6 +136,24 @@ function renderRecordsPage() {
       <div class="card-title">🎟️ Best bezochte wedstrijd</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;margin:4px 0">${bestAttended.attendance.toLocaleString('nl-NL')}</div>
       <div style="font-size:12px;color:var(--text-muted)">${home?.name||'?'} - ${away?.name||'?'} (${new Date(bestAttended.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})})</div>
+    </div>`;
+  })());
+  cards.push((() => {
+    if (!bestSingleMatchGoals) return card('⚽','Meeste doelpunten in 1 wedstrijd', '—', 'Nog geen doelpunten geregistreerd');
+    const home = S.clubs.find(c=>c.id===bestSingleMatchGoals.match.homeClubId), away = S.clubs.find(c=>c.id===bestSingleMatchGoals.match.awayClubId);
+    return `<div class="card" style="cursor:pointer" onclick="navigateToMatch('${bestSingleMatchGoals.match.id}')">
+      <div class="card-title">⚽ Meeste doelpunten in 1 wedstrijd</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;margin:4px 0">${bestSingleMatchGoals.count}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${playerLink(bestSingleMatchGoals.player)} · ${home?.name||'?'} - ${away?.name||'?'} (${bestSingleMatchGoals.match.date?new Date(bestSingleMatchGoals.match.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'?'})</div>
+    </div>`;
+  })());
+  cards.push((() => {
+    if (!biggestComeback) return card('🔄','Grootste comeback', '—', 'Nog geen wedstrijd met minuutregistratie waarin een achterstand werd rechtgezet');
+    const home = S.clubs.find(c=>c.id===biggestComeback.match.homeClubId), away = S.clubs.find(c=>c.id===biggestComeback.match.awayClubId);
+    return `<div class="card" style="cursor:pointer" onclick="navigateToMatch('${biggestComeback.match.id}')">
+      <div class="card-title">🔄 Grootste comeback</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;margin:4px 0">-${biggestComeback.deficit} → ${biggestComeback.finalCam}-${biggestComeback.finalOpp}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${home?.name||'?'} - ${away?.name||'?'} (${biggestComeback.match.date?new Date(biggestComeback.match.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'?'})</div>
     </div>`;
   })());
 

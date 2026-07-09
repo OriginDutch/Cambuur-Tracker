@@ -5,7 +5,7 @@ const DB_NAME='CambuurTracker', DB_VER=2;
 let db;
 function initDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,DB_VER);r.onupgradeneeded=e=>{const d=e.target.result;['seasons','clubs','stadiums','competitions','players','matches','matchevents','coaches'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});});if(!d.objectStoreNames.contains('settings'))d.createObjectStore('settings',{keyPath:'key'});};r.onsuccess=e=>{db=e.target.result;res();};r.onerror=()=>rej(r.error);});}
 const dbGet=(s,k)=>new Promise((r,j)=>{const q=db.transaction(s,'readonly').objectStore(s).get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});
-const dbPut=(s,o)=>new Promise((r,j)=>{const q=db.transaction(s,'readwrite').objectStore(s).put(o);q.onsuccess=()=>{r(q.result);_scheduleAutosave();};q.onerror=()=>j(q.error);});
+const dbPut=(s,o)=>new Promise((r,j)=>{const q=db.transaction(s,'readwrite').objectStore(s).put(o);q.onsuccess=()=>{r(q.result);if(!window._isImporting)_scheduleAutosave();};q.onerror=()=>j(q.error);});
 let _autosaveTimer=null;
 function _scheduleAutosave(){clearTimeout(_autosaveTimer);_autosaveTimer=setTimeout(()=>fsWriteData(),2000);gistSchedulePush();}
 const dbDel=(s,k)=>new Promise((r,j)=>{const q=db.transaction(s,'readwrite').objectStore(s).delete(k);q.onsuccess=()=>r();q.onerror=()=>j(q.error);});
@@ -52,6 +52,7 @@ async function loadAll(){
 // INIT
 // ══════════════════════════════
 async function init(){
+  window._isImporting = true; // blijft aan tot de eventuele eerste Gist-pull is afgerond
   await initDB();await loadAll();
   applyTheme(S.theme);
   applyClubBranding();

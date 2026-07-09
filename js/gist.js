@@ -22,7 +22,7 @@ let _gistPushTimer = null;
 let _gistLastPushed = null;
 
 // Load saved token/id from localStorage on startup
-function gistInit() {
+async function gistInit() {
   _gistToken = localStorage.getItem('gist_token') || null;
   _gistId    = localStorage.getItem('gist_id')    || null;
   GIST_WORKER_URL = localStorage.getItem('gist_worker_url') || '';
@@ -33,7 +33,12 @@ function gistInit() {
   if (idInput     && _gistId)         idInput.value     = _gistId;
   if (workerInput && GIST_WORKER_URL) workerInput.value = GIST_WORKER_URL;
   gistUpdateStatus();
-  if (_gistToken && _gistId) gistPull(false);
+  if (_gistToken && _gistId) await gistPull(false);
+  // Pas nu, ná een eventuele eerste pull, mogen dbPut-aanroepen (bijv. van
+  // latere eigen bewerkingen) weer automatisch een push plannen. Dit
+  // voorkomt dat verouderde lokale data (nog niet bijgewerkt door de pull)
+  // per ongeluk teruggeschreven wordt naar Gist vlak na het opstarten.
+  window._isImporting = false;
 }
 
 function gistSaveToken(val) {
@@ -268,15 +273,20 @@ async function setupGistRestore() {
 // wijzigen: check of beide functies nog het juiste gedrag hebben voor
 // hún eigen use-case — niet automatisch synchroniseren.
 async function importDataObj(data) {
-  if (data.seasons)      { for (const s of data.seasons)      await dbPut('seasons', s); }
-  if (data.clubs)        { for (const s of data.clubs)         await dbPut('clubs', s); }
-  if (data.stadiums)     { for (const s of data.stadiums)      await dbPut('stadiums', s); }
-  if (data.competitions) { for (const s of data.competitions)  await dbPut('competitions', s); }
-  if (data.players)      { for (const s of data.players)       await dbPut('players', s); }
-  if (data.matches)      { for (const s of data.matches)       await dbPut('matches', s); }
-  if (data.coaches)      { for (const s of data.coaches)       await dbPut('coaches', s); }
-  if (data.prefs)        { S.prefs = data.prefs; await dbPut('settings', {key:'prefs', value: JSON.stringify(S.prefs)}); }
-  if (data.pinnedNextMatch !== undefined) { S.pinnedNextMatch = data.pinnedNextMatch; await saveSetting('pinnedNextMatch', S.pinnedNextMatch); }
+  window._isImporting = true;
+  try {
+    if (data.seasons)      { for (const s of data.seasons)      await dbPut('seasons', s); }
+    if (data.clubs)        { for (const s of data.clubs)         await dbPut('clubs', s); }
+    if (data.stadiums)     { for (const s of data.stadiums)      await dbPut('stadiums', s); }
+    if (data.competitions) { for (const s of data.competitions)  await dbPut('competitions', s); }
+    if (data.players)      { for (const s of data.players)       await dbPut('players', s); }
+    if (data.matches)      { for (const s of data.matches)       await dbPut('matches', s); }
+    if (data.coaches)      { for (const s of data.coaches)       await dbPut('coaches', s); }
+    if (data.prefs)        { S.prefs = data.prefs; await dbPut('settings', {key:'prefs', value: JSON.stringify(S.prefs)}); }
+    if (data.pinnedNextMatch !== undefined) { S.pinnedNextMatch = data.pinnedNextMatch; await saveSetting('pinnedNextMatch', S.pinnedNextMatch); }
+  } finally {
+    window._isImporting = false;
+  }
   await loadAll();
   renderSeasonSelect();
   renderCompetitionsNav();

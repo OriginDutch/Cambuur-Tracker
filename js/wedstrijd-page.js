@@ -67,6 +67,15 @@ function _refreshMatchRow(matchId, forceFullRefresh) {
   }
 }
 
+function wpSwitchTab(tab, el) {
+  ['opstelling','gebeurtenissen','overig'].forEach(t => {
+    const content = document.getElementById('wp-tab-'+t);
+    if (content) content.style.display = (t===tab) ? 'block' : 'none';
+  });
+  document.querySelectorAll('#wp-tabs .tab').forEach(t=>t.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
 function renderWedstrijdPage(matchId) {
   const m = (S.matches||[]).find(x=>x.id===matchId);
   const el = document.getElementById('wedstrijd-content');
@@ -119,9 +128,12 @@ function renderWedstrijdPage(matchId) {
           ? `<select class="form-select" id="wp-match-round" style="height:32px;font-size:12px">${comp.rounds.map(r=>`<option value="${r}" ${m.round===r?'selected':''}>${r}</option>`).join('')}</select>`
           : `<input class="form-input" id="wp-match-round" type="number" min="1" value="${m.round||''}" style="height:32px;font-size:12px">`}
       </div>
-      <div class="form-group" style="margin:0;width:120px">
+      <div class="form-group" style="margin:0;width:150px">
         <label class="form-label" style="font-size:10px">Toeschouwers</label>
-        <input class="form-input" id="wp-attendance" type="number" min="0" value="${m.attendance??''}" placeholder="—" style="height:32px;font-size:12px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <input class="form-input" id="wp-attendance" type="number" min="0" value="${m.attendance??''}" placeholder="—" style="height:32px;font-size:12px;flex:1">
+          ${isMatchSoldOut(m)?'<span style="font-size:11px;white-space:nowrap" title="Toeschouwersaantal is gelijk aan de stadioncapaciteit">🎟️ Uitverkocht</span>':''}
+        </div>
       </div>
     </div>
   </div>
@@ -189,10 +201,24 @@ function renderWedstrijdPage(matchId) {
     </div>
   </div>
 
-  <!-- Layout: basiself alleen als Cambuur speelt -->
-  <div style="display:grid;grid-template-columns:${isCamPlaying?'1fr 1fr':'1fr'};gap:12px;align-items:start">
+  <!-- Tijdlijn — altijd zichtbaar, want dit is een directe samenvatting van
+       wat je in de tabbladen hieronder invoert; die wil je kunnen zien
+       terwijl je bewerkt, niet erachter verstopt -->
+  <div class="wp-section" style="margin-bottom:12px">
+    <div class="wp-section-title">🕐 Tijdlijn</div>
+    <div id="wp-timeline"></div>
+  </div>
 
-    ${isCamPlaying ? `<!-- LINKS: Basiself -->
+  <!-- Tabbladen: wat je bij het invoeren scheidt, staat ook in het scherm
+       gescheiden — Opstelling (vooraf), Gebeurtenissen (tijdens/erna),
+       Overig (coach/MOTM/notities/statistieken, minder vaak per wedstrijd) -->
+  <div class="tabs" id="wp-tabs" style="margin-bottom:12px">
+    ${isCamPlaying ? `<div class="tab active" data-tab="opstelling" onclick="wpSwitchTab('opstelling',this)">👕 Opstelling</div>` : ''}
+    <div class="tab ${!isCamPlaying?'active':''}" data-tab="gebeurtenissen" onclick="wpSwitchTab('gebeurtenissen',this)">⚽ Gebeurtenissen</div>
+    <div class="tab" data-tab="overig" onclick="wpSwitchTab('overig',this)">📋 Overig</div>
+  </div>
+
+  ${isCamPlaying ? `<div id="wp-tab-opstelling" class="wp-tab-content">
     <div class="wp-section">
       <div class="wp-section-title">
         <span>👕 Basiself <span id="wp-cnt" style="color:var(--text-muted);font-weight:400">(${wpStarters.size}/11)</span></span>
@@ -206,11 +232,24 @@ function renderWedstrijdPage(matchId) {
         </div>
       </div>
       <div id="wp-lineup"></div>
-    </div>` : ''}
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+        <label class="form-label" style="margin:0;font-size:11px;white-space:nowrap">Aanvoerder deze wedstrijd</label>
+        <select class="form-select" id="wp-captain" style="height:28px;font-size:12px;max-width:220px">
+          ${(() => {
+            const lineup = m.lineup || [];
+            const suggested = m.captain || (lineup.find(pid => S.players.find(p=>p.id===pid)?.isCaptain))
+              || (lineup.find(pid => S.players.find(p=>p.id===pid)?.isViceCaptain)) || '';
+            const opts = ['<option value="">— Geen —</option>', ...S.players.slice().sort((a,b)=>(a.lastname||'').localeCompare(b.lastname||'')).map(p=>
+              `<option value="${p.id}" ${suggested===p.id?'selected':''}>${p.number?'#'+p.number+' ':''}${p.firstname?p.firstname+' ':''}${p.lastname}${p.isCaptain?' 🅲':p.isViceCaptain?' 🅥':''}</option>`)];
+            return opts.join('');
+          })()}
+        </select>
+      </div>
+    </div>
+  </div>` : ''}
 
-    <!-- Gebeurtenissen -->
+  <div id="wp-tab-gebeurtenissen" class="wp-tab-content" style="display:${isCamPlaying?'none':'block'}">
     <div style="display:flex;flex-direction:column;gap:10px">
-
       <!-- Doelpunten -->
       <div class="wp-section">
         <div class="wp-section-title">
@@ -219,7 +258,6 @@ function renderWedstrijdPage(matchId) {
         </div>
         <div id="wp-goals"></div>
       </div>
-
       <!-- Wissels -->
       <div class="wp-section">
         <div class="wp-section-title">
@@ -228,7 +266,6 @@ function renderWedstrijdPage(matchId) {
         </div>
         <div id="wp-subs"></div>
       </div>
-
       <!-- Kaarten -->
       <div class="wp-section">
         <div class="wp-section-title">
@@ -237,71 +274,63 @@ function renderWedstrijdPage(matchId) {
         </div>
         <div id="wp-cards"></div>
       </div>
-
-      <!-- Coach + MOTM (alleen als Cambuur speelt) + Notities -->
-      <div class="wp-section">
-        ${isCamPlaying ? `
-        <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
-            <span>🧑‍💼 Coach</span>
-            ${m.played ? wpDataIgnoredToggle(m, 'coach') : ''}
-          </label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <select class="form-select" id="wp-coach" style="flex:1" onchange="wpCoachChanged()"></select>
-            <div id="wp-coach-warning" style="display:none;font-size:11px;color:var(--loss);white-space:nowrap">⚠️ Geschorst</div>
-          </div>
-          <div id="wp-coach-cards-section" style="margin-top:8px"></div>
-        </div>
-        <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
-            <span>🏆 Man of the Match</span>
-            ${m.played ? wpDataIgnoredToggle(m, 'motm') : ''}
-          </label>
-          <select class="form-select" id="wp-motm" style="width:100%"></select>
-        </div>` : ''}
-        <div class="form-group" style="margin:0">
-          <label class="form-label">📝 Notities</label>
-          <textarea class="form-input" id="wp-notes" rows="3"
-            style="resize:vertical;min-height:60px;font-size:13px;width:100%"
-            placeholder="Vrije aantekeningen...">${m.notes||''}</textarea>
-        </div>
-      </div>
     </div>
   </div>
 
-  <!-- Wedstrijdstatistieken — volle breedte, alleen als Cambuur speelt -->
-  ${isCamPlaying ? `<div class="wp-section" style="margin-top:12px">
-    <div class="wp-section-title">
-      <span>📊 Wedstrijdstatistieken</span>
-      ${m.played ? wpDataIgnoredToggle(m, 'matchStats') : ''}
+  <div id="wp-tab-overig" class="wp-tab-content" style="display:none">
+    <div class="wp-section" style="margin-bottom:12px">
+      ${isCamPlaying ? `
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+          <span>🧑‍💼 Coach</span>
+          ${m.played ? wpDataIgnoredToggle(m, 'coach') : ''}
+        </label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select class="form-select" id="wp-coach" style="flex:1" onchange="wpCoachChanged()"></select>
+          <div id="wp-coach-warning" style="display:none;font-size:11px;color:var(--loss);white-space:nowrap">⚠️ Geschorst</div>
+        </div>
+        <div id="wp-coach-cards-section" style="margin-top:8px"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+          <span>🏆 Man of the Match</span>
+          ${m.played ? wpDataIgnoredToggle(m, 'motm') : ''}
+        </label>
+        <select class="form-select" id="wp-motm" style="width:100%"></select>
+      </div>` : ''}
+      <div class="form-group" style="margin:0">
+        <label class="form-label">📝 Notities</label>
+        <textarea class="form-input" id="wp-notes" rows="3"
+          style="resize:vertical;min-height:60px;font-size:13px;width:100%"
+          placeholder="Vrije aantekeningen...">${m.notes||''}</textarea>
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center">
-      <!-- Header -->
-      <div style="font-size:11px;font-weight:700;color:var(--accent-primary);text-align:center">${isCamHome?homeName:awayName}</div>
-      <div></div>
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-align:center">${isCamHome?awayName:homeName}</div>
-      ${[
-        {key:'possession', label:'Balbezit %', type:'number', min:0, max:100},
-        {key:'shots', label:'Schoten', type:'number', min:0},
-        {key:'shotsOnTarget', label:'Schoten op doel', type:'number', min:0},
-        {key:'corners', label:'Corners', type:'number', min:0},
-        {key:'fouls', label:'Overtredingen gemaakt', type:'number', min:0},
-      ].map(s=>`
-        <input class="form-input" type="${s.type}" min="${s.min||0}" ${s.max?'max="'+s.max+'"':''} id="wp-ms-home-${s.key}"
-          value="${m.matchStats?.home?.[s.key]??''}" placeholder="—"
-          style="text-align:center;height:30px;padding:2px 6px;font-size:13px">
-        <div style="font-size:11px;color:var(--text-muted);text-align:center;white-space:nowrap;padding:0 8px">${s.label}</div>
-        <input class="form-input" type="${s.type}" min="${s.min||0}" ${s.max?'max="'+s.max+'"':''} id="wp-ms-away-${s.key}"
-          value="${m.matchStats?.away?.[s.key]??''}" placeholder="—"
-          style="text-align:center;height:30px;padding:2px 6px;font-size:13px">
-      `).join('')}
-    </div>
-  </div>` : ''}
-
-  <!-- Tijdlijn — volle breedte -->
-  <div class="wp-section" style="margin-top:12px">
-    <div class="wp-section-title">🕐 Tijdlijn</div>
-    <div id="wp-timeline"></div>
+    ${isCamPlaying ? `<div class="wp-section">
+      <div class="wp-section-title">
+        <span>📊 Wedstrijdstatistieken</span>
+        ${m.played ? wpDataIgnoredToggle(m, 'matchStats') : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center">
+        <div style="font-size:11px;font-weight:700;color:var(--accent-primary);text-align:center">${isCamHome?homeName:awayName}</div>
+        <div></div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-align:center">${isCamHome?awayName:homeName}</div>
+        ${[
+          {key:'possession', label:'Balbezit %', type:'number', min:0, max:100},
+          {key:'shots', label:'Schoten', type:'number', min:0},
+          {key:'shotsOnTarget', label:'Schoten op doel', type:'number', min:0},
+          {key:'corners', label:'Corners', type:'number', min:0},
+          {key:'fouls', label:'Overtredingen gemaakt', type:'number', min:0},
+        ].map(s=>`
+          <input class="form-input" type="${s.type}" min="${s.min||0}" ${s.max?'max="'+s.max+'"':''} id="wp-ms-home-${s.key}"
+            value="${m.matchStats?.home?.[s.key]??''}" placeholder="—"
+            style="text-align:center;height:30px;padding:2px 6px;font-size:13px">
+          <div style="font-size:11px;color:var(--text-muted);text-align:center;white-space:nowrap;padding:0 8px">${s.label}</div>
+          <input class="form-input" type="${s.type}" min="${s.min||0}" ${s.max?'max="'+s.max+'"':''} id="wp-ms-away-${s.key}"
+            value="${m.matchStats?.away?.[s.key]??''}" placeholder="—"
+            style="text-align:center;height:30px;padding:2px 6px;font-size:13px">
+        `).join('')}
+      </div>
+    </div>` : ''}
   </div>
 
   <!-- Verwijderen — onderaan, subtiel -->
@@ -907,6 +936,8 @@ async function wpSave() {
   m.prediction = (predHs!==''&&predHs!=null && predAs!==''&&predAs!=null)
     ? {homeScore: parseInt(predHs), awayScore: parseInt(predAs)}
     : null;
+  const captainEl = document.getElementById('wp-captain');
+  if (captainEl) m.captain = captainEl.value || null;
 
   const hs = document.getElementById('wp-hs')?.value?.trim();
   const as = document.getElementById('wp-as')?.value?.trim();
