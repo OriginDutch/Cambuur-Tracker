@@ -412,7 +412,7 @@
   }
   .match-row { position: relative; overflow: visible; }
   .match-row:hover .match-tooltip { display: block; }
-  .wp-sticky { position: sticky; top: 0; z-index: 50; background: var(--bg-primary); padding: 10px 0 8px; border-bottom: 1px solid var(--border); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .wp-sticky { position: sticky; top: -16px; z-index: 50; background: var(--bg-primary); margin: -16px -16px 16px; padding: 26px 16px 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
   .wp-section { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; }
   .wp-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
   .starter-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border-light); }

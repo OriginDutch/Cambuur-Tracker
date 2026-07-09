@@ -122,7 +122,7 @@ function renderWedstrijdPage(matchId) {
         <label class="form-label" style="font-size:10px">Tijd</label>
         <input class="form-input" id="wp-match-time" type="time" value="${m.time||''}" style="height:32px;font-size:12px">
       </div>
-      <div class="form-group" style="margin:0;flex:1;min-width:140px">
+      <div class="form-group" style="margin:0;width:160px">
         <label class="form-label" style="font-size:10px">Ronde</label>
         ${(comp?.type==='beker'||comp?.type==='playoffs') && (comp?.rounds||[]).length
           ? `<select class="form-select" id="wp-match-round" style="height:32px;font-size:12px">${comp.rounds.map(r=>`<option value="${r}" ${m.round===r?'selected':''}>${r}</option>`).join('')}</select>`
@@ -197,7 +197,7 @@ function renderWedstrijdPage(matchId) {
         <input id="wp-pen-a" type="number" min="0" value="${m.penalties?.away??''}" placeholder="—"
           class="form-input" style="width:36px;height:28px;text-align:center;font-size:12px;padding:2px 4px;-moz-appearance:textfield" onwheel="this.blur()">
       </div>` : ''}
-      ${m.played && isCamPlaying ? wpDataIgnoredToggle(m, 'extraTime') : ''}
+      ${m.played && isCamPlaying ? `<div style="margin-left:auto;padding-left:12px;border-left:1px solid var(--border-light)">${wpDataIgnoredToggle(m, 'extraTime')}</div>` : ''}
     </div>
   </div>
 
@@ -249,7 +249,7 @@ function renderWedstrijdPage(matchId) {
   </div>` : ''}
 
   <div id="wp-tab-gebeurtenissen" class="wp-tab-content" style="display:${isCamPlaying?'none':'block'}">
-    <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;align-items:start">
       <!-- Doelpunten -->
       <div class="wp-section">
         <div class="wp-section-title">
@@ -278,59 +278,61 @@ function renderWedstrijdPage(matchId) {
   </div>
 
   <div id="wp-tab-overig" class="wp-tab-content" style="display:none">
-    <div class="wp-section" style="margin-bottom:12px">
-      ${isCamPlaying ? `
-      <div class="form-group" style="margin-bottom:10px">
-        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
-          <span>🧑‍💼 Coach</span>
-          ${m.played ? wpDataIgnoredToggle(m, 'coach') : ''}
-        </label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <select class="form-select" id="wp-coach" style="flex:1" onchange="wpCoachChanged()"></select>
-          <div id="wp-coach-warning" style="display:none;font-size:11px;color:var(--loss);white-space:nowrap">⚠️ Geschorst</div>
+    <div style="display:grid;grid-template-columns:${isCamPlaying?'1fr 1fr':'1fr'};gap:12px;align-items:start">
+      <div class="wp-section">
+        ${isCamPlaying ? `
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+            <span>🧑‍💼 Coach</span>
+            ${m.played ? wpDataIgnoredToggle(m, 'coach') : ''}
+          </label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select class="form-select" id="wp-coach" style="flex:1" onchange="wpCoachChanged()"></select>
+            <div id="wp-coach-warning" style="display:none;font-size:11px;color:var(--loss);white-space:nowrap">⚠️ Geschorst</div>
+          </div>
+          <div id="wp-coach-cards-section" style="margin-top:8px"></div>
         </div>
-        <div id="wp-coach-cards-section" style="margin-top:8px"></div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+            <span>🏆 Man of the Match</span>
+            ${m.played ? wpDataIgnoredToggle(m, 'motm') : ''}
+          </label>
+          <select class="form-select" id="wp-motm" style="width:100%"></select>
+        </div>` : ''}
+        <div class="form-group" style="margin:0">
+          <label class="form-label">📝 Notities</label>
+          <textarea class="form-input" id="wp-notes" rows="3"
+            style="resize:vertical;min-height:60px;font-size:13px;width:100%"
+            placeholder="Vrije aantekeningen...">${m.notes||''}</textarea>
+        </div>
       </div>
-      <div class="form-group" style="margin-bottom:10px">
-        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
-          <span>🏆 Man of the Match</span>
-          ${m.played ? wpDataIgnoredToggle(m, 'motm') : ''}
-        </label>
-        <select class="form-select" id="wp-motm" style="width:100%"></select>
+      ${isCamPlaying ? `<div class="wp-section">
+        <div class="wp-section-title">
+          <span>📊 Wedstrijdstatistieken</span>
+          ${m.played ? wpDataIgnoredToggle(m, 'matchStats') : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center">
+          <div style="font-size:11px;font-weight:700;color:var(--accent-primary);text-align:center">${isCamHome?homeName:awayName}</div>
+          <div></div>
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-align:center">${isCamHome?awayName:homeName}</div>
+          ${[
+            {key:'possession', label:'Balbezit %', type:'number', min:0, max:100},
+            {key:'shots', label:'Schoten', type:'number', min:0},
+            {key:'shotsOnTarget', label:'Schoten op doel', type:'number', min:0},
+            {key:'corners', label:'Corners', type:'number', min:0},
+            {key:'fouls', label:'Overtredingen gemaakt', type:'number', min:0},
+          ].map(s=>`
+            <input class="form-input" type="${s.type}" min="${s.min||0}" ${s.max?'max="'+s.max+'"':''} id="wp-ms-home-${s.key}"
+              value="${m.matchStats?.home?.[s.key]??''}" placeholder="—"
+              style="text-align:center;height:30px;padding:2px 6px;font-size:13px">
+            <div style="font-size:11px;color:var(--text-muted);text-align:center;white-space:nowrap;padding:0 8px">${s.label}</div>
+            <input class="form-input" type="${s.type}" min="${s.min||0}" ${s.max?'max="'+s.max+'"':''} id="wp-ms-away-${s.key}"
+              value="${m.matchStats?.away?.[s.key]??''}" placeholder="—"
+              style="text-align:center;height:30px;padding:2px 6px;font-size:13px">
+          `).join('')}
+        </div>
       </div>` : ''}
-      <div class="form-group" style="margin:0">
-        <label class="form-label">📝 Notities</label>
-        <textarea class="form-input" id="wp-notes" rows="3"
-          style="resize:vertical;min-height:60px;font-size:13px;width:100%"
-          placeholder="Vrije aantekeningen...">${m.notes||''}</textarea>
-      </div>
     </div>
-    ${isCamPlaying ? `<div class="wp-section">
-      <div class="wp-section-title">
-        <span>📊 Wedstrijdstatistieken</span>
-        ${m.played ? wpDataIgnoredToggle(m, 'matchStats') : ''}
-      </div>
-      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center">
-        <div style="font-size:11px;font-weight:700;color:var(--accent-primary);text-align:center">${isCamHome?homeName:awayName}</div>
-        <div></div>
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-align:center">${isCamHome?awayName:homeName}</div>
-        ${[
-          {key:'possession', label:'Balbezit %', type:'number', min:0, max:100},
-          {key:'shots', label:'Schoten', type:'number', min:0},
-          {key:'shotsOnTarget', label:'Schoten op doel', type:'number', min:0},
-          {key:'corners', label:'Corners', type:'number', min:0},
-          {key:'fouls', label:'Overtredingen gemaakt', type:'number', min:0},
-        ].map(s=>`
-          <input class="form-input" type="${s.type}" min="${s.min||0}" ${s.max?'max="'+s.max+'"':''} id="wp-ms-home-${s.key}"
-            value="${m.matchStats?.home?.[s.key]??''}" placeholder="—"
-            style="text-align:center;height:30px;padding:2px 6px;font-size:13px">
-          <div style="font-size:11px;color:var(--text-muted);text-align:center;white-space:nowrap;padding:0 8px">${s.label}</div>
-          <input class="form-input" type="${s.type}" min="${s.min||0}" ${s.max?'max="'+s.max+'"':''} id="wp-ms-away-${s.key}"
-            value="${m.matchStats?.away?.[s.key]??''}" placeholder="—"
-            style="text-align:center;height:30px;padding:2px 6px;font-size:13px">
-        `).join('')}
-      </div>
-    </div>` : ''}
   </div>
 
   <!-- Verwijderen — onderaan, subtiel -->
@@ -563,8 +565,9 @@ function wpRenderLineup() {
         <input type="checkbox" ${isS?'checked':''} ${maxed?'disabled':''} style="accent-color:var(--accent-primary);width:15px;height:15px"
           onchange="wpToggleStarter('${p.id}',this.checked)">
         <span style="font-weight:700;color:var(--accent-primary);min-width:26px;font-size:12px">${p.number?'#'+p.number:''}</span>
-        <span style="flex:1;font-size:13px;font-weight:${isS?'600':'400'};color:${isS?'var(--text-primary)':'var(--text-secondary)'}">${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</span>
+        <span style="width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:${isS?'600':'400'};color:${isS?'var(--text-primary)':'var(--text-secondary)'}">${p.firstname?p.firstname[0]+'. ':''}${p.lastname}</span>
         <span style="font-size:11px;color:var(--text-muted)">${p.subpos?.[0]||p.position||''}</span>
+        <span style="flex:1"></span>
         ${isKeeper&&isS?`<input type="number" min="0" id="wp-saves-${p.id}" value="${savesVal}"
           placeholder="Red." title="Reddingen"
           style="width:52px;height:24px;font-size:11px;padding:2px 4px;text-align:center;margin-left:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">`:''}
