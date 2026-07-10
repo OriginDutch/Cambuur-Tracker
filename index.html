@@ -669,10 +669,18 @@
     <div class="modal-body">
       <input type="hidden" id="edit-club-id">
       <div class="form-row cols-2">
-        <div class="form-group"><label class="form-label">Clubnaam</label><input class="form-input" id="club-name" placeholder=""></div>
-        <div class="form-group"><label class="form-label">Afkorting</label><input class="form-input" id="club-abbr" placeholder="" maxlength="4"></div>
+        <div class="form-group"><label class="form-label">Clubnaam</label><input class="form-input" id="club-name" placeholder="" oninput="previewClubLogo()"></div>
+        <div class="form-group"><label class="form-label">Afkorting</label><input class="form-input" id="club-abbr" placeholder="" maxlength="4" oninput="previewClubLogo()"></div>
       </div>
       <div class="form-group"><label class="form-label">Stad</label><input class="form-input" id="club-city" placeholder=""></div>
+      <div class="form-group">
+        <label class="form-label">Logo (URL, optioneel)</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input class="form-input" id="club-logo" placeholder="https://..." style="flex:1" oninput="previewClubLogo()">
+          <div id="club-logo-preview" style="width:40px;height:40px;flex-shrink:0"></div>
+        </div>
+        <div class="settings-row-desc" style="margin-top:4px">Zelf een link naar een afbeelding plakken — geen upload. Werkt de link niet (meer), dan valt de app terug op de afkorting.</div>
+      </div>
       <div class="form-group">
         <label class="form-label">Stadion</label>
         <select class="form-select" id="club-stadium"></select>

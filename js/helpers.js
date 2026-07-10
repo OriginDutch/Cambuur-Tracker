@@ -318,6 +318,17 @@ function findClubFuzzy(name, clubList) {
 // er te weinig gegevens zijn om iets te zeggen (geen toeschouwersaantal of
 // geen bekende capaciteit), zodat dit niet per ongeluk als "niet uitverkocht"
 // wordt geteld.
+// Toont het clublogo (URL, handmatig ingevuld) met terugval op de afkorting
+// zodra er geen logo is ingevuld, of de link een keer niet meer werkt.
+// Zelfde patroon als playerAvatarHTML in selectie.js.
+function clubLogoHTML(club, size) {
+  if (!club) return '';
+  const abbr = club.abbr || club.name?.slice(0,3).toUpperCase() || '?';
+  const sz = size ? `width:${size}px;height:${size}px;font-size:${Math.floor(size*0.32)}px` : '';
+  if (club.logo) return `<span class="club-logo" style="${sz}"><img src="${club.logo}" onerror="this.parentElement.textContent='${abbr}'"></span>`;
+  return `<span class="club-logo" style="${sz}">${abbr}</span>`;
+}
+
 function isMatchSoldOut(m) {
   if (m.attendance == null) return null;
   const homeClub = (S.clubs||[]).find(c=>c.id===m.homeClubId);

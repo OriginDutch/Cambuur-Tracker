@@ -344,7 +344,7 @@ function autoOpenCurrentRound(compId, today) {
 // ══════════════════════════════
 function calcStandings(clubs, compMatches, deductions) {
   const table = {};
-  clubs.forEach(c => { table[c.id] = {id:c.id,name:c.name,isOwn:c.isOwnClub,highlight:c.highlight,g:0,w:0,d:0,l:0,gf:0,ga:0,pts:0,ded:0}; });
+  clubs.forEach(c => { table[c.id] = {id:c.id,name:c.name,logo:c.logo,abbr:c.abbr,isOwn:c.isOwnClub,highlight:c.highlight,g:0,w:0,d:0,l:0,gf:0,ga:0,pts:0,ded:0}; });
   compMatches.filter(m=>m.played&&m.homeScore!==null).forEach(m => {
     let h = table[m.homeClubId];
     let a = table[m.awayClubId];
@@ -431,7 +431,7 @@ function renderLeagueTable(comp, clubs, compMatches) {
       return `<tr style="${c.isOwn?'background:rgba(245,197,0,0.07);font-weight:600':''}${c.highlight==='rivaal'?';border-left:2px solid var(--rival-accent)':''}">
         <td style="width:6px;padding:0;${zone?'background:'+zone.color:''}" title="${zone?.label||''}"></td>
         <td class="num text-muted">${pos}</td>
-        <td>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}${cupBadge}${excludedBadge}</td>
+        <td><div style="display:flex;align-items:center;gap:6px">${clubLogoHTML({logo:c.logo,abbr:c.abbr,name:c.name},18)}<span>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}${cupBadge}${excludedBadge}</span></div></td>
         <td class="num">${c.g}</td><td class="num">${c.w}</td><td class="num">${c.d}</td><td class="num">${c.l}</td>
         <td class="num">${c.gf}</td><td class="num">${c.ga}</td><td class="num">${c.gf-c.ga>0?'+':''}${c.gf-c.ga}</td>
         <td class="num" style="font-weight:700">${c.pts}${c.ded>0?` <span style="font-size:9px;color:var(--loss);font-weight:400" title="${c.ded} punt(en) in mindering gebracht">(-${c.ded})</span>`:''}</td>

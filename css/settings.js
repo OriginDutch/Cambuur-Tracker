@@ -290,7 +290,7 @@ function renderClubsTable(){
       const ownBg = c.isOwnClub ? 'background:rgba(232,124,42,0.12);' : '';
       const rivalBorder = c.highlight==='rivaal'?'border-left:2px solid var(--rival-accent);':c.highlight==='interessant'?'border-left:2px solid var(--interessant);':'';
       return `<tr ${dragAttrs} style="${ownBg}${rivalBorder}${canDrag?'cursor:grab;':''}">
-        <td>${canDrag?'<span style="color:var(--text-muted);margin-right:4px" title="Sleep om te herordenen">⠿</span>':''}<span style="display:inline-flex;align-items:center;gap:6px">${clubLogoHTML(c,20)}<strong>${c.name}</strong></span>${c.isOwnClub?' <span class="badge badge-active" style="font-size:9px">Eigen</span>':''}</td>
+        <td>${canDrag?'<span style="color:var(--text-muted);margin-right:4px" title="Sleep om te herordenen">⠿</span>':''}<strong>${c.name}</strong>${c.isOwnClub?' <span class="badge badge-active" style="font-size:9px">Eigen</span>':''}</td>
         <td><span class="tag">${c.abbr||'—'}</span></td>
         <td class="text-secondary">${c.city||'—'}</td>
         <td>${stad?stad.name:'<span class="text-muted">—</span>'}</td>
@@ -323,30 +323,17 @@ function openClubModal(editId){
     document.getElementById('club-city').value=c.city||'';document.getElementById('club-stadium').value=c.stadiumId||'';
     document.getElementById('club-highlight').value=c.highlight||'';document.getElementById('club-note').value=c.note||'';
     document.getElementById('club-promotion-excluded').checked=c.promotionExcluded||false;
-    document.getElementById('club-logo').value=c.logo||'';
     document.getElementById('modal-club-title').textContent='Club bewerken';
     window._clubDivisions = JSON.parse(JSON.stringify(c.divisionHistory||[]));
   }else{
-    ['club-name','club-abbr','club-city','club-note','club-logo'].forEach(id=>document.getElementById(id).value='');
+    ['club-name','club-abbr','club-city','club-note'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('club-stadium').value='';document.getElementById('club-highlight').value='';
     document.getElementById('club-promotion-excluded').checked=false;
     document.getElementById('modal-club-title').textContent='Club toevoegen';
     window._clubDivisions = [];
   }
-  previewClubLogo();
   renderDivisionHistory();
   document.getElementById('modal-club').classList.add('open');
-}
-
-function previewClubLogo() {
-  const url = document.getElementById('club-logo').value.trim();
-  const abbrRaw = document.getElementById('club-abbr').value.trim();
-  const nameRaw = document.getElementById('club-name').value.trim();
-  const abbr = abbrRaw || nameRaw.slice(0,3).toUpperCase() || '?';
-  const preview = document.getElementById('club-logo-preview');
-  preview.innerHTML = url
-    ? `<div class="club-logo" style="width:40px;height:40px;font-size:13px"><img src="${url}" onerror="this.parentElement.textContent='${abbr}'"></div>`
-    : `<div class="club-logo" style="width:40px;height:40px;font-size:13px">${abbr}</div>`;
 }
 async function saveClub(){
   const name=document.getElementById('club-name').value.trim();
@@ -355,7 +342,7 @@ async function saveClub(){
   if(S.clubs.find(c=>c.name.toLowerCase()===name.toLowerCase()&&c.id!==existing)){showToast('Er bestaat al een club met deze naam','error');return;}
   const id=existing||genId('club');
   const existingClub=existing?S.clubs.find(c=>c.id===existing):null;
-  const club={id,name,abbr:document.getElementById('club-abbr').value.trim().toUpperCase(),stadiumId:document.getElementById('club-stadium').value||null,city:document.getElementById('club-city').value.trim(),highlight:document.getElementById('club-highlight').value,note:document.getElementById('club-note').value.trim(),logo:document.getElementById('club-logo').value.trim(),isOwnClub:existingClub?.isOwnClub||false,promotionExcluded:document.getElementById('club-promotion-excluded').checked,divisionHistory:window._clubDivisions||[],sortOrder:existingClub?.sortOrder};
+  const club={id,name,abbr:document.getElementById('club-abbr').value.trim().toUpperCase(),stadiumId:document.getElementById('club-stadium').value||null,city:document.getElementById('club-city').value.trim(),highlight:document.getElementById('club-highlight').value,note:document.getElementById('club-note').value.trim(),isOwnClub:existingClub?.isOwnClub||false,promotionExcluded:document.getElementById('club-promotion-excluded').checked,divisionHistory:window._clubDivisions||[],sortOrder:existingClub?.sortOrder};
   await dbPut('clubs',club);
   if(existing){const i=S.clubs.findIndex(c=>c.id===existing);if(i>=0)S.clubs[i]=club;}else S.clubs.push(club);
   renderClubsTable();renderCompetitionsNav();renderCompetitionsPage();renderDivisionsSettings();applyClubBranding();closeModal('modal-club');showToast('Club opgeslagen: '+name,'success');

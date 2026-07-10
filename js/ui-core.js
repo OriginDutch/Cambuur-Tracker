@@ -20,7 +20,11 @@ function applyClubBranding() {
   document.title = club ? `${name} — Seizoenstracker` : 'Seizoenstracker';
   const sidebarBadge = document.getElementById('sidebar-badge');
   const sidebarTitleClub = document.getElementById('sidebar-title-club');
-  if (sidebarBadge) sidebarBadge.textContent = abbr;
+  if (sidebarBadge) {
+    sidebarBadge.innerHTML = club?.logo
+      ? `<img src="${club.logo}" style="width:100%;height:100%;object-fit:contain;border-radius:50%" onerror="this.parentElement.textContent='${abbr}'">`
+      : abbr;
+  }
   if (sidebarTitleClub) sidebarTitleClub.textContent = name;
 }
 
