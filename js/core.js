@@ -56,7 +56,7 @@ async function init(){
   await initDB();await loadAll();
   applyTheme(S.theme);
   applyClubBranding();
-  document.getElementById('dark-mode-toggle').checked=S.theme==='dark';
+  const themeSel=document.getElementById('theme-select');if(themeSel)themeSel.value=S.theme||'dark';
   document.getElementById('lang-select').value=S.lang;
   if (!S.prefs) S.prefs = {};
   applyPrefs();
@@ -69,6 +69,13 @@ async function init(){
   await migrateLegacyPlayerFieldsV2();
   renderSeasonSelect();renderCompetitionsNav();renderDashboard();renderSeasonsManage();
   if(S.seasons.length===0){initWizard();document.getElementById('setup-overlay').classList.add('open');}
+  else {
+    const startPage = getPrefs().defaultPage;
+    if (startPage && startPage!=='dashboard') {
+      const navItem = document.querySelector(`.nav-item[data-page="${startPage}"]`);
+      if (navItem) navigate(startPage, navItem);
+    }
+  }
   setTimeout(checkDepartedPlayers, 800);
 }
 

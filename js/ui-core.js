@@ -8,6 +8,7 @@
 // THEME / LANG
 // ══════════════════════════════
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t);}
+async function setTheme(t){S.theme=t;applyTheme(t);await saveSetting('theme',t);}
 
 // Past de paginatitel en het zijbalk-logo aan op de ingestelde eigen club —
 // zodat de clubnaam nergens hardgecodeerd hoeft te blijven staan voor wie de
@@ -22,7 +23,7 @@ function applyClubBranding() {
   if (sidebarBadge) sidebarBadge.textContent = abbr;
   if (sidebarTitleClub) sidebarTitleClub.textContent = name;
 }
-async function toggleTheme(){S.theme=S.theme==='dark'?'light':'dark';applyTheme(S.theme);await saveSetting('theme',S.theme);}
+
 async function setLanguage(lang){S.lang=lang;await saveSetting('lang',lang);}
 
 

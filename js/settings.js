@@ -929,6 +929,14 @@ const DEFAULT_PREFS = {
   clubSortState: {key:'name', dir:1}, // null = handmatige sleepvolgorde, anders {key,dir}
   coachArchiefOpen: false,
   contentWidth: 'compact', // 'compact' = gecentreerd op 1080px, 'full' = volledige breedte
+  tableDensity: 'comfortabel', // 'comfortabel' of 'compact'
+  defaultPage: 'dashboard',
+  colorAccentPrimary: '#F5C500',
+  colorAccentSecondary: '#003A8C',
+  colorRivalAccent: '#C8102E',
+  colorWin: '#22c55e',
+  colorDraw: '#f59e0b',
+  colorLoss: '#ef4444',
 };
 
 function getPrefs() {
@@ -960,6 +968,41 @@ function applyPrefs() {
   document.body.classList.remove('cw-medium', 'cw-full');
   if (p.contentWidth === 'medium') document.body.classList.add('cw-medium');
   else if (p.contentWidth === 'full') document.body.classList.add('cw-full');
+  // Tabeldichtheid
+  document.body.classList.toggle('table-compact', p.tableDensity === 'compact');
+  // Accentkleuren
+  const root = document.documentElement.style;
+  root.setProperty('--accent-primary', p.colorAccentPrimary || '#F5C500');
+  root.setProperty('--accent-secondary', p.colorAccentSecondary || '#003A8C');
+  root.setProperty('--rival-accent', p.colorRivalAccent || '#C8102E');
+  // Win/Gelijk/Verlies — inclusief bijpassende, licht getinte achtergrondversie
+  const win = p.colorWin || '#22c55e', draw = p.colorDraw || '#f59e0b', loss = p.colorLoss || '#ef4444';
+  root.setProperty('--win', win);
+  root.setProperty('--draw', draw);
+  root.setProperty('--loss', loss);
+  root.setProperty('--win-bg', hexToRgba(win, 0.12));
+  root.setProperty('--draw-bg', hexToRgba(draw, 0.12));
+  root.setProperty('--loss-bg', hexToRgba(loss, 0.12));
+}
+
+// Zet #RRGGBB om naar rgba(...) met de gevraagde dekking — nodig om de
+// getinte win/gelijk/verlies-achtergronden mee te laten bewegen met een
+// aangepaste hoofdkleur, in plaats van een vaste kleur te laten staan die
+// niet meer bij de nieuwe accentkleur past.
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  if (isNaN(r)||isNaN(g)||isNaN(b)) return `rgba(0,0,0,${alpha})`;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+async function resetColorPrefs() {
+  const keys = ['colorAccentPrimary','colorAccentSecondary','colorRivalAccent','colorWin','colorDraw','colorLoss'];
+  for (const k of keys) { S.prefs[k] = DEFAULT_PREFS[k]; }
+  await dbPut('settings', {key:'prefs', value: JSON.stringify(S.prefs)});
+  applyPrefs();
+  renderInstellingen();
+  showToast('Standaardkleuren hersteld', 'success');
 }
 
 function setFont(val) { savePref('font', val); }
@@ -968,12 +1011,20 @@ function setFontSize(val) { savePref('fontSize', val); }
 function renderInstellingen() {
   const p = getPrefs();
   // Sync toggle states
-  const dm = document.getElementById('dark-mode-toggle');
-  if (dm) dm.checked = S.theme==='dark';
+  const dm = document.getElementById('theme-select');
+  if (dm) dm.value = S.theme || 'dark';
   const fs = document.getElementById('font-select');
   if (fs) fs.value = p.font || 'inter';
   const cw = document.getElementById('pref-content-width');
   if (cw) cw.value = p.contentWidth || 'compact';
+  const td = document.getElementById('pref-table-density');
+  if (td) td.value = p.tableDensity || 'comfortabel';
+  const dp = document.getElementById('pref-default-page');
+  if (dp) dp.value = p.defaultPage || 'dashboard';
+  ['colorAccentPrimary','colorAccentSecondary','colorRivalAccent','colorWin','colorDraw','colorLoss'].forEach(k => {
+    const el = document.getElementById('pref-'+k);
+    if (el) el.value = p[k] || DEFAULT_PREFS[k];
+  });
   const fss = document.getElementById('fontsize-select');
   if (fss) fss.value = p.fontSize || 'normal';
   const fls = document.getElementById('form-length-select');

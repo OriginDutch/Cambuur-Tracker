@@ -303,8 +303,12 @@
         <div class="settings-section">
           <div class="settings-title">Weergave</div>
           <div class="settings-row">
-            <div><div class="settings-row-label">Donker thema</div><div class="settings-row-desc">Schakel tussen donker en licht</div></div>
-            <label class="toggle"><input type="checkbox" id="dark-mode-toggle" checked onchange="toggleTheme()"><span class="toggle-slider"></span></label>
+            <div><div class="settings-row-label">Thema</div><div class="settings-row-desc">Kies de achtergrondstijl van de interface</div></div>
+            <select class="form-select" style="width:180px" id="theme-select" onchange="setTheme(this.value)">
+              <option value="dark">Donker</option>
+              <option value="dark-contrast">Donker, hoog contrast</option>
+              <option value="light">Licht</option>
+            </select>
           </div>
           <div class="settings-row">
             <div><div class="settings-row-label">Paginabreedte</div><div class="settings-row-desc">Compact/Middel houden de app leesbaar gecentreerd op brede schermen, in plaats van edge-to-edge uit te rekken</div></div>
@@ -338,6 +342,66 @@
               <option value="en">English</option>
             </select>
           </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Tabeldichtheid</div><div class="settings-row-desc">Compact toont meer rijen per scherm, met minder ruimte per rij</div></div>
+            <select class="form-select" style="width:160px" id="pref-table-density" onchange="savePref('tableDensity',this.value)">
+              <option value="comfortabel">Comfortabel</option>
+              <option value="compact">Compact</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Standaard startpagina</div><div class="settings-row-desc">Welke pagina de app opent bij het opstarten</div></div>
+            <select class="form-select" style="width:180px" id="pref-default-page" onchange="savePref('defaultPage',this.value)">
+              <option value="dashboard">Dashboard</option>
+              <option value="selectie">Selectie</option>
+              <option value="statistieken">Statistieken</option>
+              <option value="vergelijking">Vergelijking</option>
+              <option value="coaches">Technische staf</option>
+              <option value="records">Records</option>
+              <option value="rivaliteiten">Rivaliteiten</option>
+              <option value="dagboek">Wedstrijddagboek</option>
+              <option value="kalender">Kalender</option>
+              <option value="clubs">Clubs &amp; Stadions</option>
+              <option value="competitions">Competities beheren</option>
+            </select>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">Kleuren</div>
+          <div class="settings-row-desc" style="margin-bottom:10px">Aangepaste kleuren gelden meteen door de hele app heen — ranglijst-accenten, badges, uitslag-indicatoren, etc.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="pref-colorAccentPrimary" value="#F5C500" onchange="savePref('colorAccentPrimary',this.value)"
+                style="width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;flex-shrink:0">
+              <span style="font-size:12px;color:var(--text-secondary)">Accentkleur (primair)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="pref-colorAccentSecondary" value="#003A8C" onchange="savePref('colorAccentSecondary',this.value)"
+                style="width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;flex-shrink:0">
+              <span style="font-size:12px;color:var(--text-secondary)">Accentkleur (secundair)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="pref-colorRivalAccent" value="#C8102E" onchange="savePref('colorRivalAccent',this.value)"
+                style="width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;flex-shrink:0">
+              <span style="font-size:12px;color:var(--text-secondary)">Rivaal-markering</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="pref-colorWin" value="#22c55e" onchange="savePref('colorWin',this.value)"
+                style="width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;flex-shrink:0">
+              <span style="font-size:12px;color:var(--text-secondary)">Winst</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="pref-colorDraw" value="#f59e0b" onchange="savePref('colorDraw',this.value)"
+                style="width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;flex-shrink:0">
+              <span style="font-size:12px;color:var(--text-secondary)">Gelijkspel</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="pref-colorLoss" value="#ef4444" onchange="savePref('colorLoss',this.value)"
+                style="width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;flex-shrink:0">
+              <span style="font-size:12px;color:var(--text-secondary)">Verlies</span>
+            </div>
+          </div>
+          <button class="btn btn-ghost" style="font-size:11px" onclick="resetColorPrefs()">↺ Terug naar standaardkleuren</button>
         </div>
         <div class="settings-section">
           <div class="settings-title">Dashboard</div>

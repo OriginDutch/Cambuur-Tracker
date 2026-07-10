@@ -15,6 +15,12 @@
     --text-primary:#0f1117;--text-secondary:#4a5270;--text-muted:#6b7494;--text-inverse:#f0f2f7;
     --border:#d0d5e8;--border-light:#e0e4f0;
   }
+  [data-theme="dark-contrast"] {
+    --bg-primary:#000000;--bg-secondary:#111318;--bg-tertiary:#1a1d28;--bg-card:#15171f;
+    --bg-hover:#22252f;--bg-input:#1a1d28;--bg-modal:#111318;
+    --text-primary:#ffffff;--text-secondary:#c5cad9;--text-muted:#a0a6bd;--text-inverse:#000000;
+    --border:#4a5270;--border-light:#333a52;
+  }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Inter',sans-serif;background:var(--bg-primary);color:var(--text-primary);display:flex;height:100vh;overflow:hidden;font-size:13px;}
 
@@ -103,6 +109,8 @@
   .data-table td{padding:7px 10px;border-bottom:1px solid var(--border-light);color:var(--text-primary);vertical-align:middle;}
   .data-table tbody tr:hover{background:var(--bg-hover);}
   .data-table .num{text-align:right;font-variant-numeric:tabular-nums;}
+  body.table-compact .data-table th{padding:3px 8px;}
+  body.table-compact .data-table td{padding:3px 8px;}
 
   /* CARDS */
   .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;}
