@@ -22,7 +22,8 @@
     --border:#4a5270;--border-light:#333a52;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Inter',sans-serif;background:var(--bg-primary);color:var(--text-primary);display:flex;height:100vh;overflow:hidden;font-size:13px;}
+  html{height:100%;}
+  body{font-family:'Inter',sans-serif;background:var(--bg-primary);color:var(--text-primary);display:flex;height:100%;overflow:hidden;font-size:13px;}
 
   /* SETUP WIZARD */
   #setup-overlay{display:none;position:fixed;inset:0;background:var(--bg-primary);z-index:9000;overflow-y:auto;justify-content:center;padding:40px 20px;}
@@ -83,7 +84,7 @@
   #sidebar.collapsed .sidebar-footer .nav-label{display:none;}
   #collapse-btn{position:absolute;right:-12px;top:50%;transform:translateY(-50%);width:24px;height:24px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-secondary);z-index:200;transition:background 0.1s;}
   #collapse-btn:hover{background:var(--bg-hover);color:var(--text-primary);}
-  .sidebar-wrap{position:relative;display:flex;height:100vh;}
+  .sidebar-wrap{position:relative;display:flex;height:100%;}
 
   /* MAIN */
   #main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
