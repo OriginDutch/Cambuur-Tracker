@@ -54,7 +54,7 @@ function renderKalenderPage() {
         })();
         cells += `<div onclick="navigateToMatch('${m.id}')" style="cursor:pointer;background:var(--bg-tertiary);border-radius:6px;padding:4px;min-height:56px;border:1px solid var(--border-light)">
           <div style="font-size:10px;color:var(--text-muted)">${d}</div>
-          <div style="font-size:11px;font-weight:700;margin-top:2px">${isCamHome?'🏠':'🚌'} ${oppLabel}</div>
+          <div style="font-size:11px;font-weight:700;margin-top:2px;display:flex;align-items:center;gap:3px">${isCamHome?'🏠':'🚌'} ${clubLogoHTML(opp,14)} ${oppLabel}</div>
           <div style="font-size:11px;font-weight:700;color:${resultColor}">${resultLabel}</div>
         </div>`;
       } else {

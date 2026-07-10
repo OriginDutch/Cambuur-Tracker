@@ -324,12 +324,12 @@ function renderVergClubs(el, cam) {
         <div class="card" style="margin-top:16px;margin-bottom:16px">
           <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:16px;padding-bottom:16px;border-top:${club.highlight==='rivaal'?'3px solid var(--rival-accent)':'none'}">
             <div style="text-align:center">
-              <div style="margin-bottom:4px">${clubLogoHTML(cam,40)}</div>
+              <div style="margin-bottom:4px">${clubLogoHTML(cam,46)}</div>
               <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--accent-primary)">${cam?.name||'Eigen club'}</div>
             </div>
             <div style="text-align:center;font-size:13px;color:var(--text-muted)">all-time</div>
             <div style="text-align:center">
-              <div style="margin-bottom:4px">${clubLogoHTML(club,40)}</div>
+              <div style="margin-bottom:4px">${clubLogoHTML(club,46)}</div>
               <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800">${club.name}</div>
               ${club.highlight==='rivaal'?'<span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}
             </div>

@@ -325,7 +325,7 @@ function clubLogoHTML(club, size) {
   if (!club) return '';
   const abbr = club.abbr || club.name?.slice(0,3).toUpperCase() || '?';
   const sz = size ? `width:${size}px;height:${size}px;font-size:${Math.floor(size*0.32)}px` : '';
-  if (club.logo) return `<span class="club-logo" style="${sz};background:transparent"><img src="${club.logo}" onerror="this.parentElement.style.background='var(--accent-primary)';this.parentElement.textContent='${abbr}'"></span>`;
+  if (club.logo) return `<span class="club-logo has-image" style="${sz}"><img src="${club.logo}" onerror="this.parentElement.classList.remove('has-image');this.parentElement.textContent='${abbr}'"></span>`;
   return `<span class="club-logo" style="${sz}">${abbr}</span>`;
 }
 

@@ -273,9 +273,9 @@ function renderMatchRow(m, comp) {
     style="${isRival&&isCam?'border-left:2px solid var(--rival-accent)':''}"
     onclick="navigateToMatch('${m.id}')">
     <div class="match-date">${dateStr}${m.time&&!m.played?' '+m.time:''}</div>
-    <div class="match-home" style="display:flex;align-items:center;justify-content:flex-end;gap:6px;${isCam&&m.homeClubId===cam?.id?'color:var(--accent-primary)':''}"><span>${homeName}</span>${clubLogoHTML(homeClub,18)}</div>
+    <div class="match-home" style="display:flex;align-items:center;justify-content:flex-end;gap:6px;${isCam&&m.homeClubId===cam?.id?'color:var(--accent-primary)':''}"><span>${homeName}</span>${clubLogoHTML(homeClub,26)}</div>
     ${scoreHtml}
-    <div class="match-away" style="display:flex;align-items:center;justify-content:flex-start;gap:6px;${isCam&&m.awayClubId===cam?.id?'color:var(--accent-primary)':''}">${clubLogoHTML(awayClub,18)}<span>${awayName}</span></div>
+    <div class="match-away" style="display:flex;align-items:center;justify-content:flex-start;gap:6px;${isCam&&m.awayClubId===cam?.id?'color:var(--accent-primary)':''}">${clubLogoHTML(awayClub,26)}<span>${awayName}</span></div>
     <div class="match-actions" style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
       ${missingDot}
       <button class="icon-btn danger" style="height:26px;padding:2px 6px;font-size:11px"
@@ -431,7 +431,7 @@ function renderLeagueTable(comp, clubs, compMatches) {
       return `<tr style="${c.isOwn?'background:rgba(245,197,0,0.07);font-weight:600':''}${c.highlight==='rivaal'?';border-left:2px solid var(--rival-accent)':''}">
         <td style="width:6px;padding:0;${zone?'background:'+zone.color:''}" title="${zone?.label||''}"></td>
         <td class="num text-muted">${pos}</td>
-        <td><div style="display:flex;align-items:center;gap:6px">${clubLogoHTML({logo:c.logo,abbr:c.abbr,name:c.name},23)}<span>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}${cupBadge}${excludedBadge}</span></div></td>
+        <td><div style="display:flex;align-items:center;gap:6px">${clubLogoHTML({logo:c.logo,abbr:c.abbr,name:c.name},30)}<span>${c.isOwn?'▶ ':''}${c.name}${c.highlight==='rivaal'?' <span class="badge badge-rival" style="font-size:9px">Rivaal</span>':''}${periodBadge}${cupBadge}${excludedBadge}</span></div></td>
         <td class="num">${c.g}</td><td class="num">${c.w}</td><td class="num">${c.d}</td><td class="num">${c.l}</td>
         <td class="num">${c.gf}</td><td class="num">${c.ga}</td><td class="num">${c.gf-c.ga>0?'+':''}${c.gf-c.ga}</td>
         <td class="num" style="font-weight:700">${c.pts}${c.ded>0?` <span style="font-size:9px;color:var(--loss);font-weight:400" title="${c.ded} punt(en) in mindering gebracht">(-${c.ded})</span>`:''}</td>

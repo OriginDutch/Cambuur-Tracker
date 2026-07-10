@@ -135,7 +135,7 @@ function renderRecordsPage() {
     return `<div class="card" style="cursor:pointer" onclick="navigateToMatch('${bestAttended.id}')">
       <div class="card-title">🎟️ Best bezochte wedstrijd</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;margin:4px 0">${bestAttended.attendance.toLocaleString('nl-NL')}</div>
-      <div style="font-size:12px;color:var(--text-muted)">${home?.name||'?'} - ${away?.name||'?'} (${new Date(bestAttended.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})})</div>
+      <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px">${clubLogoHTML(home,16)}<span>${home?.name||'?'} - ${away?.name||'?'}</span>${clubLogoHTML(away,16)}<span>(${new Date(bestAttended.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})})</span></div>
     </div>`;
   })());
   cards.push((() => {
@@ -144,7 +144,7 @@ function renderRecordsPage() {
     return `<div class="card" style="cursor:pointer" onclick="navigateToMatch('${bestSingleMatchGoals.match.id}')">
       <div class="card-title">⚽ Meeste doelpunten in 1 wedstrijd</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;margin:4px 0">${bestSingleMatchGoals.count}</div>
-      <div style="font-size:12px;color:var(--text-muted)">${playerLink(bestSingleMatchGoals.player)} · ${home?.name||'?'} - ${away?.name||'?'} (${bestSingleMatchGoals.match.date?new Date(bestSingleMatchGoals.match.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'?'})</div>
+      <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px">${playerLink(bestSingleMatchGoals.player)} · ${clubLogoHTML(home,16)}<span>${home?.name||'?'} - ${away?.name||'?'}</span>${clubLogoHTML(away,16)}<span>(${bestSingleMatchGoals.match.date?new Date(bestSingleMatchGoals.match.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'?'})</span></div>
     </div>`;
   })());
   cards.push((() => {
@@ -153,7 +153,7 @@ function renderRecordsPage() {
     return `<div class="card" style="cursor:pointer" onclick="navigateToMatch('${biggestComeback.match.id}')">
       <div class="card-title">🔄 Grootste comeback</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;margin:4px 0">-${biggestComeback.deficit} → ${biggestComeback.finalCam}-${biggestComeback.finalOpp}</div>
-      <div style="font-size:12px;color:var(--text-muted)">${home?.name||'?'} - ${away?.name||'?'} (${biggestComeback.match.date?new Date(biggestComeback.match.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'?'})</div>
+      <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px">${clubLogoHTML(home,16)}<span>${home?.name||'?'} - ${away?.name||'?'}</span>${clubLogoHTML(away,16)}<span>(${biggestComeback.match.date?new Date(biggestComeback.match.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'?'})</span></div>
     </div>`;
   })());
 

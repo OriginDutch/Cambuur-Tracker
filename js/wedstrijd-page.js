@@ -148,7 +148,7 @@ function renderWedstrijdPage(matchId) {
   <!-- Score -->
   <div class="wp-section" style="text-align:center;margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:8px">
-      <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:18px;font-weight:700;color:${isCamHome?'var(--accent-primary)':'var(--text-primary)'}"><span>${homeName}</span>${clubLogoHTML(homeClub,33)}</div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:18px;font-weight:700;color:${isCamHome?'var(--accent-primary)':'var(--text-primary)'}"><span>${homeName}</span>${clubLogoHTML(homeClub,40)}</div>
       <div style="display:flex;align-items:center;gap:8px">
         <input id="wp-hs" type="number" min="0" placeholder="—" value="${hs}"
           class="form-input" style="width:60px;text-align:center;font-size:26px;font-weight:800;font-family:'Barlow Condensed',sans-serif;height:48px;padding:2px;-moz-appearance:textfield" onwheel="this.blur()">
@@ -156,7 +156,7 @@ function renderWedstrijdPage(matchId) {
         <input id="wp-as" type="number" min="0" placeholder="—" value="${as}"
           class="form-input" style="width:60px;text-align:center;font-size:26px;font-weight:800;font-family:'Barlow Condensed',sans-serif;height:48px;padding:2px;-moz-appearance:textfield" onwheel="this.blur()">
       </div>
-      <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;gap:8px;font-size:18px;font-weight:700;color:${!isCamHome?'var(--accent-primary)':'var(--text-primary)'}">${clubLogoHTML(awayClub,33)}<span>${awayName}</span></div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;gap:8px;font-size:18px;font-weight:700;color:${!isCamHome?'var(--accent-primary)':'var(--text-primary)'}">${clubLogoHTML(awayClub,40)}<span>${awayName}</span></div>
     </div>
     ${result?`<div style="font-size:12px;font-weight:700;color:${resultColor}">${result}</div>`:''}
     <button class="btn btn-ghost" style="font-size:11px;margin-top:6px" onclick="wpRecalcScore()">📊 Herbereken uit doelpunten</button>
