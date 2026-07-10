@@ -16,15 +16,10 @@ async function setTheme(t){S.theme=t;applyTheme(t);await saveSetting('theme',t);
 function applyClubBranding() {
   const club = (S.clubs||[]).find(c=>c.isOwnClub);
   const name = club?.name || 'Club';
-  const abbr = (club?.abbr || name).slice(0,2).toUpperCase();
   document.title = club ? `${name} — Seizoenstracker` : 'Seizoenstracker';
   const sidebarBadge = document.getElementById('sidebar-badge');
   const sidebarTitleClub = document.getElementById('sidebar-title-club');
-  if (sidebarBadge) {
-    sidebarBadge.innerHTML = club?.logo
-      ? `<img src="${club.logo}" style="width:100%;height:100%;object-fit:contain;border-radius:50%" onerror="this.parentElement.textContent='${abbr}'">`
-      : abbr;
-  }
+  if (sidebarBadge) sidebarBadge.innerHTML = clubLogoHTML(club || {name, abbr: name.slice(0,2)}, 28);
   if (sidebarTitleClub) sidebarTitleClub.textContent = name;
 }
 
