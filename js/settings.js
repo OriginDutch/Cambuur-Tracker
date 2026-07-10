@@ -928,6 +928,7 @@ const DEFAULT_PREFS = {
   divisions: [],
   clubSortState: {key:'name', dir:1}, // null = handmatige sleepvolgorde, anders {key,dir}
   coachArchiefOpen: false,
+  contentWidth: 'compact', // 'compact' = gecentreerd op 1080px, 'full' = volledige breedte
 };
 
 function getPrefs() {
@@ -955,6 +956,10 @@ function applyPrefs() {
   const sizes = {small:'13px', normal:'14px', large:'16px'};
   document.documentElement.style.setProperty('--base-font-size', sizes[p.fontSize] || '14px');
   document.body.style.fontSize = sizes[p.fontSize] || '14px';
+  // Paginabreedte
+  document.body.classList.remove('cw-medium', 'cw-full');
+  if (p.contentWidth === 'medium') document.body.classList.add('cw-medium');
+  else if (p.contentWidth === 'full') document.body.classList.add('cw-full');
 }
 
 function setFont(val) { savePref('font', val); }
@@ -967,6 +972,8 @@ function renderInstellingen() {
   if (dm) dm.checked = S.theme==='dark';
   const fs = document.getElementById('font-select');
   if (fs) fs.value = p.font || 'inter';
+  const cw = document.getElementById('pref-content-width');
+  if (cw) cw.value = p.contentWidth || 'compact';
   const fss = document.getElementById('fontsize-select');
   if (fss) fss.value = p.fontSize || 'normal';
   const fls = document.getElementById('form-length-select');

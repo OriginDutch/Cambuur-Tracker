@@ -93,7 +93,9 @@
   .btn-ghost:hover{color:var(--text-primary);background:var(--bg-hover);}
   #content{flex:1;overflow-y:auto;padding:16px;}
   .page{display:none;}
-  .page.active{display:block;}
+  .page.active{display:block;max-width:1080px;margin:0 auto;}
+  body.cw-medium .page.active{max-width:1400px;}
+  body.cw-full .page.active{max-width:none;}
 
   /* TABLES */
   .data-table{width:100%;border-collapse:collapse;font-size:12px;}

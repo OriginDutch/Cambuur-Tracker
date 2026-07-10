@@ -112,11 +112,9 @@ function renderWedstrijdPage(matchId) {
     <button class="btn btn-primary" onclick="wpSave()">✓ Opslaan</button>
   </div>
 
-  <!-- Alle inhoud hieronder gecentreerd en breedte-beperkt — dit is een
-       formulier-zware pagina (40+ losse velden), die worden op extreme
-       breedte onleesbaar/opgerekt. Kaartenpagina's elders in de app hebben
-       dit bewust niet, want die profiteren juist wél van meer breedte. -->
-  <div style="max-width:1080px;margin:0 auto">
+  <!-- Alle inhoud hieronder — de paginabreedte zelf wordt nu universeel
+       geregeld via .page in app.css, aangestuurd door de contentWidth-
+       voorkeur (zie applyPrefs()) -->
 
   <!-- Wedstrijdgegevens: datum/tijd/ronde -->
   <div class="wp-section" style="margin-bottom:12px">
@@ -346,8 +344,6 @@ function renderWedstrijdPage(matchId) {
   <div style="text-align:right;margin:16px 0 8px;opacity:0.5">
     <button class="btn btn-ghost" style="font-size:11px;color:var(--loss)"
       onclick="if(confirm('Wedstrijd verwijderen?')){deleteMatch('${m.id}');wpBack()}">🗑️ Wedstrijd verwijderen</button>
-  </div>
-
   </div>`;
 
   // Populate MOTM

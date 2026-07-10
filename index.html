@@ -307,6 +307,14 @@
             <label class="toggle"><input type="checkbox" id="dark-mode-toggle" checked onchange="toggleTheme()"><span class="toggle-slider"></span></label>
           </div>
           <div class="settings-row">
+            <div><div class="settings-row-label">Paginabreedte</div><div class="settings-row-desc">Compact/Middel houden de app leesbaar gecentreerd op brede schermen, in plaats van edge-to-edge uit te rekken</div></div>
+            <select class="form-select" style="width:160px" id="pref-content-width" onchange="savePref('contentWidth',this.value)">
+              <option value="compact">Compact (1080px)</option>
+              <option value="medium">Middel (1400px)</option>
+              <option value="full">Volledige breedte</option>
+            </select>
+          </div>
+          <div class="settings-row">
             <div><div class="settings-row-label">Lettertype</div><div class="settings-row-desc">Kies het lettertype voor de interface</div></div>
             <select class="form-select" style="width:160px" id="font-select" onchange="setFont(this.value)">
               <option value="inter">Inter (standaard)</option>
