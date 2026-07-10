@@ -152,7 +152,7 @@ function renderDashboard(){
   const camName=cam?.name||'Eigen club';
   const nextMatch=getNextMatch();
   const lastMatch=getLastCambuurMatch();
-  const form=getCambuurForm(5);
+  const form=getCambuurForm(parseInt(getPrefs().formLength)||5);
   const formLong=getCambuurForm(10); // iets meer geschiedenis, specifiek voor de vormgrafiek
   const leaguePos=getCambuurLeaguePos();
   const camMatches=(S.matches||[]).filter(m=>m.seasonId===S.currentSeason&&(m.homeClubId===cam?.id||m.awayClubId===cam?.id));

@@ -957,13 +957,16 @@ function applyPrefs() {
     inter: "'Inter','Segoe UI',sans-serif",
     system: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
     roboto: "'Roboto','Segoe UI',sans-serif",
-    mono: "'JetBrains Mono','Fira Code',monospace"
+    mono: "'JetBrains Mono','Fira Code',monospace",
+    bahnschrift: "'Bahnschrift','Segoe UI',sans-serif" // Windows-systeemfont; valt elders terug op Segoe UI
   };
   document.body.style.fontFamily = fonts[p.font] || fonts.inter;
-  // Font size
-  const sizes = {small:'13px', normal:'14px', large:'16px'};
-  document.documentElement.style.setProperty('--base-font-size', sizes[p.fontSize] || '14px');
-  document.body.style.fontSize = sizes[p.fontSize] || '14px';
+  // Tekstgrootte — schaalt de hele interface proportioneel (tekst, afstand,
+  // iconen) via zoom, in plaats van alleen de font-size van <body> te zetten
+  // (die had geen effect, want vrijwel elk element heeft een eigen vaste
+  // pixelwaarde die niet van body overerft).
+  const zoomLevels = {xsmall:'90%', small:'95%', normal:'100%', large:'110%', xlarge:'125%'};
+  document.body.style.zoom = zoomLevels[p.fontSize] || '100%';
   // Paginabreedte
   document.body.classList.remove('cw-medium', 'cw-full');
   if (p.contentWidth === 'medium') document.body.classList.add('cw-medium');

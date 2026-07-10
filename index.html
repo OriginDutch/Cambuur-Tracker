@@ -325,17 +325,20 @@
               <option value="system">Systeemfont</option>
               <option value="roboto">Roboto</option>
               <option value="mono">Monospace</option>
+              <option value="bahnschrift">Bahnschrift (Windows)</option>
             </select>
           </div>
           <div class="settings-row">
             <div><div class="settings-row-label">Tekstgrootte</div><div class="settings-row-desc">Basisgrootte voor de interface</div></div>
             <select class="form-select" style="width:160px" id="fontsize-select" onchange="setFontSize(this.value)">
-              <option value="small">Klein (13px)</option>
-              <option value="normal" selected>Normaal (14px)</option>
-              <option value="large">Groot (16px)</option>
+              <option value="xsmall">Extra klein (90%)</option>
+              <option value="small">Klein (95%)</option>
+              <option value="normal" selected>Normaal (100%)</option>
+              <option value="large">Groot (110%)</option>
+              <option value="xlarge">Extra groot (125%)</option>
             </select>
           </div>
-          <div class="settings-row">
+          <div class="settings-row" style="display:none">
             <div><div class="settings-row-label">Taal</div><div class="settings-row-desc">Nederlands of Engels</div></div>
             <select class="form-select" style="width:auto" id="lang-select" onchange="setLanguage(this.value)">
               <option value="nl">Nederlands</option>
