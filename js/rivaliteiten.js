@@ -21,7 +21,7 @@ function renderRivaliteitenPage() {
     const h2h = getHeadToHeadStats(cam.id, club.id);
     if (!h2h.played) {
       return `<div class="card mb-12">
-        <div class="card-title" style="display:flex;align-items:center;gap:6px">${clubLogoHTML(club,20)}🔥 ${club.name}</div>
+        <div class="card-title" style="display:flex;align-items:center;gap:6px">${clubLogoHTML(club,25)}🔥 ${club.name}</div>
         <p class="text-muted" style="font-size:12px">Nog geen onderlinge wedstrijden gevonden.</p>
       </div>`;
     }
@@ -32,7 +32,7 @@ function renderRivaliteitenPage() {
     const lastResultColor = lastCs>lastOs?'var(--win)':lastCs<lastOs?'var(--loss)':'var(--draw)';
     return `<div class="card mb-12" style="cursor:pointer" onclick="navigateToClubComparison('${club.id}')">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="card-title" style="margin:0;display:flex;align-items:center;gap:6px">${clubLogoHTML(club,20)}🔥 ${club.name}</div>
+        <div class="card-title" style="margin:0;display:flex;align-items:center;gap:6px">${clubLogoHTML(club,25)}🔥 ${club.name}</div>
         <div style="font-size:11px;color:var(--text-muted)">${h2h.played} ontmoetingen all-time</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center">
