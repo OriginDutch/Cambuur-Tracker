@@ -127,11 +127,11 @@ function renderClubPage(clubId) {
     const relTotal = Object.values(analysis.relegations).reduce((a,b)=>a+b,0);
 
     const timelineStints = analysis.stints.slice().reverse(); // nieuwste eerst
-    const timelineHtml = timelineStints.map(s => {
+    const timelineHtml = timelineStints.map((s, i) => {
       const arrow = s.transitionType==='promotie' ? '<span style="color:var(--win);font-size:12px">▲</span>'
         : s.transitionType==='degradatie' ? '<span style="color:var(--loss);font-size:12px">▼</span>'
         : '<span style="color:var(--text-muted)">•</span>';
-      return `<div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border-light)">
+      return `<div style="display:flex;gap:10px;align-items:baseline;padding:6px 8px;border-bottom:1px solid var(--border-light);background:${i%2?'var(--bg-tertiary)':'transparent'}">
         <div style="font-size:11px;color:var(--text-muted);width:90px;flex-shrink:0">${new Date(s.start).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})}</div>
         <div style="width:16px;flex-shrink:0;text-align:center">${arrow}</div>
         <div style="flex:1">
@@ -199,31 +199,29 @@ function renderClubPage(clubId) {
 
       // Wedstrijdrij: perspectief is altijd de EIGEN club (niet per se de club
       // wiens pagina je bekijkt) — anders zou "onze" winst rood ogen zodra je
-      // vanaf de pagina van de tegenstander vergelijkt. Doelpunten voor/tegen
-      // in groen/rood, winnaar direct duidelijk via een gekleurde rand en
-      // vetgedrukte naam.
+      // vanaf de pagina van de tegenstander vergelijkt. Winst/gelijk/verlies
+      // blijft zichtbaar via de rand + vetgedrukte naam; de score zelf blijft
+      // neutraal om niet drie keer hetzelfde signaal te geven.
       const ownClubForPerspective = S.clubs.find(c=>c.isOwnClub);
       const perspectiveId = (ownClubForPerspective && (ownClubForPerspective.id===clubId || ownClubForPerspective.id===clubPageCompareId))
         ? ownClubForPerspective.id : clubId;
       h2hMatchListHtml = `<div class="card mt-12">
         <div class="card-title">📋 Alle onderlinge wedstrijden (${h2h.played})</div>
         <div style="max-height:280px;overflow-y:auto">
-          ${h2h.matches.map(m => {
+          ${h2h.matches.map((m, i) => {
             const home = S.clubs.find(c=>c.id===m.homeClubId), away = S.clubs.find(c=>c.id===m.awayClubId);
             const comp = S.competitions.find(c=>c.id===m.competitionId);
             const isPerspectiveHome = m.homeClubId===perspectiveId;
             const perspectiveScore = isPerspectiveHome ? m.homeScore : m.awayScore;
             const otherScore = isPerspectiveHome ? m.awayScore : m.homeScore;
             const resultColor = perspectiveScore>otherScore?'var(--win)':perspectiveScore<otherScore?'var(--loss)':'var(--draw)';
-            const homeScoreColor = isPerspectiveHome ? 'var(--win)' : 'var(--loss)';
-            const awayScoreColor = !isPerspectiveHome ? 'var(--win)' : 'var(--loss)';
             const homeWonMatch = m.homeScore > m.awayScore, awayWonMatch = m.awayScore > m.homeScore;
-            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border-light);border-left:3px solid ${resultColor};cursor:pointer;font-size:12px" onclick="navigateToMatch('${m.id}')">
-              <span style="color:var(--text-muted);width:90px;flex-shrink:0">${m.date?new Date(m.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'?'}</span>
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border-light);border-left:3px solid ${resultColor};background:${i%2?'var(--bg-tertiary)':'transparent'};cursor:pointer;font-size:12px" onclick="navigateToMatch('${m.id}')">
+              <span style="color:var(--text-muted);width:80px;flex-shrink:0">${m.date?new Date(m.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'?'}</span>
+              <span style="color:var(--text-muted);font-size:10px;width:90px;flex-shrink:0">${comp?.name||''}</span>
               <span style="flex:1;text-align:right;font-weight:${homeWonMatch?'700':'400'}">${home?.name||'?'}</span>
-              <span style="padding:0 10px;font-weight:800;font-family:'Barlow Condensed',sans-serif;font-size:14px"><span style="color:${homeScoreColor}">${m.homeScore}</span>-<span style="color:${awayScoreColor}">${m.awayScore}</span></span>
+              <span style="padding:0 14px;font-weight:800;font-family:'Barlow Condensed',sans-serif;font-size:15px;white-space:nowrap">${m.homeScore} - ${m.awayScore}</span>
               <span style="flex:1;font-weight:${awayWonMatch?'700':'400'}">${away?.name||'?'}</span>
-              <span style="color:var(--text-muted);font-size:10px;width:100px;text-align:right;flex-shrink:0">${comp?.name||''}</span>
             </div>`;
           }).join('')}
         </div>
