@@ -61,10 +61,17 @@ function analyzeDivisionHistory(club) {
     };
   });
 
-  const countSeasons = (start, end) => (S.seasons||[]).filter(s => {
-    const r = getSeasonDateRange(s);
-    return r && r.start < end && r.end >= start;
-  }).length;
+  // Telt hoeveel juli-juni-'seizoenen' er tussen start en einde vallen, puur
+  // op datumbasis (zelfde conventie als getSeasonDateRange) — bewust NIET
+  // afhankelijk van welke seizoenen je toevallig al hebt aangemaakt in de
+  // app, anders zou een periode van vóór je eerste bijgehouden seizoen altijd
+  // op 0 uitkomen, ook als je 'm keurig op 1 juli hebt ingesteld.
+  const seasonYearOf = (dateStr) => {
+    const d = new Date(dateStr);
+    const y = d.getFullYear(), m = d.getMonth(); // maand 0-11
+    return m >= 6 ? y : y - 1; // juli (6) of later telt als start van dát seizoensjaar
+  };
+  const countSeasons = (start, end) => Math.max(0, seasonYearOf(end) - seasonYearOf(start));
   stints.forEach(s => { s.seasons = countSeasons(s.start, s.end); });
 
   const promotions = {}, relegations = {};
@@ -121,8 +128,8 @@ function renderClubPage(clubId) {
 
     const timelineStints = analysis.stints.slice().reverse(); // nieuwste eerst
     const timelineHtml = timelineStints.map(s => {
-      const arrow = s.transitionType==='promotie' ? '<span style="color:var(--win)">⬆️</span>'
-        : s.transitionType==='degradatie' ? '<span style="color:var(--loss)">⬇️</span>'
+      const arrow = s.transitionType==='promotie' ? '<span style="color:var(--win);font-size:12px">▲</span>'
+        : s.transitionType==='degradatie' ? '<span style="color:var(--loss);font-size:12px">▼</span>'
         : '<span style="color:var(--text-muted)">•</span>';
       return `<div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border-light)">
         <div style="font-size:11px;color:var(--text-muted);width:90px;flex-shrink:0">${new Date(s.start).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})}</div>
@@ -190,21 +197,26 @@ function renderClubPage(clubId) {
         ${fmtBig(h2h.biggestWin, 'Grootste zege', 'var(--win)')}
         ${fmtBig(h2h.biggestLoss, 'Grootste nederlaag', 'var(--loss)')}`;
 
-      // Wedstrijdrij: doelpunten gekleurd naar voor/tegen (eigen goals fel,
-      // tegendoelpunten gedempt) + winnaar direct duidelijk via een gekleurde
-      // rand en vetgedrukte naam van de winnende club.
+      // Wedstrijdrij: perspectief is altijd de EIGEN club (niet per se de club
+      // wiens pagina je bekijkt) — anders zou "onze" winst rood ogen zodra je
+      // vanaf de pagina van de tegenstander vergelijkt. Doelpunten voor/tegen
+      // in groen/rood, winnaar direct duidelijk via een gekleurde rand en
+      // vetgedrukte naam.
+      const ownClubForPerspective = S.clubs.find(c=>c.isOwnClub);
+      const perspectiveId = (ownClubForPerspective && (ownClubForPerspective.id===clubId || ownClubForPerspective.id===clubPageCompareId))
+        ? ownClubForPerspective.id : clubId;
       h2hMatchListHtml = `<div class="card mt-12">
         <div class="card-title">📋 Alle onderlinge wedstrijden (${h2h.played})</div>
         <div style="max-height:280px;overflow-y:auto">
           ${h2h.matches.map(m => {
             const home = S.clubs.find(c=>c.id===m.homeClubId), away = S.clubs.find(c=>c.id===m.awayClubId);
             const comp = S.competitions.find(c=>c.id===m.competitionId);
-            const isClubHome = m.homeClubId===clubId;
-            const clubScore = isClubHome ? m.homeScore : m.awayScore;
-            const oppScore = isClubHome ? m.awayScore : m.homeScore;
-            const resultColor = clubScore>oppScore?'var(--win)':clubScore<oppScore?'var(--loss)':'var(--draw)';
-            const homeScoreColor = isClubHome ? 'var(--text-primary)' : 'var(--text-muted)';
-            const awayScoreColor = !isClubHome ? 'var(--text-primary)' : 'var(--text-muted)';
+            const isPerspectiveHome = m.homeClubId===perspectiveId;
+            const perspectiveScore = isPerspectiveHome ? m.homeScore : m.awayScore;
+            const otherScore = isPerspectiveHome ? m.awayScore : m.homeScore;
+            const resultColor = perspectiveScore>otherScore?'var(--win)':perspectiveScore<otherScore?'var(--loss)':'var(--draw)';
+            const homeScoreColor = isPerspectiveHome ? 'var(--win)' : 'var(--loss)';
+            const awayScoreColor = !isPerspectiveHome ? 'var(--win)' : 'var(--loss)';
             const homeWonMatch = m.homeScore > m.awayScore, awayWonMatch = m.awayScore > m.homeScore;
             return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border-light);border-left:3px solid ${resultColor};cursor:pointer;font-size:12px" onclick="navigateToMatch('${m.id}')">
               <span style="color:var(--text-muted);width:90px;flex-shrink:0">${m.date?new Date(m.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'?'}</span>
