@@ -31,18 +31,35 @@ function setClubPageCompare(id) {
   renderClubPage(clubPageCurrentId);
 }
 
+// Analyseert de divisiehistorie aan de hand van de volgorde in de ingestelde
+// divisielijst (S.prefs.divisions) — die volgorde IS de hiërarchie (bovenaan
+// = hoogste niveau). Elke "stint" (periode in één divisie) krijgt meteen
+// zijn eigen duur (in seizoenen, op basis van overlap met S.seasons) en een
+// promotie/degradatie-richting t.o.v. de vorige periode — die twee dingen
+// worden zowel in de samenvatting als in de tijdlijn hergebruikt, zodat ze
+// nooit uit de pas kunnen lopen met elkaar.
 function analyzeDivisionHistory(club) {
   const hierarchy = S.prefs?.divisions || [];
   const history = (club.divisionHistory||[]).filter(h=>h.startDate).slice().sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
   if (!history.length) return null;
 
   const today = new Date().toISOString().split('T')[0];
-  const stints = history.map((h, i) => ({
-    division: h.division,
-    start: h.startDate,
-    end: history[i+1]?.startDate || today,
-    isOngoing: i === history.length-1,
-  }));
+  const stints = history.map((h, i) => {
+    const prevIdx = i>0 ? hierarchy.indexOf(history[i-1].division) : -1;
+    const curIdx = hierarchy.indexOf(h.division);
+    let transitionType = null;
+    if (i>0 && prevIdx!==-1 && curIdx!==-1 && prevIdx!==curIdx) {
+      transitionType = curIdx < prevIdx ? 'promotie' : 'degradatie';
+    }
+    return {
+      division: h.division,
+      note: h.note,
+      start: h.startDate,
+      end: history[i+1]?.startDate || today,
+      isOngoing: i === history.length-1,
+      transitionType,
+    };
+  });
 
   const countSeasons = (start, end) => (S.seasons||[]).filter(s => {
     const r = getSeasonDateRange(s);
@@ -52,19 +69,15 @@ function analyzeDivisionHistory(club) {
 
   const promotions = {}, relegations = {};
   let lastTransitionYear = null, lastTransitionType = null;
-  for (let i=1; i<history.length; i++) {
-    const prevIdx = hierarchy.indexOf(history[i-1].division);
-    const newIdx = hierarchy.indexOf(history[i].division);
-    if (prevIdx===-1 || newIdx===-1 || prevIdx===newIdx) continue;
-    const year = history[i].startDate ? new Date(history[i].startDate).getFullYear() : null;
-    if (newIdx < prevIdx) {
-      promotions[history[i].division] = (promotions[history[i].division]||0)+1;
-      lastTransitionYear = year; lastTransitionType = 'promotie';
-    } else {
-      relegations[history[i].division] = (relegations[history[i].division]||0)+1;
-      lastTransitionYear = year; lastTransitionType = 'degradatie';
+  stints.forEach(s => {
+    if (s.transitionType === 'promotie') {
+      promotions[s.division] = (promotions[s.division]||0)+1;
+      lastTransitionYear = new Date(s.start).getFullYear(); lastTransitionType = 'promotie';
+    } else if (s.transitionType === 'degradatie') {
+      relegations[s.division] = (relegations[s.division]||0)+1;
+      lastTransitionYear = new Date(s.start).getFullYear(); lastTransitionType = 'degradatie';
     }
-  }
+  });
 
   const longest = stints.slice().sort((a,b)=>b.seasons-a.seasons)[0];
   const withIdx = history.map(h=>({division:h.division, idx:hierarchy.indexOf(h.division)})).filter(x=>x.idx!==-1);
@@ -75,6 +88,9 @@ function analyzeDivisionHistory(club) {
   return {stints, promotions, relegations, longest, highest, lowest, current, lastTransitionYear, lastTransitionType};
 }
 
+// Spelers die WIJ van deze club kochten, en spelers die WIJ aan deze club
+// verkochten — afgeleid uit ieders transferhistorie (vrije-tekst clubnaam,
+// dus tekst-vergelijking, geen harde koppeling).
 function getClubTransferConnections(clubName) {
   const bought = [], sold = [];
   (S.players||[]).forEach(p => {
@@ -95,30 +111,48 @@ function renderClubPage(clubId) {
   if (!club || !el) return;
   const stadium = (S.stadiums||[]).find(s=>s.id===club.stadiumId);
 
+  // ── Divisiehistorie: prominente "huidig"-regel + statistiekenraster + tijdlijn ──
   const analysis = analyzeDivisionHistory(club);
-  let divisionSummaryHtml = '<p class="text-muted" style="font-size:12px">Nog geen divisiehistorie bekend voor deze club.</p>';
+  let divisionCardHtml = '<p class="text-muted" style="font-size:12px">Nog geen divisiehistorie bekend voor deze club.</p>';
   if (analysis) {
-    const promoLines = Object.entries(analysis.promotions).map(([div,n])=>`<div>up ${n}x gepromoveerd naar <strong>${div}</strong></div>`).join('');
-    const relLines = Object.entries(analysis.relegations).map(([div,n])=>`<div>down ${n}x gedegradeerd naar <strong>${div}</strong></div>`).join('');
-    divisionSummaryHtml = `
-      <div style="font-size:13px;line-height:1.9">
-        <div>Momenteel actief in <strong>${analysis.current.division}</strong>, al ${analysis.current.seasons} seizoen${analysis.current.seasons!==1?'en':''}</div>
-        ${promoLines}${relLines}
-        ${analysis.longest?`<div>Langste periode: <strong>${analysis.longest.seasons} seizoenen</strong> in ${analysis.longest.division}</div>`:''}
-        ${analysis.highest?`<div>Hoogst bereikt: <strong>${analysis.highest.division}</strong></div>`:''}
-        ${analysis.lowest && analysis.lowest.division!==analysis.highest?.division?`<div>Laagst bereikt: <strong>${analysis.lowest.division}</strong></div>`:''}
-        ${analysis.lastTransitionYear?`<div>Laatste ${analysis.lastTransitionType}: <strong>${analysis.lastTransitionYear}</strong></div>`:''}
-      </div>`;
-  }
-  const history = (club.divisionHistory||[]).slice().sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
-  const historyHtml = history.length
-    ? history.map(h => `<div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border-light)">
-        <div style="font-size:11px;color:var(--text-muted);width:90px;flex-shrink:0">${h.startDate ? new Date(h.startDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}) : '—'}</div>
-        <div style="font-weight:600;font-size:13px">${h.division||'—'}</div>
-        ${h.note?`<div style="font-size:12px;color:var(--text-muted)">— ${h.note}</div>`:''}
-      </div>`).join('')
-    : '';
+    const statChip = (value, label, color) => `<div><div style="font-size:16px;font-weight:800;${color?`color:${color}`:''}">${value}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;margin-top:1px">${label}</div></div>`;
+    const promoTotal = Object.values(analysis.promotions).reduce((a,b)=>a+b,0);
+    const relTotal = Object.values(analysis.relegations).reduce((a,b)=>a+b,0);
 
+    const timelineStints = analysis.stints.slice().reverse(); // nieuwste eerst
+    const timelineHtml = timelineStints.map(s => {
+      const arrow = s.transitionType==='promotie' ? '<span style="color:var(--win)">⬆️</span>'
+        : s.transitionType==='degradatie' ? '<span style="color:var(--loss)">⬇️</span>'
+        : '<span style="color:var(--text-muted)">•</span>';
+      return `<div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border-light)">
+        <div style="font-size:11px;color:var(--text-muted);width:90px;flex-shrink:0">${new Date(s.start).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})}</div>
+        <div style="width:16px;flex-shrink:0;text-align:center">${arrow}</div>
+        <div style="flex:1">
+          <span style="font-weight:600;font-size:13px">${s.division}</span>
+          <span style="font-size:11px;color:var(--text-muted)"> — ${s.seasons} seizoen${s.seasons!==1?'en':''}</span>
+          ${s.note?`<div style="font-size:11px;color:var(--text-muted)">${s.note}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+
+    divisionCardHtml = `
+      <div style="font-size:13px;margin-bottom:12px">
+        📍 Momenteel actief in <strong>${analysis.current.division}</strong>, al <strong>${analysis.current.seasons} seizoen${analysis.current.seasons!==1?'en':''}</strong>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center;padding:10px 0;border-top:1px solid var(--border-light);border-bottom:1px solid var(--border-light);margin-bottom:12px">
+        ${statChip(promoTotal, 'Promoties', 'var(--win)')}
+        ${statChip(relTotal, 'Degradaties', 'var(--loss)')}
+        ${analysis.longest?statChip(analysis.longest.seasons+'j', 'Langste periode'):statChip('—','Langste periode')}
+        ${analysis.highest?statChip(analysis.highest.division, 'Hoogst bereikt'):statChip('—','Hoogst bereikt')}
+        ${analysis.lowest?statChip(analysis.lowest.division, 'Laagst bereikt'):statChip('—','Laagst bereikt')}
+        ${analysis.lastTransitionYear?statChip(analysis.lastTransitionYear, 'Laatste '+analysis.lastTransitionType):statChip('—','Laatste wijziging')}
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Volledige tijdlijn</div>
+      ${timelineHtml}
+    `;
+  }
+
+  // ── Head-to-head ──
   const otherClubs = S.clubs.filter(c=>c.id!==clubId).sort((a,b)=>a.name.localeCompare(b.name));
   const compareOptions = `<option value="">— Kies een club —</option>` + otherClubs.map(c=>
     `<option value="${c.id}" ${clubPageCompareId===c.id?'selected':''}>${c.name}${c.isOwnClub?' (eigen club)':''}</option>`).join('');
@@ -156,17 +190,27 @@ function renderClubPage(clubId) {
         ${fmtBig(h2h.biggestWin, 'Grootste zege', 'var(--win)')}
         ${fmtBig(h2h.biggestLoss, 'Grootste nederlaag', 'var(--loss)')}`;
 
+      // Wedstrijdrij: doelpunten gekleurd naar voor/tegen (eigen goals fel,
+      // tegendoelpunten gedempt) + winnaar direct duidelijk via een gekleurde
+      // rand en vetgedrukte naam van de winnende club.
       h2hMatchListHtml = `<div class="card mt-12">
-        <div class="card-title">Alle onderlinge wedstrijden (${h2h.played})</div>
+        <div class="card-title">📋 Alle onderlinge wedstrijden (${h2h.played})</div>
         <div style="max-height:280px;overflow-y:auto">
           ${h2h.matches.map(m => {
             const home = S.clubs.find(c=>c.id===m.homeClubId), away = S.clubs.find(c=>c.id===m.awayClubId);
             const comp = S.competitions.find(c=>c.id===m.competitionId);
-            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-light);cursor:pointer;font-size:12px" onclick="navigateToMatch('${m.id}')">
+            const isClubHome = m.homeClubId===clubId;
+            const clubScore = isClubHome ? m.homeScore : m.awayScore;
+            const oppScore = isClubHome ? m.awayScore : m.homeScore;
+            const resultColor = clubScore>oppScore?'var(--win)':clubScore<oppScore?'var(--loss)':'var(--draw)';
+            const homeScoreColor = isClubHome ? 'var(--text-primary)' : 'var(--text-muted)';
+            const awayScoreColor = !isClubHome ? 'var(--text-primary)' : 'var(--text-muted)';
+            const homeWonMatch = m.homeScore > m.awayScore, awayWonMatch = m.awayScore > m.homeScore;
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border-light);border-left:3px solid ${resultColor};cursor:pointer;font-size:12px" onclick="navigateToMatch('${m.id}')">
               <span style="color:var(--text-muted);width:90px;flex-shrink:0">${m.date?new Date(m.date).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'?'}</span>
-              <span style="flex:1;text-align:right">${home?.name||'?'}</span>
-              <span style="font-weight:700;padding:0 10px">${m.homeScore}-${m.awayScore}</span>
-              <span style="flex:1">${away?.name||'?'}</span>
+              <span style="flex:1;text-align:right;font-weight:${homeWonMatch?'700':'400'}">${home?.name||'?'}</span>
+              <span style="padding:0 10px;font-weight:800;font-family:'Barlow Condensed',sans-serif;font-size:14px"><span style="color:${homeScoreColor}">${m.homeScore}</span>-<span style="color:${awayScoreColor}">${m.awayScore}</span></span>
+              <span style="flex:1;font-weight:${awayWonMatch?'700':'400'}">${away?.name||'?'}</span>
               <span style="color:var(--text-muted);font-size:10px;width:100px;text-align:right;flex-shrink:0">${comp?.name||''}</span>
             </div>`;
           }).join('')}
@@ -175,6 +219,7 @@ function renderClubPage(clubId) {
     }
   }
 
+  // ── Transferverbindingen ──
   const { bought, sold } = getClubTransferConnections(club.name);
   const fmtTransferRow = ({player, transfer}) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border-light);cursor:pointer;font-size:12px" onclick="navigateToPlayer('${player.id}')">
     <span>${player.firstname?player.firstname[0]+'. ':''}${player.lastname}</span>
@@ -183,11 +228,11 @@ function renderClubPage(clubId) {
   const transfersHtml = (bought.length || sold.length) ? `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div>
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Gekocht van deze club (${bought.length})</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">📥 Gekocht van deze club (${bought.length})</div>
         ${bought.length?bought.map(fmtTransferRow).join(''):'<p class="text-muted" style="font-size:12px">Geen bekend.</p>'}
       </div>
       <div>
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Verkocht aan deze club (${sold.length})</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">📤 Verkocht aan deze club (${sold.length})</div>
         ${sold.length?sold.map(fmtTransferRow).join(''):'<p class="text-muted" style="font-size:12px">Geen bekend.</p>'}
       </div>
     </div>` : '<p class="text-muted" style="font-size:12px">Geen bekende transfers tussen jullie clubs.</p>';
@@ -203,17 +248,16 @@ function renderClubPage(clubId) {
         </div>
         ${club.note?`<div style="font-size:12px;color:var(--text-muted);margin-top:4px;font-style:italic">"${club.note}"</div>`:''}
       </div>
-      <button class="btn btn-ghost" onclick="openClubModal('${club.id}')">Bewerken</button>
+      <button class="btn btn-ghost" onclick="openClubModal('${club.id}')">✏️ Bewerken</button>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
-      <div class="card">
-        <div class="card-title">Divisiehistorie</div>
-        ${divisionSummaryHtml}
-        ${historyHtml?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light)">${historyHtml}</div>`:''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="card" style="height:100%">
+        <div class="card-title">📊 Divisiehistorie</div>
+        ${divisionCardHtml}
       </div>
-      <div class="card">
-        <div class="card-title">Head-to-head</div>
+      <div class="card" style="height:100%">
+        <div class="card-title">🆚 Head-to-head</div>
         <select class="form-select" style="margin-bottom:10px" onchange="setClubPageCompare(this.value)">
           ${compareOptions}
         </select>
@@ -224,7 +268,7 @@ function renderClubPage(clubId) {
     ${h2hMatchListHtml}
 
     <div class="card mt-12">
-      <div class="card-title">Transferverbindingen</div>
+      <div class="card-title">💰 Transferverbindingen</div>
       ${transfersHtml}
     </div>
   `;
