@@ -290,7 +290,7 @@ function renderClubsTable(){
       const ownBg = c.isOwnClub ? 'background:rgba(232,124,42,0.12);' : '';
       const rivalBorder = c.highlight==='rivaal'?'border-left:2px solid var(--rival-accent);':c.highlight==='interessant'?'border-left:2px solid var(--interessant);':'';
       return `<tr ${dragAttrs} style="${ownBg}${rivalBorder}${canDrag?'cursor:grab;':''}">
-        <td>${canDrag?'<span style="color:var(--text-muted);margin-right:4px" title="Sleep om te herordenen">⠿</span>':''}<span style="display:inline-flex;align-items:center;gap:6px">${clubLogoHTML(c,30)}<strong>${c.name}</strong></span>${c.isOwnClub?' <span class="badge badge-active" style="font-size:9px">Eigen</span>':''}</td>
+        <td>${canDrag?'<span style="color:var(--text-muted);margin-right:4px" title="Sleep om te herordenen">⠿</span>':''}<span style="display:inline-flex;align-items:center;gap:6px;cursor:pointer" onclick="navigateToClub('${c.id}')">${clubLogoHTML(c,30)}<strong>${c.name}</strong></span>${c.isOwnClub?' <span class="badge badge-active" style="font-size:9px">Eigen</span>':''}</td>
         <td><span class="tag">${c.abbr||'—'}</span></td>
         <td class="text-secondary">${c.city||'—'}</td>
         <td>${stad?stad.name:'<span class="text-muted">—</span>'}</td>

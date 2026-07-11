@@ -314,9 +314,9 @@ function renderDashboard(){
       <div style="text-align:center;padding:8px 0 4px">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${fmtMatchDate(nextMatch)}${nextMatch.time?' · <strong style=color:var(--text-primary)>'+nextMatch.time+'</strong>':''}</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:8px">
-          <span style="font-weight:700;font-size:16px;text-align:right;flex:1;display:flex;align-items:center;justify-content:flex-end;gap:8px;${hc?.isOwnClub?'color:var(--accent-primary)':''}"><span>${hn}</span>${clubLogoHTML(hc,32)}</span>
+          <span style="font-weight:700;font-size:16px;text-align:right;flex:1;display:flex;align-items:center;justify-content:flex-end;gap:8px;cursor:pointer;${hc?.isOwnClub?'color:var(--accent-primary)':''}" onclick="navigateToClub('${nextMatch.homeClubId}')"><span>${hn}</span>${clubLogoHTML(hc,32)}</span>
           <span style="background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:var(--text-muted);min-width:60px;text-align:center">${nextMatch.time||'vs'}</span>
-          <span style="font-weight:700;font-size:16px;text-align:left;flex:1;display:flex;align-items:center;justify-content:flex-start;gap:8px;${ac?.isOwnClub?'color:var(--accent-primary)':''}">${clubLogoHTML(ac,32)}<span>${an}</span></span>
+          <span style="font-weight:700;font-size:16px;text-align:left;flex:1;display:flex;align-items:center;justify-content:flex-start;gap:8px;cursor:pointer;${ac?.isOwnClub?'color:var(--accent-primary)':''}" onclick="navigateToClub('${nextMatch.awayClubId}')">${clubLogoHTML(ac,32)}<span>${an}</span></span>
         </div>
         ${stad?`<div style="font-size:11px;color:var(--text-muted)">📍 ${stad.name}${stad.city?' · '+stad.city:''}</div>`:''}
         ${comp?`<div style="margin-top:6px"><span class="badge badge-${comp.type==='beker'?'beker':comp.type==='playoffs'?'playoffs':comp.type==='voorbereiding'?'voorbereiding':'competitie'}" style="font-size:9px">${comp.name}</span></div>`:''}
@@ -357,9 +357,9 @@ function renderDashboard(){
       <div style="text-align:center;padding:4px 0">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${fmtMatchDate(lastMatch)}</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:12px">
-          <span style="font-weight:700;font-size:14px;flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;${hc?.isOwnClub?'color:var(--accent-primary)':''}"><span>${hn}</span>${clubLogoHTML(hc,30)}</span>
+          <span style="font-weight:700;font-size:14px;flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;${hc?.isOwnClub?'color:var(--accent-primary)':''}" onclick="navigateToClub('${lastMatch.homeClubId}')"><span>${hn}</span>${clubLogoHTML(hc,30)}</span>
           <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:26px;color:${rc}">${lastMatch.homeScore} - ${lastMatch.awayScore}</span>
-          <span style="font-weight:700;font-size:14px;flex:1;text-align:left;display:flex;align-items:center;justify-content:flex-start;gap:6px;${ac?.isOwnClub?'color:var(--accent-primary)':''}">${clubLogoHTML(ac,30)}<span>${an}</span></span>
+          <span style="font-weight:700;font-size:14px;flex:1;text-align:left;display:flex;align-items:center;justify-content:flex-start;gap:6px;cursor:pointer;${ac?.isOwnClub?'color:var(--accent-primary)':''}" onclick="navigateToClub('${lastMatch.awayClubId}')">${clubLogoHTML(ac,30)}<span>${an}</span></span>
         </div>
         ${scorerHtml?`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${scorerHtml}</div>`:''}
       </div>
